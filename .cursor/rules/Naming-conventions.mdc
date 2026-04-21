@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+
+All classes, interfaces, structs, methods, and variable names should be descriptive and intention-revealing
+Avoid vague names like data, info, temp, helper

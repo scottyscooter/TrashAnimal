@@ -1,0 +1,14 @@
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\bin\Debug\net10.0\TrashAnimal.exe
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\bin\Debug\net10.0\TrashAnimal.deps.json
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\bin\Debug\net10.0\TrashAnimal.runtimeconfig.json
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\bin\Debug\net10.0\TrashAnimal.dll
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\bin\Debug\net10.0\TrashAnimal.pdb
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.AssemblyInfoInputs.cache
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.AssemblyInfo.cs
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.csproj.CoreCompileInputs.cache
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.dll
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\refint\TrashAnimal.dll
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.pdb
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\TrashAnimal.genruntimeconfig.cache
+C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Debug\net10.0\ref\TrashAnimal.dll
