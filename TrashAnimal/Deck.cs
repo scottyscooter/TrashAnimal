@@ -2,7 +2,7 @@ namespace TrashAnimal;
 
 public class Deck
 {
-    private List<Card> Cards { get; set; }
+    private List<Card> Cards { get; }
 
     // Will eventually need a way to load the deck from a saved configuration
     // For now, we can always instantiate the deck brand new
@@ -93,9 +93,6 @@ public class Deck
 
     public IEnumerable<Card> DealCards(int n = 1)
     {
-        if (n < 0) throw new ArgumentOutOfRangeException(nameof(n));
-        if (n > Cards.Count) throw new InvalidOperationException("Not enough cards remaining in the deck.");
-
         var dealt = Cards.GetRange(0, n);
         Cards.RemoveRange(0, n);
 
@@ -106,14 +103,14 @@ public class Deck
     /// Deals a specific number of cards to each player index in order.
     /// Example for 4 players: counts {3,4,5,6}.
     /// </summary>
-    public void DealToPlayers(IReadOnlyList<Player> players, IReadOnlyList<int> counts)
+    public void DealToPlayers(IReadOnlyList<Player> players, IReadOnlyList<int> startingCounts)
     {
-        if (players.Count != counts.Count)
+        if (players.Count != startingCounts.Count)
             throw new ArgumentException("Players and counts must have the same length.");
 
         for (var i = 0; i < players.Count; i++)
         {
-            var n = counts[i];
+            var n = startingCounts[i];
             players[i].AddCards(DealCards(n));
         }
     }
