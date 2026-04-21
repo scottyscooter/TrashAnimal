@@ -1,4 +1,0 @@
-C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Release\net10.0\TrashAnimal.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Release\net10.0\TrashAnimal.AssemblyInfoInputs.cache
-C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Release\net10.0\TrashAnimal.AssemblyInfo.cs
-C:\Users\Seth\Source\Repos\TrashAnimal\TrashAnimal\obj\Release\net10.0\TrashAnimal.csproj.CoreCompileInputs.cache
