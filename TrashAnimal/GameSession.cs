@@ -33,8 +33,14 @@ public sealed class GameSession
     /// <summary>After a voluntary stop, before Phase 2: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
     public bool AwaitingYumYumWindow { get; private set; }
 
-    /// <summary>Optional hook when Shiny or Feesh is played (effects stubbed until Phase 2).</summary>
-    public Action<int, CardName>? OnShinyFeeshPlayed { get; set; }
+    /// <summary>Optional hook when Shiny is played.</summary>
+    public Action<int>? OnShinyPlayed { get; set; }
+
+    /// <summary>Optional hook when Feesh is played.</summary>
+    public Action<int>? OnFeeshPlayed { get; set; }
+
+    /// <summary>Selects a specific card from discard when Feesh is played.</summary>
+    public Func<int, IReadOnlyList<Card>, Card?>? OnFeeshCardSelection { get; set; }
 
     public void BeginTurn()
     {
@@ -232,14 +238,62 @@ public sealed class GameSession
             return false;
         }
 
-        if (!_players[playerIndex].TryRemoveCard(cardName, out var card))
+        Card? pickedFromDiscard = null;
+        if (cardName == CardName.Feesh)
+        {
+            if (DiscardPile.Count == 0)
+            {
+                error = "No cards in discard pile to retrieve with Feesh.";
+                return false;
+            }
+
+            if (OnFeeshCardSelection is null)
+            {
+                error = "No Feesh card selector configured.";
+                return false;
+            }
+
+            pickedFromDiscard = OnFeeshCardSelection(CurrentPlayerIndex, DiscardPile);
+            if (pickedFromDiscard is null)
+            {
+                error = "Feesh selection was not provided.";
+                return false;
+            }
+
+            if (!DiscardPile.Any(c => c.Id == pickedFromDiscard.Id))
+            {
+                error = "Selected card is not in the discard pile.";
+                return false;
+            }
+        }
+
+        if (!_players[playerIndex].TryRemoveCard(cardName, out var playedCard))
         {
             error = $"No {cardName} in hand.";
             return false;
         }
 
-        DiscardPile.Add(card);
-        OnShinyFeeshPlayed?.Invoke(playerIndex, cardName);
+        DiscardPile.Add(playedCard);
+
+        if (cardName == CardName.Feesh)
+        {
+            var discardIndex = DiscardPile.FindIndex(c => c.Id == pickedFromDiscard!.Id);
+            if (discardIndex < 0)
+            {
+                error = "Could not find selected card in discard pile.";
+                DiscardPile.RemoveAt(DiscardPile.Count - 1);
+                CurrentPlayer.AddCards(new[] { playedCard });
+                return false;
+            }
+
+            var cardFromDiscard = DiscardPile[discardIndex];
+            DiscardPile.RemoveAt(discardIndex);
+            CurrentPlayer.AddCards(new[] { cardFromDiscard });
+            OnFeeshPlayed?.Invoke(playerIndex);
+            return true;
+        }
+
+        OnShinyPlayed?.Invoke(playerIndex);
         return true;
     }
 
@@ -269,6 +323,7 @@ public sealed class GameSession
             return Array.Empty<GameAction>();
 
         var actions = new List<GameAction>();
+        var isFeeshUsable = CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh) && DiscardPile.Count > 0 && OnFeeshCardSelection is not null;
 
         // Present in order: roll, optional stop, playable cards, then abandon bust (when busted).
         if (!PhaseOne.IsBusted)
@@ -278,13 +333,13 @@ public sealed class GameSession
                 actions.Add(GameAction.StopRolling);
 
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
+            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
         }
         else
         {
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) actions.Add(GameAction.PlayBlammo);
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
+            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
             actions.Add(GameAction.AbandonBust);
         }
