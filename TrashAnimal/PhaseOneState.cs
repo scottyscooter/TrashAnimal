@@ -16,7 +16,7 @@ public sealed class PhaseOneState
     /// <summary>The face that was rolled on a bust (same as an existing token).</summary>
     public TokenAction? BustingRoll { get; private set; }
 
-    /// <summary>Remaining mandatory rolls from Yum Yum (must reach 0 before voluntary stop).</summary>
+    /// <summary>Remaining mandatory rolls from Yum Yum or Blammo.</summary>
     public bool ForcedRollRemaining { get; private set; }
 
     public void Reset()
@@ -55,8 +55,7 @@ public sealed class PhaseOneState
 
     /// <summary>Removes bust state after Nanners/Blammo: token list was never given the duplicate.</summary>
     public void ClearBustIgnoringLastRoll()
-    {
-        if (!IsBusted) throw new InvalidOperationException("Not busted."); // todo: Game state should not be controlling when this action is performed. This is never selected by the player.
+    {        
         IsBusted = false;
         BustingRoll = null;
     }
