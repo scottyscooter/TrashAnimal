@@ -13,7 +13,10 @@ var controllers = new List<IPlayerController>(playerCount);
 for (var i = 0; i < playerCount; i++)
 {
     var name = Cli.ReadNonEmptyString($"Enter name for player {i + 1}: ");
-    var isComputer = Cli.ReadYesNo($"Is {name} a computer player? (y/n) ");
+    
+    // todo remove this once we have a way to select computer players
+    // var isComputer = Cli.ReadYesNo($"Is {name} a computer player? (y/n) ");
+    var isComputer = false;
 
     players.Add(new Player(i, name));
     controllers.Add(isComputer ? new AiController(name) : new CliHumanController(name));

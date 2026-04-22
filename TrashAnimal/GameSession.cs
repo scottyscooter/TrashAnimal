@@ -150,6 +150,7 @@ public sealed class GameSession
         return true;
     }
 
+    // Nanners clears the bust state but stops the player from rolling again.
     public bool TryRecoverFromBustWithNanners(out string? error)
     {
         error = null;
@@ -170,20 +171,16 @@ public sealed class GameSession
         DiscardPile.Add(card);
         PhaseOne.ClearBustIgnoringLastRoll();
         CloseYumYumWindowAfterInterrupt();
-        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
+        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens); 
         return true;
     }
 
+    // Blammo forces a roll after clearing the bust state
     public bool TryRecoverFromBustWithBlammo(out string? error)
     {
         error = null;
         EnsureState(GameState.Phase1Rolling);
-        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;
-        if (!PhaseOne.IsBusted) // todo: Blammo shouldn't even be a chooseable option for the player unless the player is already in a busted state
-        {
-            error = "Not busted.";
-            return false;
-        }
+        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;        
 
         if (!CurrentPlayer.TryRemoveCard(CardName.Blammo, out var card))
         {
@@ -193,14 +190,8 @@ public sealed class GameSession
 
         DiscardPile.Add(card);
         PhaseOne.ClearBustIgnoringLastRoll();
+        PhaseOne.AddForcedRoll();
         return true;
-    }
-
-    public bool TryRecoverFromBustWithBlammoThenStop(out string? error)
-    {
-        if (!TryRecoverFromBustWithBlammo(out error))
-            return false;
-        return TryRequestVoluntaryStop(out error);
     }
 
     /// <summary>Default: bust with no Nanners/Blammo — Phase 2 receives no tokens from this Phase 1.</summary>
@@ -285,15 +276,16 @@ public sealed class GameSession
             actions.Add(GameAction.RollDie);
             if (PhaseOne.CanVoluntarilyStop())
                 actions.Add(GameAction.StopRolling);
+
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
         }
-
-        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
-        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
-
-        if (PhaseOne.IsBusted)
+        else
         {
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) actions.Add(GameAction.PlayBlammo);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
             actions.Add(GameAction.AbandonBust);
         }
 
@@ -376,14 +368,6 @@ public sealed class GameSession
         if (State != GameState.TurnEnd)
             throw new InvalidOperationException("Turn cannot end until Phase 2 has completed.");
 
-        CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
-        BeginTurn();
-    }
-
-    /// <summary>Advance to the next player and start their Phase 1.</summary>
-    [Obsolete("Use EndTurn() once State == TurnEnd.")]
-    public void AdvanceToNextPlayer()
-    {
         CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
         BeginTurn();
     }
