@@ -6,6 +6,7 @@ public sealed class GameSession
     private readonly List<Player> _players;
     private readonly List<int> _yumYumResponders = new();
     private int _yumYumResponderPos;
+    private bool _canRoll;
 
     public GameSession(IReadOnlyList<Player> players, IPhaseTwo phaseTwo)
     {
@@ -49,6 +50,7 @@ public sealed class GameSession
         PhaseOne.Reset();
         _yumYumResponders.Clear();
         _yumYumResponderPos = 0;
+        _canRoll = true;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
         State = GameState.Phase1Rolling;
     }
@@ -177,7 +179,7 @@ public sealed class GameSession
         DiscardPile.Add(card);
         PhaseOne.ClearBustIgnoringLastRoll();
         CloseYumYumWindowAfterInterrupt();
-        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens); 
+        _canRoll = false;
         return true;
     }
 
@@ -328,7 +330,8 @@ public sealed class GameSession
         // Present in order: roll, optional stop, playable cards, then abandon bust (when busted).
         if (!PhaseOne.IsBusted)
         {
-            actions.Add(GameAction.RollDie);
+            if (_canRoll)
+                actions.Add(GameAction.RollDie);
             if (PhaseOne.CanVoluntarilyStop())
                 actions.Add(GameAction.StopRolling);
 
