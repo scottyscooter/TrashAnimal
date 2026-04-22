@@ -279,21 +279,21 @@ public sealed class GameSession
 
         var actions = new List<GameAction>();
 
-        // Always allowed timing for active player in Phase 1 (including busted).
-        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
-        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
-
+        // Present in order: roll, optional stop, playable cards, then abandon bust (when busted).
         if (!PhaseOne.IsBusted)
         {
             actions.Add(GameAction.RollDie);
             if (PhaseOne.CanVoluntarilyStop())
                 actions.Add(GameAction.StopRolling);
         }
-        else
+
+        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
+        if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)) actions.Add(GameAction.PlayFeesh);
+
+        if (PhaseOne.IsBusted)
         {
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) actions.Add(GameAction.PlayBlammo);
-
             actions.Add(GameAction.AbandonBust);
         }
 

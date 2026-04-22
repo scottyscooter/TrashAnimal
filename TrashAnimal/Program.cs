@@ -32,11 +32,13 @@ for (var i = 0; i < players.Count; i++)
     Console.WriteLine($"- {players[i].Name}: {dealCounts[i]} cards");
 }
 
-var session = new GameSession(players, new PhaseTwoNoop());
-session.OnShinyFeeshPlayed = static (_, card) =>
+var session = new GameSession(players, new PhaseTwoNoop())
 {
-    // Effects are stubbed for now.
-    Console.WriteLine($"[effect hook] Played {card} (effects stubbed).");
+    OnShinyFeeshPlayed = static (_, card) =>
+    {
+        // Effects are stubbed for now.
+        Console.WriteLine($"[effect hook] Played {card} (effects stubbed).");
+    }
 };
 
 Console.WriteLine();
