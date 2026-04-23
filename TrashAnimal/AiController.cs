@@ -30,5 +30,13 @@ public sealed class AiController : IPlayerController
         // Simple: 30% chance to play if possible.
         return _rng.NextDouble() < 0.3;
     }
+
+    public Card? ChooseFeeshCard(GameView view, IReadOnlyList<Card> discardPile)
+    {
+        if (discardPile.Count == 0)
+            return null;
+
+        return discardPile[_rng.Next(discardPile.Count)];
+    }
 }
 

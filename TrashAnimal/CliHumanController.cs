@@ -33,5 +33,20 @@ public sealed class CliHumanController : IPlayerController
         // Only asked for the current responder.
         return Cli.ReadYesNo($"{DisplayName}: play YumYum to force {view.CurrentPlayerName} to roll once? (y/n) ");
     }
+
+    public Card? ChooseFeeshCard(GameView view, IReadOnlyList<Card> discardPile)
+    {
+        if (discardPile.Count == 0)
+            return null;
+
+        Console.WriteLine("Discard pile:");
+        for (var i = 0; i < discardPile.Count; i++)
+        {
+            Console.WriteLine($"{i + 1}. {discardPile[i].Name}");
+        }
+
+        var choice = Cli.ReadIntInRange("Choose a card to recover: ", 1, discardPile.Count);
+        return discardPile[choice - 1];
+    }
 }
 

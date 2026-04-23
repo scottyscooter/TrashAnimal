@@ -1,0 +1,91 @@
+When Discard Empty:
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Automatically Progress to Phase 2 
+
+When Discard NOT Empty:
+    - Stash Piles: 0
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Play Feesh -> Pick one card from Discard Pile -> Add to hand -> Automatically Progress to Phase 2 
+
+    - Stash Piles: 1+
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Play Feesh -> Pick one card from Discard Pile -> Add to hand -> Options should be [Play Shiny, AdvanceToResolveTokens]
+
+
+
+When All Stash Piles Empty:
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Automatically Progress to Phase 2 
+
+When OneOrMore Stash Piles Has Cards:
+    - Discard: Empty
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Play Shiny -> Pick one card from FaceDown/FaceUp cards -> Automatically Progress to Phase 2 
+
+    - Discard: Nanners
+    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Roll -> Voluntary Stop -> Play Shiny -> Pick one card from FaceDown/FaceUp cards -> Add to hand -> Options should be [Play Feesh, AdvanceToResolveTokens]
+
+
+When No Feesh/Shiny Cards:
+    - Hand: Blammo, Nanners, MmmPie
+    - Roll -> Roll -> Bust -> Options should be [Blammo, Nanners, AbandonBust] -> AbandonBust -> Automatically Progress to Phase 2 
+
+    - Hand: Blammo, Nanners, MmmPie
+    - Roll -> Roll -> Bust -> Options should be [Blammo, Nanners, AbandonBust] -> Blammo -> Options should be [Roll] -> Bust -> AbandonBust -> Automatically Progress to Phase 2
+
+    - Hand: Blammo, Nanners, MmmPie
+    - Roll -> Roll -> Bust -> Options should be [Blammo, Nanners, AbandonBust] -> Blammo -> Options should be [Roll] -> Success -> Stop Roll -> Automatically Progress to Phase 2
+
+    - Hand: Blammo, Nanners, MmmPie
+    - Roll -> Roll -> Bust -> Options should be [Blammo, Nanners, AbandonBust] -> Nanners -> Automatically Progress to Phase 2
+
+Busting with Nanners and Feesh
+    Discard Pile = 0
+    - Hand: Nanners, Feesh
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Automatically Progress to Phase 2
+
+    Discard Pile = MmmPie
+    - Hand: Nanners, Feesh
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add MmmPie to hand -> Automatically Progress to Phase 2
+
+    Discard Pile = Shiny
+    Stash Piles = 0
+    - Hand: Nanners, Feesh
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add Shiny to hand -> Automatically Progress to Phase 2
+
+    Discard Pile = Shiny
+    Stash Piles = Feesh
+    - Hand: Nanners, Feesh
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add Shiny to hand -> Discard Pile now has Feesh 
+        -> Options should be [Shiny, AdvanceToResolveTokens] -> Shiny -> Add Feesh to hand -> Options should be [Feesh, AdvanceToResolveTokens] -> AdvanceToResolveTokens
+    - Discard Pile ends with: Shiny, Feesh
+    - Stash Piles ends with 0
+
+    Discard Pile = Shiny
+    Stash Piles = Feesh
+    - Hand: Nanners, Feesh
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add Shiny to hand -> Discard Pile now has Feesh 
+        -> Options should be [Shiny, AdvanceToResolveTokens] -> Shiny -> Add Feesh to hand -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add Shiny to hand -> Automatically Progress to Phase 2
+    - Discard Pile ends with: Feesh, Feesh
+    - Stash Piles ends with 0
+
+
+Busting with Nanners and Shiny
+    Stash Piles = 0
+    - Hand: Nanners, Shiny
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Automatically Progress to Phase 2
+
+    Stash Pile = MmmPie
+    - Hand: Nanners, Shiny
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Shiny, AdvanceToResolveTokens] -> Shiny -> Add MmmPie to hand -> Automatically Progress to Phase 2
+
+    Stash Pile = Feesh
+    Discard Pile = 0
+    - Hand: Nanners, Shiny
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Shiny, AdvanceToResolveTokens] -> Shiny -> Add Feesh to hand -> Automatically Progress to Phase 2
+
+    Stash Pile = Feesh
+    Discard Pile = MmmPie
+    - Hand: Nanners, Shiny
+    - Roll -> Roll -> Bust -> Options should be [Nanners, AbandonBust] -> Nanners -> Options should be [Shiny, AdvanceToResolveTokens] -> Shiny -> Add Feesh to hand -> Options should be [Feesh, AdvanceToResolveTokens] -> Feesh -> Add MmmPie to Hand -> Automatically Progress to Phase 2
