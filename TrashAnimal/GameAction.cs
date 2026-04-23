@@ -4,6 +4,7 @@ public enum GameAction
 {
     RollDie,
     StopRolling,
+    AdvanceToResolveTokens,
 
     PlayShiny,
     PlayFeesh,

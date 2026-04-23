@@ -7,6 +7,7 @@ public sealed class GameSession
     private readonly List<int> _yumYumResponders = new();
     private int _yumYumResponderPos;
     private bool _canRoll;
+    private bool _hasStoppedRolling;
 
     public GameSession(IReadOnlyList<Player> players, IPhaseTwo phaseTwo)
     {
@@ -51,6 +52,7 @@ public sealed class GameSession
         _yumYumResponders.Clear();
         _yumYumResponderPos = 0;
         _canRoll = true;
+        _hasStoppedRolling = false;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
         State = GameState.Phase1Rolling;
     }
@@ -64,8 +66,7 @@ public sealed class GameSession
         return PhaseOne.TryRollForToken(die);
     }
 
-    /// <summary>Active player chooses to stop before Phase 2. Opens the Yum Yum window when other players exist.</summary>
-    public bool TryRequestVoluntaryStop(out string? error)
+    public bool TryRequestVoluntaryStop(out string? error, bool openYumYumWindow)
     {
         error = null;
         EnsureState(GameState.Phase1Rolling);
@@ -87,18 +88,28 @@ public sealed class GameSession
             return false;
         }
 
-        // todo: Not needed because player count for a game should be 2 to 4 players
-        /* if (_players.Count <= 1)
-        {
-            GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
-            return true;
-        } */
+        _hasStoppedRolling = true;
 
         _yumYumResponders.Clear();
         _yumYumResponders.AddRange(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
         _yumYumResponderPos = 0;
         AwaitingYumYumWindow = true;
         State = GameState.AwaitingYumYum;
+        return true;
+    }
+
+    public bool TryResolvePhaseOneTokens(out string? error)
+    {
+        error = null;
+        EnsureState(GameState.Phase1Rolling);
+
+        if (!_hasStoppedRolling)
+        {
+            error = "Player has not stopped rolling.";
+            return false;
+        }
+
+        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
         return true;
     }
 
@@ -146,14 +157,13 @@ public sealed class GameSession
 
             DiscardPile.Add(yum);
             PhaseOne.AddForcedRoll();
-            CloseYumYumWindowAfterInterrupt();
-            State = GameState.Phase1Rolling;
+            CloseYumYumWindowAfterInterrupt();            
             return true;
         }
 
         _yumYumResponderPos++;
         if (_yumYumResponderPos >= _yumYumResponders.Count)
-            CompleteYumYumWindowAllPassed();
+            CloseYumYumWindowAfterInterrupt();
 
         return true;
     }
@@ -180,6 +190,7 @@ public sealed class GameSession
         PhaseOne.ClearBustIgnoringLastRoll();
         CloseYumYumWindowAfterInterrupt();
         _canRoll = false;
+        _hasStoppedRolling = true;
         return true;
     }
 
@@ -327,16 +338,20 @@ public sealed class GameSession
         var actions = new List<GameAction>();
         var isFeeshUsable = CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh) && DiscardPile.Count > 0 && OnFeeshCardSelection is not null;
 
-        // Present in order: roll, optional stop, playable cards, then abandon bust (when busted).
+        // Present in order: roll, optional stop, playable cards, resolve tokens, then abandon bust (when busted).
         if (!PhaseOne.IsBusted)
         {
-            if (_canRoll)
+            if ((_canRoll && !_hasStoppedRolling) || PhaseOne.ForcedRollRemaining)
+            {
                 actions.Add(GameAction.RollDie);
-            if (PhaseOne.CanVoluntarilyStop())
-                actions.Add(GameAction.StopRolling);
+                if (PhaseOne.CanVoluntarilyStop())
+                    actions.Add(GameAction.StopRolling);
+            }                
 
             if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
             if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
+            if ((!_canRoll || _hasStoppedRolling) && !PhaseOne.ForcedRollRemaining)
+                actions.Add(GameAction.AdvanceToResolveTokens);
         }
         else
         {
@@ -368,7 +383,10 @@ public sealed class GameSession
                 return true;
 
             case GameAction.StopRolling:
-                return TryRequestVoluntaryStop(out error);
+                return TryRequestVoluntaryStop(out error, true);
+
+            case GameAction.AdvanceToResolveTokens:
+                return TryResolvePhaseOneTokens(out error);
 
             case GameAction.PlayShiny:
                 return TryPlayShinyOrFeesh(playerIndex, CardName.Shiny, out error);
@@ -447,20 +465,14 @@ public sealed class GameSession
         AwaitingYumYumWindow = false;
         _yumYumResponders.Clear();
         _yumYumResponderPos = 0;
-    }
-
-    private void CompleteYumYumWindowAllPassed()
-    {
-        AwaitingYumYumWindow = false;
-        _yumYumResponders.Clear();
-        _yumYumResponderPos = 0;
-        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
-    }
+        State = GameState.Phase1Rolling;        
+    }    
 
     private void GoToPhaseTwo(int playerIndex, IReadOnlyList<TokenAction> tokens)
     {
         IsPhaseOneActive = false;
         AwaitingYumYumWindow = false;
+        _hasStoppedRolling = true;
         State = GameState.Phase2;
         _phaseTwo.ResolvePhaseTwo(playerIndex, tokens);
         LastPhaseTwoTokens = tokens.ToList();
