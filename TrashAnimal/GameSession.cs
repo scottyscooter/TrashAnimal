@@ -173,7 +173,7 @@ public sealed class GameSession
                 return true;
 
             case GameAction.StopRolling:
-                return TryRequestVoluntaryStop(out error, true);
+                return TryRequestVoluntaryStop(out error);
 
             case GameAction.AdvanceToResolveTokens:
                 return TryAdvanceToResolveTokens(out error);
