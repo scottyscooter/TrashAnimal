@@ -26,13 +26,13 @@ public sealed class GameSession
     public PhaseOneState PhaseOne { get; } = new();
     public List<Card> DiscardPile { get; } = new();
 
-    public GameState State { get; private set; } = GameState.Phase1Rolling;
+    public GameState State { get; private set; } = GameState.RollPhase;
     public IReadOnlyList<TokenAction> LastPhaseTwoTokens { get; private set; } = Array.Empty<TokenAction>();
 
-    /// <summary>True while the active player may take Phase 1 actions (including after a bust until resolved or abandoned).</summary>
+    /// <summary>True while the active player may take RollPhase actions (including after a bust until resolved or abandoned).</summary>
     public bool IsPhaseOneActive { get; private set; }
 
-    /// <summary>After a voluntary stop, before Phase 2: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
+    /// <summary>After a voluntary stop, before TokenPhase: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
     public bool AwaitingYumYumWindow { get; private set; }
 
     /// <summary>Optional hook when Shiny is played.</summary>
@@ -54,13 +54,12 @@ public sealed class GameSession
         _canRoll = true;
         _hasStoppedRolling = false;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
-        State = GameState.Phase1Rolling;
+        State = GameState.RollPhase;
     }
-
 
     public PhaseOneRollResult RollDie(Die die)
     {
-        EnsureState(GameState.Phase1Rolling);
+        EnsureState(GameState.RollPhase);
         if (AwaitingYumYumWindow)
             throw new InvalidOperationException("Resolve the Yum Yum window before rolling.");
         return PhaseOne.TryRollForToken(die);
@@ -69,10 +68,10 @@ public sealed class GameSession
     public bool TryRequestVoluntaryStop(out string? error, bool openYumYumWindow)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
+        EnsureState(GameState.RollPhase);
         if (!IsPhaseOneActive)
         {
-            error = "Phase 1 is not active.";
+            error = "RollPhase is not active.";
             return false;
         }
 
@@ -98,26 +97,114 @@ public sealed class GameSession
         return true;
     }
 
-    public bool TryResolvePhaseOneTokens(out string? error)
+    public IReadOnlyList<GameAction> GetAllowedActionsForPlayer(int playerIndex)
+    {
+        if (State == GameState.AwaitingYumYum)
+        {
+            var responder = GetCurrentYumYumResponderIndex();
+            if (responder == playerIndex)
+            {
+                var hasYum = _players[playerIndex].Hand.Any(c => c.Name == CardName.Yumyum);
+                return hasYum
+                    ? new[] { GameAction.YumYumPlay, GameAction.YumYumPass }
+                    : new[] { GameAction.YumYumPass };
+            }
+
+            return Array.Empty<GameAction>();
+        }
+
+        if (playerIndex != CurrentPlayerIndex)
+            return Array.Empty<GameAction>();
+
+        if (State == GameState.TurnEnd)
+            return new[] { GameAction.EndTurn };
+
+        if (State != GameState.RollPhase)
+            return Array.Empty<GameAction>();
+
+        var actions = new List<GameAction>();
+        var isFeeshUsable = CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh) && DiscardPile.Count > 0 &&
+                            OnFeeshCardSelection is not null;
+
+        // Present in order: roll, optional stop, playable cards, resolve tokens, then abandon bust (when busted).
+        if (!PhaseOne.IsBusted)
+        {
+            if ((_canRoll && !_hasStoppedRolling) || PhaseOne.ForcedRollRemaining)
+            {
+                actions.Add(GameAction.RollDie);
+                if (PhaseOne.CanVoluntarilyStop())
+                    actions.Add(GameAction.StopRolling);
+            }
+
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
+            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
+            if ((!_canRoll || _hasStoppedRolling) && !PhaseOne.ForcedRollRemaining)
+                actions.Add(GameAction.AdvanceToResolveTokens);
+        }
+        else
+        {
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) actions.Add(GameAction.PlayBlammo);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
+            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
+            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
+            actions.Add(GameAction.AbandonBust);
+        }
+
+        return actions;
+    }
+
+    public bool ApplyAction(int playerIndex, GameAction action, Die die, out string? error)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
 
-        if (!_hasStoppedRolling)
+        var allowed = GetAllowedActionsForPlayer(playerIndex);
+        if (!allowed.Contains(action))
         {
-            error = "Player has not stopped rolling.";
+            error = "Action is not allowed right now.";
             return false;
         }
 
-        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
-        return true;
-    }
+        switch (action)
+        {
+            case GameAction.RollDie:
+                RollDie(die);
+                return true;
 
-    public int? GetCurrentYumYumResponderIndex()
-    {
-        if (!AwaitingYumYumWindow) return null;
-        if (_yumYumResponderPos >= _yumYumResponders.Count) return null;
-        return _yumYumResponders[_yumYumResponderPos];
+            case GameAction.StopRolling:
+                return TryRequestVoluntaryStop(out error, true);
+
+            case GameAction.AdvanceToResolveTokens:
+                return TryAdvanceToResolveTokens(out error);
+
+            case GameAction.PlayShiny:
+                return TryPlayShinyOrFeesh(playerIndex, CardName.Shiny, out error);
+
+            case GameAction.PlayFeesh:
+                return TryPlayShinyOrFeesh(playerIndex, CardName.Feesh, out error);
+
+            case GameAction.PlayNanners:
+                return TryRecoverFromBustWithNanners(out error);
+
+            case GameAction.PlayBlammo:
+                return TryRecoverFromBustWithBlammo(out error);
+
+            case GameAction.AbandonBust:
+                return TryAdvanceToResolveTokens(out error);
+
+            case GameAction.YumYumPlay:
+                return TryYumYumRespond(playerIndex, playYumYum: true, out error);
+
+            case GameAction.YumYumPass:
+                return TryYumYumRespond(playerIndex, playYumYum: false, out error);
+
+            case GameAction.EndTurn:
+                EndTurn();
+                return true;
+
+            default:
+                error = "Unknown action.";
+                return false;
+        }
     }
 
     /// <summary>Opponent at the current response slot passes or plays Yum Yum (at most one play per stop).</summary>
@@ -172,7 +259,7 @@ public sealed class GameSession
     public bool TryRecoverFromBustWithNanners(out string? error)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
+        EnsureState(GameState.RollPhase);
         if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;
         if (!PhaseOne.IsBusted) // todo: Nanners shouldn't even be a chooseable option for the player unless the player is already in a busted state
         {
@@ -198,7 +285,7 @@ public sealed class GameSession
     public bool TryRecoverFromBustWithBlammo(out string? error)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
+        EnsureState(GameState.RollPhase);
         if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;        
 
         if (!CurrentPlayer.TryRemoveCard(CardName.Blammo, out var card))
@@ -213,26 +300,30 @@ public sealed class GameSession
         return true;
     }
 
-    /// <summary>Default: bust with no Nanners/Blammo — Phase 2 receives no tokens from this Phase 1.</summary>
-    public bool TryAbandonPhaseOneUnrecoveredBust(out string? error)
+    public bool TryAdvanceToResolveTokens(out string? error)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
-        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false; // todo: shouldn't need this when the game engine is driving the workflow as it would already know if phase one is active and only call these methods when it is
-        if (!PhaseOne.IsBusted) // todo: This should not be an option but rather automatically selected if the player does not respond with a way to clear the busted state
+        EnsureState(GameState.RollPhase);
+
+        if (!_hasStoppedRolling)
         {
-            error = "Not busted.";
+            error = "Player has not stopped rolling.";
             return false;
         }
 
-        GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
+        if (PhaseOne.IsBusted)
+            // Bust with no Nanners/Blammo recovery — TokenPhase receives no tokens
+            GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
+        else
+            GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
+
         return true;
     }
 
     public bool TryPlayShinyOrFeesh(int playerIndex, CardName cardName, out string? error)
     {
         error = null;
-        EnsureState(GameState.Phase1Rolling);
+        EnsureState(GameState.RollPhase);
         if (cardName is not (CardName.Shiny or CardName.Feesh))
         {
             error = "Only Shiny or Feesh may be played with this action.";
@@ -241,7 +332,7 @@ public sealed class GameSession
 
         if (!IsPhaseOneActive)
         {
-            error = "Shiny/Feesh may only be played during Phase 1 of the active player's turn.";
+            error = "Shiny/Feesh may only be played during RollPhase of the active player's turn.";
             return false;
         }
 
@@ -310,115 +401,6 @@ public sealed class GameSession
         return true;
     }
 
-    public IReadOnlyList<GameAction> GetAllowedActionsForPlayer(int playerIndex)
-    {
-        if (State == GameState.AwaitingYumYum)
-        {
-            var responder = GetCurrentYumYumResponderIndex();
-            if (responder == playerIndex)
-            {
-                var hasYum = _players[playerIndex].Hand.Any(c => c.Name == CardName.Yumyum);
-                return hasYum
-                    ? new[] { GameAction.YumYumPlay, GameAction.YumYumPass }
-                    : new[] { GameAction.YumYumPass };
-            }
-
-            return Array.Empty<GameAction>();
-        }
-
-        if (playerIndex != CurrentPlayerIndex)
-            return Array.Empty<GameAction>();
-
-        if (State == GameState.TurnEnd)
-            return new[] { GameAction.EndTurn };
-
-        if (State != GameState.Phase1Rolling)
-            return Array.Empty<GameAction>();
-
-        var actions = new List<GameAction>();
-        var isFeeshUsable = CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh) && DiscardPile.Count > 0 && OnFeeshCardSelection is not null;
-
-        // Present in order: roll, optional stop, playable cards, resolve tokens, then abandon bust (when busted).
-        if (!PhaseOne.IsBusted)
-        {
-            if ((_canRoll && !_hasStoppedRolling) || PhaseOne.ForcedRollRemaining)
-            {
-                actions.Add(GameAction.RollDie);
-                if (PhaseOne.CanVoluntarilyStop())
-                    actions.Add(GameAction.StopRolling);
-            }                
-
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
-            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
-            if ((!_canRoll || _hasStoppedRolling) && !PhaseOne.ForcedRollRemaining)
-                actions.Add(GameAction.AdvanceToResolveTokens);
-        }
-        else
-        {
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) actions.Add(GameAction.PlayBlammo);
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) actions.Add(GameAction.PlayNanners);
-            if (isFeeshUsable) actions.Add(GameAction.PlayFeesh);
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)) actions.Add(GameAction.PlayShiny);
-            actions.Add(GameAction.AbandonBust);
-        }
-
-        return actions;
-    }
-
-    public bool ApplyAction(int playerIndex, GameAction action, Die die, out string? error)
-    {
-        error = null;
-
-        var allowed = GetAllowedActionsForPlayer(playerIndex);
-        if (!allowed.Contains(action))
-        {
-            error = "Action is not allowed right now.";
-            return false;
-        }
-
-        switch (action)
-        {
-            case GameAction.RollDie:
-                RollDie(die);
-                return true;
-
-            case GameAction.StopRolling:
-                return TryRequestVoluntaryStop(out error, true);
-
-            case GameAction.AdvanceToResolveTokens:
-                return TryResolvePhaseOneTokens(out error);
-
-            case GameAction.PlayShiny:
-                return TryPlayShinyOrFeesh(playerIndex, CardName.Shiny, out error);
-
-            case GameAction.PlayFeesh:
-                return TryPlayShinyOrFeesh(playerIndex, CardName.Feesh, out error);
-
-            case GameAction.PlayNanners:
-                return TryRecoverFromBustWithNanners(out error);
-
-            case GameAction.PlayBlammo:
-                return TryRecoverFromBustWithBlammo(out error);
-
-            case GameAction.AbandonBust:
-                return TryAbandonPhaseOneUnrecoveredBust(out error);
-
-            case GameAction.YumYumPlay:
-                return TryYumYumRespond(playerIndex, playYumYum: true, out error);
-
-            case GameAction.YumYumPass:
-                return TryYumYumRespond(playerIndex, playYumYum: false, out error);
-
-            case GameAction.EndTurn:
-                EndTurn();
-                return true;
-
-            default:
-                error = "Unknown action.";
-                return false;
-        }
-    }
-
     public GameView GetViewForPlayer(int playerIndex)
     {
         var responderIndex = GetCurrentYumYumResponderIndex();
@@ -442,7 +424,7 @@ public sealed class GameSession
     public void EndTurn()
     {
         if (State != GameState.TurnEnd)
-            throw new InvalidOperationException("Turn cannot end until Phase 2 has completed.");
+            throw new InvalidOperationException("Turn cannot end until TokenPhase has completed.");
 
         CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
         BeginTurn();
@@ -452,7 +434,7 @@ public sealed class GameSession
     {
         if (!IsPhaseOneActive)
         {
-            error = "Phase 1 is not active.";
+            error = "RollPhase is not active.";
             return false;
         }
         
@@ -460,12 +442,19 @@ public sealed class GameSession
         return true;
     }
 
+    public int? GetCurrentYumYumResponderIndex()
+    {
+        if (!AwaitingYumYumWindow) return null;
+        if (_yumYumResponderPos >= _yumYumResponders.Count) return null;
+        return _yumYumResponders[_yumYumResponderPos];
+    }
+
     private void CloseYumYumWindowAfterInterrupt()
     {
         AwaitingYumYumWindow = false;
         _yumYumResponders.Clear();
         _yumYumResponderPos = 0;
-        State = GameState.Phase1Rolling;        
+        State = GameState.RollPhase;        
     }    
 
     private void GoToPhaseTwo(int playerIndex, IReadOnlyList<TokenAction> tokens)
@@ -473,7 +462,7 @@ public sealed class GameSession
         IsPhaseOneActive = false;
         AwaitingYumYumWindow = false;
         _hasStoppedRolling = true;
-        State = GameState.Phase2;
+        State = GameState.TokenPhase;
         _phaseTwo.ResolvePhaseTwo(playerIndex, tokens);
         LastPhaseTwoTokens = tokens.ToList();
         State = GameState.TurnEnd;

@@ -2,9 +2,9 @@ namespace TrashAnimal;
 
 public enum GameState
 {
-    Phase1Rolling,
+    RollPhase,
     AwaitingYumYum,
-    Phase2,
+    TokenPhase,
     TurnEnd
 }
 
