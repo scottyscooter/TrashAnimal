@@ -246,6 +246,7 @@ public sealed class GameSession
 
             DiscardPile.Add(yum);
             PhaseOne.AddForcedRoll();
+            _hasStoppedRolling = false;
             CloseYumYumWindowAfterInterrupt();            
             return true;
         }
@@ -276,8 +277,7 @@ public sealed class GameSession
         }
 
         DiscardPile.Add(card);
-        PhaseOne.ClearBustIgnoringLastRoll();
-        CloseYumYumWindowAfterInterrupt();
+        PhaseOne.ClearBustIgnoringLastRoll();        
         _canRoll = false;
         _hasStoppedRolling = true;
         return true;
@@ -306,12 +306,6 @@ public sealed class GameSession
     {
         error = null;
         EnsureState(GameState.RollPhase);
-
-        if (!_hasStoppedRolling)
-        {
-            error = "Player has not stopped rolling.";
-            return false;
-        }
 
         if (PhaseOne.IsBusted)
             // Bust with no Nanners/Blammo recovery — TokenPhase receives no tokens
