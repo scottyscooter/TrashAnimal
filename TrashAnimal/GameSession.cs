@@ -189,7 +189,7 @@ public sealed class GameSession
                 return TryRecoverFromBustWithBlammo(out error);
 
             case GameAction.AbandonBust:
-                return TryAbandonPhaseOneUnrecoveredBust(out error);
+                return TryAdvanceToResolveTokens(out error);
 
             case GameAction.YumYumPlay:
                 return TryYumYumRespond(playerIndex, playYumYum: true, out error);
@@ -300,22 +300,6 @@ public sealed class GameSession
         return true;
     }
 
-    /// <summary>Default: bust with no Nanners/Blammo — TokenPhase receives no tokens from this RollPhase.</summary>
-    public bool TryAbandonPhaseOneUnrecoveredBust(out string? error)
-    {
-        error = null;
-        EnsureState(GameState.RollPhase);
-        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false; // todo: shouldn't need this when the game engine is driving the workflow as it would already know if phase one is active and only call these methods when it is
-        if (!PhaseOne.IsBusted) // todo: This should not be an option but rather automatically selected if the player does not respond with a way to clear the busted state
-        {
-            error = "Not busted.";
-            return false;
-        }
-
-        GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
-        return true;
-    }
-
     public bool TryAdvanceToResolveTokens(out string? error)
     {
         error = null;
@@ -328,6 +312,7 @@ public sealed class GameSession
         }
 
         if (PhaseOne.IsBusted)
+            // Bust with no Nanners/Blammo recovery — TokenPhase receives no tokens
             GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
         else
             GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
