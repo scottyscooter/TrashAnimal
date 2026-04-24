@@ -1,7 +1,7 @@
 namespace TrashAnimal;
 
 /// <summary>
-/// Phase 1 die rolling: tokens are unique successful rolls. A bust occurs when a rolled value
+/// RollPhase: collect actionable tokens for each unique successful roll of the die. A bust occurs when a rolled value
 /// is already in <see cref="Tokens"/>; the duplicate is not added.
 /// </summary>
 public sealed class PhaseOneState

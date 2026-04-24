@@ -10,9 +10,9 @@ public enum GameAction
     PlayFeesh,
 
     // Bust recovery
-    PlayNanners,            // ignore busting roll -> Phase 2
-    PlayBlammo,             // ignore busting roll -> keep rolling -> Phase 2
-    AbandonBust,            // no recovery -> Phase 2 with zero tokens
+    PlayNanners,            // ignore busting roll -> TokenPhase
+    PlayBlammo,             // ignore busting roll -> keep rolling -> TokenPhase
+    AbandonBust,            // no recovery -> TokenPhase with zero tokens
 
     // Yum Yum response (opponents)
     YumYumPlay,

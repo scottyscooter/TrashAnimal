@@ -1,4 +1,4 @@
-﻿using TrashAnimal;
+using TrashAnimal;
 
 var die = new Die();
 
@@ -61,8 +61,7 @@ while (true)
     if (session.State == GameState.TurnEnd)
     {
         Console.WriteLine();
-        Console.WriteLine($"-- End of {session.CurrentPlayer.Name}'s turn --");
-        Console.WriteLine($"Phase 2 tokens: {(session.LastPhaseTwoTokens.Count == 0 ? "(none)" : string.Join(", ", session.LastPhaseTwoTokens))}");
+        Console.WriteLine($"-- End of {session.CurrentPlayer.Name}'s turn --");        
 
         var currentController = controllers[session.CurrentPlayerIndex];
         var allowed = session.GetAllowedActionsForPlayer(session.CurrentPlayerIndex);
@@ -97,18 +96,18 @@ while (true)
         continue;
     }
 
-    // Phase 1 (active player)
-    var activeIndex = session.CurrentPlayerIndex;
-    var active = players[activeIndex];
-    var controller = controllers[activeIndex];
-    var allowedActions = session.GetAllowedActionsForPlayer(activeIndex);
-    var viewForActive = session.GetViewForPlayer(activeIndex);
+    // RollPhase (active player)
+    var currentPlayerIndex = session.CurrentPlayerIndex;
+    var active = players[currentPlayerIndex];
+    var controller = controllers[currentPlayerIndex];
+    var allowedActions = session.GetAllowedActionsForPlayer(currentPlayerIndex);
+    var viewForActive = session.GetViewForPlayer(currentPlayerIndex);
 
     Console.WriteLine();
-    Console.WriteLine($"-- {active.Name}'s Phase 1 --");
+    Console.WriteLine($"-- {active.Name}'s RollPhase --");
 
-    var chosen = controller.ChooseAction(viewForActive, allowedActions);
-    if (!session.ApplyAction(activeIndex, chosen, die, out var error) && error is not null)
+    var playerAction = controller.ChooseAction(viewForActive, allowedActions);
+    if (!session.ApplyAction(currentPlayerIndex, playerAction, die, out var error) && error is not null)
         Console.WriteLine(error);
 }
 
