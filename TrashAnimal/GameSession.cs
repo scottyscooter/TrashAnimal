@@ -57,15 +57,16 @@ public sealed class GameSession
         State = GameState.RollPhase;
     }
 
-    public PhaseOneRollResult RollDie(Die die)
+    private RollResult RollDie(Die die)
     {
         EnsureState(GameState.RollPhase);
         if (AwaitingYumYumWindow)
             throw new InvalidOperationException("Resolve the Yum Yum window before rolling.");
+        
         return PhaseOne.TryRollForToken(die);
     }
 
-    public bool TryRequestVoluntaryStop(out string? error, bool openYumYumWindow)
+    private bool TryRequestVoluntaryStop(out string? error)
     {
         error = null;
         EnsureState(GameState.RollPhase);
@@ -167,11 +168,12 @@ public sealed class GameSession
         switch (action)
         {
             case GameAction.RollDie:
-                RollDie(die);
+                var result = RollDie(die); // todo result unused but might be useful for future features
+
                 return true;
 
             case GameAction.StopRolling:
-                return TryRequestVoluntaryStop(out error, true);
+                return TryRequestVoluntaryStop(out error);
 
             case GameAction.AdvanceToResolveTokens:
                 return TryAdvanceToResolveTokens(out error);
@@ -244,6 +246,7 @@ public sealed class GameSession
 
             DiscardPile.Add(yum);
             PhaseOne.AddForcedRoll();
+            _hasStoppedRolling = false;
             CloseYumYumWindowAfterInterrupt();            
             return true;
         }
@@ -274,8 +277,7 @@ public sealed class GameSession
         }
 
         DiscardPile.Add(card);
-        PhaseOne.ClearBustIgnoringLastRoll();
-        CloseYumYumWindowAfterInterrupt();
+        PhaseOne.ClearBustIgnoringLastRoll();        
         _canRoll = false;
         _hasStoppedRolling = true;
         return true;
@@ -304,12 +306,6 @@ public sealed class GameSession
     {
         error = null;
         EnsureState(GameState.RollPhase);
-
-        if (!_hasStoppedRolling)
-        {
-            error = "Player has not stopped rolling.";
-            return false;
-        }
 
         if (PhaseOne.IsBusted)
             // Bust with no Nanners/Blammo recovery — TokenPhase receives no tokens
