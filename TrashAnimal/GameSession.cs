@@ -57,15 +57,16 @@ public sealed class GameSession
         State = GameState.RollPhase;
     }
 
-    public PhaseOneRollResult RollDie(Die die)
+    private RollResult RollDie(Die die)
     {
         EnsureState(GameState.RollPhase);
         if (AwaitingYumYumWindow)
             throw new InvalidOperationException("Resolve the Yum Yum window before rolling.");
+        
         return PhaseOne.TryRollForToken(die);
     }
 
-    public bool TryRequestVoluntaryStop(out string? error, bool openYumYumWindow)
+    private bool TryRequestVoluntaryStop(out string? error)
     {
         error = null;
         EnsureState(GameState.RollPhase);
@@ -167,7 +168,8 @@ public sealed class GameSession
         switch (action)
         {
             case GameAction.RollDie:
-                RollDie(die);
+                var result = RollDie(die); // todo result unused but might be useful for future features
+
                 return true;
 
             case GameAction.StopRolling:

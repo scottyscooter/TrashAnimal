@@ -33,7 +33,7 @@ public sealed class PhaseOneState
     }
 
     /// <summary>Roll the die for a token. On bust, state becomes busted and the roll is not added to tokens.</summary>
-    public PhaseOneRollResult TryRollForToken(Die die)
+    public RollResult TryRollForToken(Die die)
     {
         if (IsBusted)
             throw new InvalidOperationException("Cannot roll while busted.");
@@ -45,12 +45,12 @@ public sealed class PhaseOneState
         {
             IsBusted = true;
             BustingRoll = value;
-            return PhaseOneRollResult.Busted(value);
+            return new RollResult(RollStatus.Busted, value);
         }
 
         _tokens.Add(value);        
 
-        return PhaseOneRollResult.Success(value);
+        return new RollResult(RollStatus.Success, value);
     }
 
     /// <summary>Removes bust state after Nanners/Blammo: token list was never given the duplicate.</summary>
@@ -66,17 +66,14 @@ public sealed class PhaseOneState
     }
 }
 
-public readonly struct PhaseOneRollResult
+public readonly struct RollResult(RollStatus status, TokenAction rolled)
+{    
+    public RollStatus Status { get; } = status;
+    public TokenAction Rolled { get; } = rolled;
+}
+
+public enum RollStatus
 {
-    public bool IsBust { get; }
-    public TokenAction Rolled { get; }
-
-    private PhaseOneRollResult(bool isBust, TokenAction rolled)
-    {
-        IsBust = isBust;
-        Rolled = rolled;
-    }
-
-    public static PhaseOneRollResult Success(TokenAction rolled) => new(false, rolled);
-    public static PhaseOneRollResult Busted(TokenAction rolled) => new(true, rolled);
+    Success,
+    Busted
 }
