@@ -1,30 +1,35 @@
 When Discard Empty:
     - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
-    - Roll -> Voluntary Stop -> Automatically Progress to TokenPhase 
+    - Roll -> Voluntary Stop -> Feesh is not shown as an option, Automatically Progress to TokenPhase 
 
 When Discard NOT Empty:
     - Stash Piles: 0
-    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - DiscardPile: Nanners
+    - Hand: Feesh,Shiny
     - Roll -> Voluntary Stop -> Play Feesh -> Pick one card from Discard Pile -> Add to hand -> Automatically Progress to TokenPhase 
+    - Hand should end with Shiny
 
-    - Stash Piles: 1+
-    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Stash Piles: 1 person has a Nanners stashed face up
+    - DiscardPile: Shiny
+    - Hand: Feesh
     - Roll -> Voluntary Stop -> Play Feesh -> Pick one card from Discard Pile -> Add to hand -> Options should be [Play Shiny, AdvanceToResolveTokens]
-
-
+    - Hand should end with Shiny
 
 When All Stash Piles Empty:
+    - DiscardPile: 0
     - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
     - Roll -> Voluntary Stop -> Automatically Progress to TokenPhase 
 
 When OneOrMore Stash Piles Has Cards:
     - Discard: Empty
-    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
+    - Hand: Shiny
     - Roll -> Voluntary Stop -> Play Shiny -> Pick one card from FaceDown/FaceUp cards -> Automatically Progress to TokenPhase 
 
-    - Discard: Nanners
-    - Hand: Blammo, MmmPie, Feesh, Blammo, Shiny
-    - Roll -> Voluntary Stop -> Play Shiny -> Pick one card from FaceDown/FaceUp cards -> Add to hand -> Options should be [Play Feesh, AdvanceToResolveTokens]
+    - Stash pile: 1 person has MmmPie in their facedown stash
+    - Discard Pile: Nanners
+    - Hand: Feesh, Shiny
+    - Roll -> Voluntary Stop -> Options should be [feesh, shiny, advance to token phase] -> Play Shiny -> Pick one card from FaceDown/FaceUp cards -> Add to hand -> Options should be [Play Feesh, AdvanceToResolveTokens]
+    - Hand should now have Feesh and MmmPie
 
 
 When No Feesh/Shiny Cards:

@@ -38,5 +38,17 @@ public sealed class AiController : IPlayerController
 
         return discardPile[_rng.Next(discardPile.Count)];
     }
+
+    public int ChooseShinyStealVictim(GameView view, IReadOnlyList<int> opponentIndicesWithNonEmptyStash)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(opponentIndicesWithNonEmptyStash.Count);
+        return opponentIndicesWithNonEmptyStash[_rng.Next(opponentIndicesWithNonEmptyStash.Count)];
+    }
+
+    public Guid ChooseStealCard(GameView view, IReadOnlyList<StealPickSlot> slots)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(slots.Count);
+        return slots[_rng.Next(slots.Count)].CardId;
+    }
 }
 

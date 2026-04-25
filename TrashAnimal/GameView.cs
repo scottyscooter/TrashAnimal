@@ -9,6 +9,7 @@ public sealed record GameView(
     IReadOnlyList<TokenAction> PhaseOneTokens,
     IReadOnlyList<CardName> HandCardNames,
     int? YumYumResponderIndex,
-    string? YumYumResponderName
+    string? YumYumResponderName,
+    StealPhaseView? StealPhase
 );
 

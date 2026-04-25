@@ -18,6 +18,11 @@ public enum GameAction
     YumYumPlay,
     YumYumPass,
 
+    // Steal response (victim of active steal attempt)
+    StealPass,
+    StealPlayDoggo,
+    StealPlayKitteh,
+
     // Turn lifecycle
     EndTurn
 }
