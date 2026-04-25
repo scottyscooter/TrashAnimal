@@ -1,12 +1,15 @@
+using TrashAnimal.RollPhase;
+
 namespace TrashAnimal;
 
 public sealed class GameSession
 {
     private readonly IPhaseTwo _phaseTwo;
     private readonly IDrawPile _drawPile;
+    private readonly RollPhaseGameplayHandlerRegistry _rollPhaseHandlers =
+        new(RollPhaseGameplayHandlers.CreateDefault());
     private readonly List<Player> _players;
-    private readonly List<int> _yumYumResponders = new();
-    private int _yumYumResponderPos;
+    private readonly YumYumWindow _yumYumWindow = new();
     private bool _canRoll;
     private bool _hasStoppedRolling;
 
@@ -37,7 +40,7 @@ public sealed class GameSession
     public bool IsPhaseOneActive { get; private set; }
 
     /// <summary>After a voluntary stop, before TokenPhase: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
-    public bool AwaitingYumYumWindow { get; private set; }
+    public bool AwaitingYumYumWindow => _yumYumWindow.IsAwaiting;
 
     /// <summary>Optional hook when Feesh is played.</summary>
     public Action<int>? OnFeeshPlayed { get; set; }
@@ -56,10 +59,8 @@ public sealed class GameSession
     {
         ClearStealChain();
         IsPhaseOneActive = true;
-        AwaitingYumYumWindow = false;
+        _yumYumWindow.Reset();
         PhaseOne.Reset();
-        _yumYumResponders.Clear();
-        _yumYumResponderPos = 0;
         _canRoll = true;
         _hasStoppedRolling = false;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
@@ -69,7 +70,7 @@ public sealed class GameSession
     private RollResult RollDie(Die die)
     {
         EnsureState(GameState.RollPhase);
-        if (AwaitingYumYumWindow)
+        if (_yumYumWindow.IsAwaiting)
             throw new InvalidOperationException("Resolve the Yum Yum window before rolling.");
 
         return PhaseOne.TryRollForToken(die);
@@ -85,7 +86,7 @@ public sealed class GameSession
             return false;
         }
 
-        if (AwaitingYumYumWindow)
+        if (_yumYumWindow.IsAwaiting)
         {
             error = "Already awaiting Yum Yum responses.";
             return false;
@@ -99,10 +100,7 @@ public sealed class GameSession
 
         _hasStoppedRolling = true;
 
-        _yumYumResponders.Clear();
-        _yumYumResponders.AddRange(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
-        _yumYumResponderPos = 0;
-        AwaitingYumYumWindow = true;
+        _yumYumWindow.Open(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
         State = GameState.AwaitingYumYum;
         return true;
     }
@@ -144,12 +142,7 @@ public sealed class GameSession
             return Array.Empty<GameAction>();
 
         var rollActions = new List<GameAction>();
-        var isFeeshUsable = CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh) && DiscardPile.Count > 0 &&
-                            OnFeeshCardSelection is not null;
-
-        var shinyEligible = CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny) &&
-                            StealAttempt.AnyOpponentHasStashCards(_players, CurrentPlayerIndex) &&
-                            ChooseShinyStealVictim is not null;
+        var snapshot = CreateRollPhaseOfferSnapshot(PhaseOne.IsBusted);
 
         if (!PhaseOne.IsBusted)
         {
@@ -160,17 +153,23 @@ public sealed class GameSession
                     rollActions.Add(GameAction.StopRolling);
             }
 
-            if (shinyEligible) rollActions.Add(GameAction.PlayShiny);
-            if (isFeeshUsable) rollActions.Add(GameAction.PlayFeesh);
+            foreach (var handler in _rollPhaseHandlers.All)
+            {
+                if (handler.IsActionable(in snapshot))
+                    rollActions.Add(handler.Action);
+            }
+
             if ((!_canRoll || _hasStoppedRolling) && !PhaseOne.ForcedRollRemaining)
                 rollActions.Add(GameAction.AdvanceToResolveTokens);
         }
         else
         {
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo)) rollActions.Add(GameAction.PlayBlammo);
-            if (CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners)) rollActions.Add(GameAction.PlayNanners);
-            if (isFeeshUsable) rollActions.Add(GameAction.PlayFeesh);
-            if (shinyEligible) rollActions.Add(GameAction.PlayShiny);
+            foreach (var handler in _rollPhaseHandlers.All)
+            {
+                if (handler.IsActionable(in snapshot))
+                    rollActions.Add(handler.Action);
+            }
+
             rollActions.Add(GameAction.AbandonBust);
         }
 
@@ -201,16 +200,10 @@ public sealed class GameSession
                 return TryAdvanceToResolveTokens(out error);
 
             case GameAction.PlayShiny:
-                return TryPlayShinyOrFeesh(playerIndex, CardName.Shiny, out error);
-
             case GameAction.PlayFeesh:
-                return TryPlayShinyOrFeesh(playerIndex, CardName.Feesh, out error);
-
             case GameAction.PlayNanners:
-                return TryRecoverFromBustWithNanners(out error);
-
             case GameAction.PlayBlammo:
-                return TryRecoverFromBustWithBlammo(out error);
+                return TryExecuteRollPhaseHandler(action, playerIndex, out error);
 
             case GameAction.AbandonBust:
                 return TryAdvanceToResolveTokens(out error);
@@ -284,94 +277,24 @@ public sealed class GameSession
     public bool TryYumYumRespond(int opponentPlayerIndex, bool playYumYum, out string? error)
     {
         EnsureState(GameState.AwaitingYumYum);
-        // todo: This whole interaction needs to go out to all other players at the same time and then whoever responds first is the one who forces the active player to roll again
-        // should be async with about a 10 second response window for each player before continuing the game
-        error = null;
-        if (!AwaitingYumYumWindow)
-        {
-            error = "Yum Yum window is not open.";
-            return false;
-        }
-
-        if (_yumYumResponderPos >= _yumYumResponders.Count)
-        {
-            error = "Yum Yum window already finished.";
-            return false;
-        }
-
-        var expected = _yumYumResponders[_yumYumResponderPos];
-        if (opponentPlayerIndex != expected)
-        {
-            error = $"It is not this opponent's turn to respond (expected player index {expected}).";
-            return false;
-        }
-
-        var opponent = _players[opponentPlayerIndex];
-        if (playYumYum)
-        {
-            if (!opponent.TryRemoveCard(CardName.Yumyum, out var yum))
-            {
-                error = "Opponent does not have a Yum Yum card.";
-                return false;
-            }
-
-            DiscardPile.Add(yum);
-            PhaseOne.AddForcedRoll();
-            _hasStoppedRolling = false;
-            CloseYumYumWindowAfterInterrupt();
-            return true;
-        }
-
-        _yumYumResponderPos++;
-        if (_yumYumResponderPos >= _yumYumResponders.Count)
-            CloseYumYumWindowAfterInterrupt();
-
-        return true;
+        return _yumYumWindow.TryRespond(
+            opponentPlayerIndex,
+            playYumYum,
+            _players,
+            DiscardPile,
+            PhaseOne,
+            onYumYumPlayedAllowRollsAgain: () => _hasStoppedRolling = false,
+            onWindowClosedReturnToRollPhase: () => State = GameState.RollPhase,
+            out error);
     }
 
-    // Nanners clears the bust state but stops the player from rolling again.
-    public bool TryRecoverFromBustWithNanners(out string? error)
-    {
-        error = null;
-        EnsureState(GameState.RollPhase);
-        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;
-        if (!PhaseOne.IsBusted) // todo: Nanners shouldn't even be a chooseable option for the player unless the player is already in a busted state
-        {
-            error = "Not busted.";
-            return false;
-        }
+    /// <summary>Nanners: clear bust and stop further rolling this phase.</summary>
+    public bool TryRecoverFromBustWithNanners(out string? error) =>
+        TryExecuteRollPhaseHandler(GameAction.PlayNanners, CurrentPlayerIndex, out error);
 
-        if (!CurrentPlayer.TryRemoveCard(CardName.Nanners, out var card))
-        {
-            error = "No Nanners card in hand.";
-            return false;
-        }
-
-        DiscardPile.Add(card);
-        PhaseOne.ClearBustIgnoringLastRoll();
-        _canRoll = false;
-        _hasStoppedRolling = true;
-        return true;
-    }
-
-    // Blammo forces a roll after clearing the bust state
-    public bool TryRecoverFromBustWithBlammo(out string? error)
-    {
-        error = null;
-        EnsureState(GameState.RollPhase);
-        if (!EnsureActivePhaseOneForCurrentPlayer(out error)) return false;
-
-        if (!CurrentPlayer.TryRemoveCard(CardName.Blammo, out var card))
-        {
-            error = "No Blammo card in hand.";
-            return false;
-        }
-
-        DiscardPile.Add(card);
-        PhaseOne.ClearBustIgnoringLastRoll();
-        PhaseOne.AddForcedRoll();
-        return true;
-    }
+    /// <summary>Blammo: clear bust and require one forced roll.</summary>
+    public bool TryRecoverFromBustWithBlammo(out string? error) =>
+        TryExecuteRollPhaseHandler(GameAction.PlayBlammo, CurrentPlayerIndex, out error);
 
     public bool TryAdvanceToResolveTokens(out string? error)
     {
@@ -390,115 +313,51 @@ public sealed class GameSession
     public bool TryPlayShinyOrFeesh(int playerIndex, CardName cardName, out string? error)
     {
         error = null;
-        EnsureState(GameState.RollPhase);
         if (cardName is not (CardName.Shiny or CardName.Feesh))
         {
             error = "Only Shiny or Feesh may be played with this action.";
             return false;
         }
 
-        if (!IsPhaseOneActive)
+        var action = cardName == CardName.Shiny ? GameAction.PlayShiny : GameAction.PlayFeesh;
+        return TryExecuteRollPhaseHandler(action, playerIndex, out error);
+    }
+
+    private RollPhaseOfferSnapshot CreateRollPhaseOfferSnapshot(bool isBustedBranch) => new(
+        IsBustedBranch: isBustedBranch,
+        CurrentPlayer: CurrentPlayer,
+        Players: _players,
+        CurrentPlayerIndex: CurrentPlayerIndex,
+        DiscardPileCount: DiscardPile.Count,
+        HasFeeshSelector: OnFeeshCardSelection is not null,
+        HasShinyVictimSelector: ChooseShinyStealVictim is not null);
+
+    private RollPhasePlayContext CreateRollPhasePlayContext() => new()
+    {
+        Players = _players,
+        CurrentPlayerIndex = CurrentPlayerIndex,
+        PhaseOne = PhaseOne,
+        DiscardPile = DiscardPile,
+        Steal = _steal,
+        CurrentState = State,
+        IsPhaseOneActive = IsPhaseOneActive,
+        OnFeeshCardSelection = OnFeeshCardSelection,
+        ChooseShinyStealVictim = ChooseShinyStealVictim,
+        OnFeeshPlayed = OnFeeshPlayed,
+        ApplyState = s => State = s,
+        ApplyCanRoll = v => _canRoll = v,
+        ApplyHasStoppedRolling = v => _hasStoppedRolling = v
+    };
+
+    private bool TryExecuteRollPhaseHandler(GameAction action, int playerIndex, out string? error)
+    {
+        if (!_rollPhaseHandlers.TryGetHandler(action, out var handler) || handler is null)
         {
-            error = "Shiny/Feesh may only be played during RollPhase of the active player's turn.";
+            error = "Unknown roll-phase action.";
             return false;
         }
 
-        if (playerIndex != CurrentPlayerIndex)
-        {
-            error = "Only the active player may play Shiny or Feesh.";
-            return false;
-        }
-
-        Card? pickedFromDiscard = null;
-        if (cardName == CardName.Feesh)
-        {
-            if (DiscardPile.Count == 0)
-            {
-                error = "No cards in discard pile to retrieve with Feesh.";
-                return false;
-            }
-
-            if (OnFeeshCardSelection is null)
-            {
-                error = "No Feesh card selector configured.";
-                return false;
-            }
-
-            pickedFromDiscard = OnFeeshCardSelection(CurrentPlayerIndex, DiscardPile);
-            if (pickedFromDiscard is null)
-            {
-                error = "Feesh selection was not provided.";
-                return false;
-            }
-
-            if (!DiscardPile.Any(c => c.Id == pickedFromDiscard.Id))
-            {
-                error = "Selected card is not in the discard pile.";
-                return false;
-            }
-        }
-        else
-        {
-            if (!StealAttempt.AnyOpponentHasStashCards(_players, CurrentPlayerIndex))
-            {
-                error = "No opponent has a card in their stash to steal.";
-                return false;
-            }
-
-            if (ChooseShinyStealVictim is null)
-            {
-                error = "No Shiny victim selector configured.";
-                return false;
-            }
-
-            var candidates = StealAttempt.GetOpponentIndicesWithNonEmptyStash(_players, CurrentPlayerIndex).ToList();
-            var victimIndex = ChooseShinyStealVictim(CurrentPlayerIndex, candidates);
-            if (!candidates.Contains(victimIndex))
-            {
-                error = "Shiny victim selection is invalid.";
-                return false;
-            }
-
-            if (_players[victimIndex].StashPile.Count == 0)
-            {
-                error = "Selected victim has no cards in stash.";
-                return false;
-            }
-
-            if (!CurrentPlayer.TryRemoveCard(CardName.Shiny, out var shinyCard))
-            {
-                error = "No Shiny in hand.";
-                return false;
-            }
-
-            DiscardPile.Add(shinyCard);
-            _steal.BeginStashStealFromShiny(CurrentPlayerIndex, victimIndex);
-            State = GameState.AwaitingStealResponse;
-            return true;
-        }
-
-        if (!_players[playerIndex].TryRemoveCard(cardName, out var playedCard))
-        {
-            error = $"No {cardName} in hand.";
-            return false;
-        }
-
-        DiscardPile.Add(playedCard);
-
-        var discardIndex = DiscardPile.FindIndex(c => c.Id == pickedFromDiscard!.Id);
-        if (discardIndex < 0)
-        {
-            error = "Could not find selected card in discard pile.";
-            DiscardPile.RemoveAt(DiscardPile.Count - 1);
-            CurrentPlayer.AddCards(new[] { playedCard });
-            return false;
-        }
-
-        var cardFromDiscard = DiscardPile[discardIndex];
-        DiscardPile.RemoveAt(discardIndex);
-        CurrentPlayer.AddCards(new[] { cardFromDiscard });
-        OnFeeshPlayed?.Invoke(playerIndex);
-        return true;
+        return handler.TryExecute(CreateRollPhasePlayContext(), playerIndex, out error);
     }
 
     public GameView GetViewForPlayer(int playerIndex)
@@ -532,37 +391,12 @@ public sealed class GameSession
         BeginTurn();
     }
 
-    private bool EnsureActivePhaseOneForCurrentPlayer(out string? error)
-    {
-        if (!IsPhaseOneActive)
-        {
-            error = "RollPhase is not active.";
-            return false;
-        }
-
-        error = null;
-        return true;
-    }
-
-    public int? GetCurrentYumYumResponderIndex()
-    {
-        if (!AwaitingYumYumWindow) return null;
-        if (_yumYumResponderPos >= _yumYumResponders.Count) return null;
-        return _yumYumResponders[_yumYumResponderPos];
-    }
-
-    private void CloseYumYumWindowAfterInterrupt()
-    {
-        AwaitingYumYumWindow = false;
-        _yumYumResponders.Clear();
-        _yumYumResponderPos = 0;
-        State = GameState.RollPhase;
-    }
+    public int? GetCurrentYumYumResponderIndex() => _yumYumWindow.GetCurrentResponderPlayerIndex();
 
     private void GoToPhaseTwo(int playerIndex, IReadOnlyList<TokenAction> tokens)
     {
         IsPhaseOneActive = false;
-        AwaitingYumYumWindow = false;
+        _yumYumWindow.Reset();
         ClearStealChain();
         _hasStoppedRolling = true;
         State = GameState.TokenPhase;
