@@ -1,6 +1,6 @@
 namespace TrashAnimal;
 
-public class Deck
+public class Deck : IDrawPile
 {
     private List<Card> Cards { get; }
 
@@ -91,11 +91,18 @@ public class Deck
         return Cards.Count;
     }
 
-    public IEnumerable<Card> DealCards(int n = 1)
+    /// <inheritdoc />
+    public IEnumerable<Card> DealCards(int count = 1)
     {
+        if (count <= 0)
+            return Array.Empty<Card>();
+
+        var n = Math.Min(count, Cards.Count);
+        if (n == 0)
+            return Array.Empty<Card>();
+
         var dealt = Cards.GetRange(0, n);
         Cards.RemoveRange(0, n);
-
         return dealt;
     }
 

@@ -1,4 +1,4 @@
-using TrashAnimal;
+﻿using TrashAnimal;
 
 var die = new Die();
 
@@ -35,12 +35,7 @@ for (var i = 0; i < players.Count; i++)
     Console.WriteLine($"- {players[i].Name}: {dealCounts[i]} cards");
 }
 
-var session = new GameSession(players, new PhaseTwoNoop());
-
-session.OnShinyPlayed = static playerIndex =>
-{
-    Console.WriteLine($"[effect hook] Player {playerIndex + 1} played Shiny (effects stubbed).");
-};
+var session = new GameSession(players, new PhaseTwoNoop(), deck);
 
 session.OnFeeshPlayed = static playerIndex =>
 {
@@ -51,6 +46,12 @@ session.OnFeeshCardSelection = (playerIndex, discardCards) =>
 {
     var view = session.GetViewForPlayer(playerIndex);
     return controllers[playerIndex].ChooseFeeshCard(view, discardCards);
+};
+
+session.ChooseShinyStealVictim = (thiefIndex, candidates) =>
+{
+    var view = session.GetViewForPlayer(thiefIndex);
+    return controllers[thiefIndex].ChooseShinyStealVictim(view, candidates);
 };
 
 Console.WriteLine();
@@ -72,6 +73,35 @@ while (true)
 
         if (!session.ApplyAction(session.CurrentPlayerIndex, action, die, out var err) && err is not null)
             Console.WriteLine(err);
+
+        continue;
+    }
+
+    if (session.State == GameState.AwaitingStealCardPick)
+    {
+        var thiefIndex = session.StealThiefIndex
+            ?? throw new InvalidOperationException("AwaitingStealCardPick but no thief.");
+        var thiefController = controllers[thiefIndex];
+        var thiefView = session.GetViewForPlayer(thiefIndex);
+        var slots = thiefView.StealPhase?.ThiefPickSlots
+            ?? throw new InvalidOperationException("Steal pick slots missing from view.");
+        var cardId = thiefController.ChooseStealCard(thiefView, slots);
+        if (!session.TryCompleteStealWithCard(thiefIndex, cardId, out var stealErr) && stealErr is not null)
+            Console.WriteLine(stealErr);
+
+        continue;
+    }
+
+    if (session.State == GameState.AwaitingStealResponse)
+    {
+        var victimIndex = session.StealVictimIndex
+            ?? throw new InvalidOperationException("AwaitingStealResponse but no victim.");
+        var victimController = controllers[victimIndex];
+        var victimView = session.GetViewForPlayer(victimIndex);
+        var allowed = session.GetAllowedActionsForPlayer(victimIndex);
+        var stealAction = victimController.ChooseAction(victimView, allowed);
+        if (!session.ApplyAction(victimIndex, stealAction, die, out var stealRespondErr) && stealRespondErr is not null)
+            Console.WriteLine(stealRespondErr);
 
         continue;
     }
