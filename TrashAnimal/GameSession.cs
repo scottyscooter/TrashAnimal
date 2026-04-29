@@ -42,9 +42,6 @@ public sealed class GameSession
     /// <summary>After a voluntary stop, before TokenPhase: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
     public bool AwaitingYumYumWindow => _yumYumWindow.IsAwaiting;
 
-    /// <summary>Optional hook when Feesh is played.</summary>
-    public Action<int>? OnFeeshPlayed { get; set; }
-
     /// <summary>Selects a specific card from discard when Feesh is played.</summary>
     public Func<int, IReadOnlyList<Card>, Card?>? OnFeeshCardSelection { get; set; }
 
@@ -342,8 +339,7 @@ public sealed class GameSession
         CurrentState = State,
         IsPhaseOneActive = IsPhaseOneActive,
         OnFeeshCardSelection = OnFeeshCardSelection,
-        ChooseShinyStealVictim = ChooseShinyStealVictim,
-        OnFeeshPlayed = OnFeeshPlayed,
+        ChooseShinyStealVictim = ChooseShinyStealVictim,        
         ApplyState = s => State = s,
         ApplyCanRoll = v => _canRoll = v,
         ApplyHasStoppedRolling = v => _hasStoppedRolling = v

@@ -65,8 +65,7 @@ public sealed class FeeshPlayHandler : IGameplayHandler
 
         var cardFromDiscard = context.DiscardPile[discardIndex];
         context.DiscardPile.RemoveAt(discardIndex);
-        context.CurrentPlayer.AddCards(new[] { cardFromDiscard });
-        context.OnFeeshPlayed?.Invoke(playerIndex);
+        context.CurrentPlayer.AddCards(new[] { cardFromDiscard });        
         return true;
     }
 }

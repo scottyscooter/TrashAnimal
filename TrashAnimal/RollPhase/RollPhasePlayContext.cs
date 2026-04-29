@@ -11,8 +11,7 @@ public sealed class RollPhasePlayContext
     public required PhaseOneState PhaseOne { get; init; }
     public required IList<Card> DiscardPile { get; init; }
     public required StealAttempt Steal { get; init; }
-    public required GameState CurrentState { get; init; }
-    public Action<int>? OnFeeshPlayed { get; init; }
+    public required GameState CurrentState { get; init; }    
     public Func<int, IReadOnlyList<Card>, Card?>? OnFeeshCardSelection { get; init; }
     public Func<int, IReadOnlyList<int>, int>? ChooseShinyStealVictim { get; init; }
     public required Action<GameState> ApplyState { get; init; }

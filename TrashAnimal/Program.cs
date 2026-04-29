@@ -37,11 +37,6 @@ for (var i = 0; i < players.Count; i++)
 
 var session = new GameSession(players, new PhaseTwoNoop(), deck);
 
-session.OnFeeshPlayed = static playerIndex =>
-{
-    Console.WriteLine($"[effect hook] Player {playerIndex + 1} played Feesh (effects stubbed).");
-};
-
 session.OnFeeshCardSelection = (playerIndex, discardCards) =>
 {
     var view = session.GetViewForPlayer(playerIndex);
