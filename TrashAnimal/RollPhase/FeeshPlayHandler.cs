@@ -5,7 +5,7 @@ public sealed class FeeshPlayHandler : IGameplayHandler
     public GameAction Action => GameAction.PlayFeesh;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
-        snapshot.CurrentPlayer.Hand.Any(c => c.Name == CardName.Feesh)
+        snapshot.CurrentPlayer.Hand.Any(e => e.Card.Name == CardName.Feesh)
         && snapshot is { DiscardPileCount: > 0, HasFeeshSelector: true };
 
     public bool TryExecute(RollPhasePlayContext context, int playerIndex, out string? error)
@@ -59,13 +59,13 @@ public sealed class FeeshPlayHandler : IGameplayHandler
         {
             error = "Could not find selected card in discard pile.";
             context.DiscardPile.RemoveAt(context.DiscardPile.Count - 1);
-            context.CurrentPlayer.AddCards(new[] { playedCard });
+            context.CurrentPlayer.AddCards(new[] { playedCard }, markReceivedOnOwnerCurrentTurn: true);
             return false;
         }
 
         var cardFromDiscard = context.DiscardPile[discardIndex];
         context.DiscardPile.RemoveAt(discardIndex);
-        context.CurrentPlayer.AddCards(new[] { cardFromDiscard });        
+        context.CurrentPlayer.AddCards(new[] { cardFromDiscard }, markReceivedOnOwnerCurrentTurn: true);
         return true;
     }
 }

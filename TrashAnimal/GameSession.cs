@@ -55,6 +55,7 @@ public sealed class GameSession
     public void BeginTurn()
     {
         ClearStealChain();
+        CurrentPlayer.Hand.ClearNewlyAddedFlags();
         IsPhaseOneActive = true;
         _yumYumWindow.Reset();
         PhaseOne.Reset();
@@ -120,7 +121,7 @@ public sealed class GameSession
             var responder = GetCurrentYumYumResponderIndex();
             if (responder == playerIndex)
             {
-                var hasYum = _players[playerIndex].Hand.Any(c => c.Name == CardName.Yumyum);
+                var hasYum = _players[playerIndex].Hand.Any(e => e.Card.Name == CardName.Yumyum);
                 return hasYum
                     ? new[] { GameAction.YumYumPlay, GameAction.YumYumPass }
                     : new[] { GameAction.YumYumPass };
@@ -245,7 +246,7 @@ public sealed class GameSession
     public bool TryStealPlayDoggo(int victimIndex, out string? error)
     {
         EnsureState(GameState.AwaitingStealResponse);
-        if (!_steal.TryPlayDoggo(victimIndex, _players, DiscardPile, _drawPile, out var aftermath, out error))
+        if (!_steal.TryPlayDoggo(victimIndex, _players, DiscardPile, _drawPile, CurrentPlayerIndex, out var aftermath, out error))
             return false;
 
         if (aftermath == StealAttemptAftermath.Completed)
@@ -263,7 +264,7 @@ public sealed class GameSession
     public bool TryCompleteStealWithCard(int thiefIndex, Guid cardId, out string? error)
     {
         EnsureState(GameState.AwaitingStealCardPick);
-        if (!_steal.TryCompletePick(thiefIndex, cardId, _players, out error))
+        if (!_steal.TryCompletePick(thiefIndex, cardId, _players, CurrentPlayerIndex, out error))
             return false;
 
         State = GameState.RollPhase;
@@ -361,7 +362,7 @@ public sealed class GameSession
         var responderIndex = GetCurrentYumYumResponderIndex();
         var responderName = responderIndex is null ? null : _players[responderIndex.Value].Name;
 
-        var hand = _players[playerIndex].Hand.Select(c => c.Name).ToList();
+        var hand = _players[playerIndex].Hand.Select(e => e.Card.Name).ToList();
 
         var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
 

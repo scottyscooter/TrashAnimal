@@ -57,7 +57,7 @@ public sealed class GameSessionShinyStealTests
 
         Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err3), err3);
         Assert.Equal(GameState.RollPhase, session.State);
-        Assert.Contains(stashed, p0.Hand);
+        Assert.Contains(stashed, p0.Hand.Select(e => e.Card));
         Assert.DoesNotContain(p1.StashPile, e => e.Card.Id == stashed.Id);
     }
 
@@ -76,7 +76,7 @@ public sealed class GameSessionShinyStealTests
         Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err), err);
         Assert.Equal(GameState.RollPhase, session.State);
         Assert.Equal(before - 2, deck.GetDeckCount());
-        Assert.Equal(2, p1.Hand.Count(c => c.Name is not CardName.Doggo));
+        Assert.Equal(2, p1.Hand.Count(e => e.Card.Name is not CardName.Doggo));
     }
 
     [Fact]
@@ -106,6 +106,6 @@ public sealed class GameSessionShinyStealTests
 
         Assert.True(session.ApplyAction(0, GameAction.StealPass, die, out _));
         Assert.True(session.TryCompleteStealWithCard(1, p0.StashPile[0].Card.Id, out _), "Bob steals Alice's stash card");
-        Assert.Contains(victimCard, p1.Hand);
+        Assert.Contains(victimCard, p1.Hand.Select(e => e.Card));
     }
 }

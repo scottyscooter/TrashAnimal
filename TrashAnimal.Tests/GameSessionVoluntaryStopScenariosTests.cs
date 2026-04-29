@@ -104,8 +104,8 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.DoesNotContain(GameAction.PlayShiny, mid);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1), err1);
-        Assert.Contains(shinyInHand, p0.Hand);
-        Assert.Contains(nannersOnDiscard, p0.Hand);
+        Assert.Contains(shinyInHand, p0.Hand.Select(e => e.Card));
+        Assert.Contains(nannersOnDiscard, p0.Hand.Select(e => e.Card));
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2), err2);
         Assert.Equal(GameState.TurnEnd, session.State);
@@ -130,8 +130,8 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         PassEntireYumYumWindow(session, die);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1), err1);
-        Assert.Contains(shinyOnDiscard, p0.Hand);
-        Assert.DoesNotContain(p0.Hand, c => c.Name == CardName.Feesh);
+        Assert.Contains(shinyOnDiscard, p0.Hand.Select(e => e.Card));
+        Assert.DoesNotContain(p0.Hand, e => e.Card.Name == CardName.Feesh);
 
         var afterFeesh = session.GetAllowedActionsForPlayer(0);
         Assert.Contains(GameAction.PlayShiny, afterFeesh);
@@ -185,7 +185,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1), err1);
         Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2), err2);
         Assert.True(session.TryCompleteStealWithCard(0, stashedPie.Id, out var err3), err3);
-        Assert.Contains(stashedPie, p0.Hand);
+        Assert.Contains(stashedPie, p0.Hand.Select(e => e.Card));
         Assert.Empty(p1.StashPile);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4), err4);
@@ -222,8 +222,8 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2), err2);
         Assert.True(session.TryCompleteStealWithCard(0, mmmPieInStash.Id, out var err3), err3);
 
-        Assert.Contains(feeshInHand, p0.Hand);
-        Assert.Contains(mmmPieInStash, p0.Hand);
+        Assert.Contains(feeshInHand, p0.Hand.Select(e => e.Card));
+        Assert.Contains(mmmPieInStash, p0.Hand.Select(e => e.Card));
 
         var afterSteal = session.GetAllowedActionsForPlayer(0);
         Assert.Contains(GameAction.PlayFeesh, afterSteal);

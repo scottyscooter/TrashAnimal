@@ -12,53 +12,21 @@ public sealed class Player
 
     public int Index { get; }
     public string Name { get; }
-    public List<Card> Hand { get; } = new();
-    public List<StashEntry> StashPile { get; } = new();
+    public Hand Hand { get; } = new();
+    public StashPile StashPile { get; } = new();
 
-    public void AddToStash(Card card, bool faceUp) =>
-        StashPile.Add(new StashEntry(card, faceUp));
+    public void AddToStash(Card card, bool faceUp) => StashPile.Add(card, faceUp);
 
-    public bool TryRemoveFromStashByCardId(Guid cardId, [NotNullWhen(true)] out Card? card)
-    {
-        var i = StashPile.FindIndex(e => e.Card.Id == cardId);
-        if (i < 0)
-        {
-            card = null;
-            return false;
-        }
+    public bool TryRemoveFromStashByCardId(Guid cardId, [NotNullWhen(true)] out Card? card) =>
+        StashPile.TryRemoveByCardId(cardId, out card);
 
-        card = StashPile[i].Card;
-        StashPile.RemoveAt(i);
-        return true;
-    }
+    public bool TryRemoveFromHandByCardId(Guid cardId, [NotNullWhen(true)] out Card? card) =>
+        Hand.TryRemoveCard(cardId, out card);
 
-    public bool TryRemoveFromHandByCardId(Guid cardId, [NotNullWhen(true)] out Card? card)
-    {
-        var i = Hand.FindIndex(c => c.Id == cardId);
-        if (i < 0)
-        {
-            card = null;
-            return false;
-        }
+    public bool TryRemoveCard(CardName name, [NotNullWhen(true)] out Card? card) =>
+        Hand.TryRemoveCard(name, out card);
 
-        card = Hand[i];
-        Hand.RemoveAt(i);
-        return true;
-    }
-
-    public bool TryRemoveCard(CardName name, [NotNullWhen(true)] out Card? card)
-    {
-        var i = Hand.FindIndex(c => c.Name == name);
-        if (i < 0)
-        {
-            card = null;
-            return false;
-        }
-
-        card = Hand[i];
-        Hand.RemoveAt(i);
-        return true;
-    }
-
-    public void AddCards(IEnumerable<Card> cards) => Hand.AddRange(cards);
+    /// <param name="markReceivedOnOwnerCurrentTurn">True when this player is the current turn holder and the draw should count as received on this turn.</param>
+    public void AddCards(IEnumerable<Card> cards, bool markReceivedOnOwnerCurrentTurn = false) =>
+        Hand.AddRange(cards, markReceivedOnOwnerCurrentTurn);
 }

@@ -5,7 +5,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
     public GameAction Action => GameAction.PlayShiny;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
-        snapshot.CurrentPlayer.Hand.Any(c => c.Name == CardName.Shiny)
+        snapshot.CurrentPlayer.Hand.Any(e => e.Card.Name == CardName.Shiny)
         && StealAttempt.AnyOpponentHasStashCards((IReadOnlyList<Player>)snapshot.Players, snapshot.CurrentPlayerIndex)
         && snapshot.HasShinyVictimSelector;
 

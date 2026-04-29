@@ -41,7 +41,7 @@ internal static class Cli
 
     public static void PrintHand(Player player)
     {
-        Console.WriteLine($"Hand ({player.Hand.Count}): {string.Join(", ", player.Hand.Select(c => c.Name))}");
+        Console.WriteLine($"Hand ({player.Hand.Count}): {string.Join(", ", player.Hand.Select(e => e.Card.Name))}");
     }
 
     public static void PrintTokens(IReadOnlyList<TokenAction> tokens)

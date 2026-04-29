@@ -59,9 +59,9 @@ public sealed class StealAttempt
     public IReadOnlyList<GameAction> GetAllowedResponseActions(Player victim)
     {
         var actions = new List<GameAction> { GameAction.StealPass };
-        if (victim.Hand.Any(c => c.Name == CardName.Doggo))
+        if (victim.Hand.Any(e => e.Card.Name == CardName.Doggo))
             actions.Add(GameAction.StealPlayDoggo);
-        if (victim.Hand.Any(c => c.Name == CardName.Kitteh))
+        if (victim.Hand.Any(e => e.Card.Name == CardName.Kitteh))
             actions.Add(GameAction.StealPlayKitteh);
         return actions;
     }
@@ -106,6 +106,7 @@ public sealed class StealAttempt
         IList<Player> players,
         IList<Card> discardPile,
         IDrawPile drawPile,
+        int currentTurnPlayerIndex,
         out StealAttemptAftermath aftermath,
         out string? error)
     {
@@ -127,7 +128,7 @@ public sealed class StealAttempt
         discardPile.Add(doggo);
 
         var drawn = drawPile.DealCards(2);
-        victim.AddCards(drawn);
+        victim.AddCards(drawn, victim.Index == currentTurnPlayerIndex);
         
         Clear();
         aftermath = StealAttemptAftermath.Completed;
@@ -157,7 +158,7 @@ public sealed class StealAttempt
         return true;
     }
 
-    public bool TryCompletePick(int thiefIndex, Guid cardId, IList<Player> players, out string? error)
+    public bool TryCompletePick(int thiefIndex, Guid cardId, IList<Player> players, int currentTurnPlayerIndex, out string? error)
     {
         error = null;
         if (thiefIndex != _thiefIndex)
@@ -192,7 +193,7 @@ public sealed class StealAttempt
             stolen = fromHand;
         }
 
-        thief.AddCards([stolen]);
+        thief.AddCards([stolen], thief.Index == currentTurnPlayerIndex);
         Clear();
         return true;
     }

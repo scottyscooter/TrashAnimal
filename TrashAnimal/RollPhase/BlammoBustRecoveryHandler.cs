@@ -5,7 +5,7 @@ public sealed class BlammoBustRecoveryHandler : IGameplayHandler
     public GameAction Action => GameAction.PlayBlammo;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
-        snapshot.IsBustedBranch && snapshot.CurrentPlayer.Hand.Any(c => c.Name == CardName.Blammo);
+        snapshot.IsBustedBranch && snapshot.CurrentPlayer.Hand.Any(e => e.Card.Name == CardName.Blammo);
 
     public bool TryExecute(RollPhasePlayContext context, int playerIndex, out string? error)
     {

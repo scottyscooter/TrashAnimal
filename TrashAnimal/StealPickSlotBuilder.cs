@@ -14,7 +14,7 @@ public static class StealPickSlotBuilder
         }
 
         return victim.Hand
-            .Select(c => new StealPickSlot(c.Id, StealPickSlot.UnrevealedLabel))
+            .Select(e => new StealPickSlot(e.Card.Id, StealPickSlot.UnrevealedLabel))
             .ToList();
     }
 }

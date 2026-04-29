@@ -5,7 +5,7 @@ public sealed class NannersBustRecoveryHandler : IGameplayHandler
     public GameAction Action => GameAction.PlayNanners;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
-        snapshot.IsBustedBranch && snapshot.CurrentPlayer.Hand.Any(c => c.Name == CardName.Nanners);
+        snapshot.IsBustedBranch && snapshot.CurrentPlayer.Hand.Any(e => e.Card.Name == CardName.Nanners);
 
     public bool TryExecute(RollPhasePlayContext context, int playerIndex, out string? error)
     {
