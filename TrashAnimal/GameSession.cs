@@ -189,7 +189,7 @@ public sealed partial class GameSession
                 return TryExecuteRollPhaseHandler(action, playerIndex, out error);
 
             case GameAction.AbandonBust:
-                return TryAdvanceToResolveTokens(out error);
+                return TryBustAndEndTurn(out error);
 
             case GameAction.YumYumPlay:
                 return TryYumYumRespond(playerIndex, playYumYum: true, out error);
@@ -246,10 +246,31 @@ public sealed partial class GameSession
         EnsureState(GameState.RollPhase);
 
         if (PhaseOne.IsBusted)
-            GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
-        else
-            GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
+        {
+            error = "Cannot advance to resolve tokens while busted; play a recovery card or choose AbandonBust.";
+            return false;
+        }
 
+        GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
+        return true;
+    }
+
+    public bool TryBustAndEndTurn(out string? error)
+    {
+        error = null;
+        EnsureState(GameState.RollPhase);
+
+        if (!PhaseOne.IsBusted)
+        {
+            error = "AbandonBust is only allowed after a bust.";
+            return false;
+        }
+
+        var drawn = _drawPile.DealCards(1).ToList();
+        CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
+
+        GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
+        EndTurn();
         return true;
     }
 

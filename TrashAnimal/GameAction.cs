@@ -12,7 +12,8 @@ public enum GameAction
     // Bust recovery
     PlayNanners,            // ignore busting roll -> TokenPhase
     PlayBlammo,             // ignore busting roll -> keep rolling -> TokenPhase
-    AbandonBust,            // no recovery -> TokenPhase with zero tokens
+    /// <summary>Bust only: draw one from the deck, skip token phase, end turn immediately (next player in RollPhase).</summary>
+    AbandonBust,
 
     // Yum Yum response (opponents)
     YumYumPlay,

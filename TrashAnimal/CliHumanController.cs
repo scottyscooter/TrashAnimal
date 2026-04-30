@@ -11,6 +11,11 @@ public sealed class CliHumanController : IPlayerController
 
     public GameAction ChooseAction(GameView view, IReadOnlyList<GameAction> allowedActions)
     {
+        string Label(GameAction action) =>
+            action == GameAction.AbandonBust
+                ? "Busted: Draw one card and end turn."
+                : action.ToString();
+
         while (true)
         {
             Console.WriteLine();
@@ -23,7 +28,7 @@ public sealed class CliHumanController : IPlayerController
             Console.WriteLine();
 
             for (var i = 0; i < allowedActions.Count; i++)
-                Console.WriteLine($"{i + 1}. {allowedActions[i]}");
+                Console.WriteLine($"{i + 1}. {Label(allowedActions[i])}");
 
             var choice = Cli.ReadIntInRange("Choose action: ", 1, allowedActions.Count);
             return allowedActions[choice - 1];
