@@ -10,6 +10,6 @@ public sealed record GameView(
     IReadOnlyList<CardName> HandCardNames,
     int? YumYumResponderIndex,
     string? YumYumResponderName,
-    StealPhaseView? StealPhase
-);
+    StealPhaseView? StealPhase,
+    TokenPhaseView? TokenPhase);
 

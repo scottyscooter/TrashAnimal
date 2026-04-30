@@ -1,7 +1,10 @@
 ---
+description: 
 alwaysApply: true
 ---
 
 Code should follow the SOLID principles: Single responsibility, Open–closed, Liskov substitution, Interface segregation, and Dependency inversion
 Reduce tight coupling between components
 Code should be written with unit testing in mind
+No partial classes
+Avoid static methods as much as possible

@@ -25,7 +25,7 @@ public sealed class GameSessionBustNannersFeeshTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var deck = new Deck();
-        var session = new GameSession(new[] { p0, p1 }, new PhaseTwoNoop(), deck);
+        var session = new GameSession(new[] { p0, p1 }, deck);
         session.ChooseShinyStealVictim = (_, candidates) => candidates[0];
         session.OnFeeshCardSelection = onFeeshCardSelection;
         return (p0, p1, deck, session);
@@ -66,7 +66,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterNanners);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2), err2);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
         Assert.Single(session.LastPhaseTwoTokens);
         Assert.Equal(TokenAction.Bandit, session.LastPhaseTwoTokens[0]);
     }
@@ -95,7 +95,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.DoesNotContain(session.DiscardPile, c => c.Id == mmmPie.Id);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.DoesNotContain(GameAction.PlayShiny, session.GetAllowedActionsForPlayer(0));
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, beforeAdvance);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
 
         var names = session.DiscardPile.Select(c => c.Name).ToArray();
         Assert.Contains(CardName.Shiny, names);
@@ -193,7 +193,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.Empty(p1.StashPile);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
 
         Assert.Equal(2, session.DiscardPile.Count(c => c.Name == CardName.Feesh));
         Assert.DoesNotContain(session.DiscardPile, c => c.Name == CardName.Shiny);

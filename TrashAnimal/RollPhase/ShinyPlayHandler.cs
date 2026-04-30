@@ -50,6 +50,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
 
         context.DiscardPile.Add(shinyCard);
         context.Steal.BeginStashStealFromShiny(context.CurrentPlayerIndex, victimIndex);
+        context.OnStashStealBegun?.Invoke();
         context.ApplyState(GameState.AwaitingStealResponse);
         return true;
     }

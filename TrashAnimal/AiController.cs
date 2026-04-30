@@ -50,5 +50,41 @@ public sealed class AiController : IPlayerController
         ArgumentOutOfRangeException.ThrowIfZero(slots.Count);
         return slots[_rng.Next(slots.Count)].CardId;
     }
+
+    public void ChooseBanditResponse(GameView view, out bool stash, out Guid? cardId)
+    {
+        stash = false;
+        cardId = null;
+        var tp = view.TokenPhase;
+        if (tp?.StashableHandCardsForCurrentPrompt is not { Count: > 0 } stashable)
+            return;
+
+        if (_rng.NextDouble() < 0.4)
+            return;
+
+        stash = true;
+        cardId = stashable[_rng.Next(stashable.Count)].CardId;
+    }
+
+    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    {
+        var count = stashable.Count == 0 ? 0 : _rng.Next(3);
+        if (count == 0)
+            return Array.Empty<Guid>();
+
+        return stashable.OrderBy(_ => _rng.Next()).Take(count).Select(s => s.Id).ToList();
+    }
+
+    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(stashable.Count);
+        return stashable[_rng.Next(stashable.Count)].Id;
+    }
+
+    public TokenAction ChooseRecycleReplacement(GameView view, IReadOnlyList<TokenAction> options)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(options.Count);
+        return options[_rng.Next(options.Count)];
+    }
 }
 

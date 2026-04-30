@@ -1,28 +1,30 @@
 using TrashAnimal.RollPhase;
+using TrashAnimal.TokenPhase;
 
 namespace TrashAnimal;
 
-public sealed class GameSession
+public sealed partial class GameSession
 {
-    private readonly IPhaseTwo _phaseTwo;
     private readonly IDrawPile _drawPile;
     private readonly RollPhaseGameplayHandlerRegistry _rollPhaseHandlers =
         new(RollPhaseGameplayHandlers.CreateDefault());
     private readonly List<Player> _players;
     private readonly YumYumWindow _yumYumWindow = new();
+    private readonly TokenPhaseCoordinator _tokenPhaseCoordinator;
     private bool _canRoll;
     private bool _hasStoppedRolling;
 
     private readonly StealAttempt _steal = new();
+    private GameState _stealResumeState = GameState.RollPhase;
 
-    public GameSession(IReadOnlyList<Player> players, IPhaseTwo phaseTwo, IDrawPile drawPile)
+    public GameSession(IReadOnlyList<Player> players, IDrawPile drawPile)
     {
         if (players.Count is < 2 or > 4)
             throw new ArgumentException("Player count must be between 2 and 4.", nameof(players));
 
-        _phaseTwo = phaseTwo ?? throw new ArgumentNullException(nameof(phaseTwo));
         _drawPile = drawPile ?? throw new ArgumentNullException(nameof(drawPile));
         _players = new List<Player>(players);
+        _tokenPhaseCoordinator = new TokenPhaseCoordinator(this);
         CurrentPlayerIndex = 0;
         BeginTurn();
     }
@@ -32,28 +34,45 @@ public sealed class GameSession
     public Player CurrentPlayer => _players[CurrentPlayerIndex];
     public PhaseOneState PhaseOne { get; } = new();
     public List<Card> DiscardPile { get; } = new();
+    public IDrawPile DrawPile => _drawPile;
 
     public GameState State { get; private set; } = GameState.RollPhase;
     public IReadOnlyList<TokenAction> LastPhaseTwoTokens { get; private set; } = Array.Empty<TokenAction>();
 
-    /// <summary>True while the active player may take RollPhase actions (including after a bust until resolved or abandoned).</summary>
     public bool IsPhaseOneActive { get; private set; }
 
-    /// <summary>After a voluntary stop, before TokenPhase: opponents respond in clockwise order; at most one Yum Yum per stop.</summary>
     public bool AwaitingYumYumWindow => _yumYumWindow.IsAwaiting;
 
-    /// <summary>Selects a specific card from discard when Feesh is played.</summary>
     public Func<int, IReadOnlyList<Card>, Card?>? OnFeeshCardSelection { get; set; }
 
-    /// <summary>Selects victim index when Shiny is played; candidates are opponents with at least one stashed card.</summary>
     public Func<int, IReadOnlyList<int>, int>? ChooseShinyStealVictim { get; set; }
+
+    /// <summary>Selects victim index for the Steal token; candidates are opponents with at least one card in hand.</summary>
+    public Func<int, IReadOnlyList<int>, int>? ChooseTokenHandStealVictim { get; set; }
 
     public int? StealThiefIndex => _steal.ThiefIndex;
     public int? StealVictimIndex => _steal.VictimIndex;
     public StealTargetZone? InitialStealTargetZone => _steal.InitialStealTargetZone;
 
+    internal GameState StealResumeState => _stealResumeState;
+
+    internal void ArmStealResumeState(GameState state) => _stealResumeState = state;
+
+    internal void ResetStealResumeStateToRollPhase() => _stealResumeState = GameState.RollPhase;
+
+    internal void SetGameState(GameState state) => State = state;
+
+    internal StealAttempt Steal => _steal;
+
+    internal void CompleteTokenPhaseAndEndTurn()
+    {
+        _tokenPhaseCoordinator.Clear();
+        State = GameState.TurnEnd;
+    }
+
     public void BeginTurn()
     {
+        ResetStealResumeStateToRollPhase();
         ClearStealChain();
         CurrentPlayer.Hand.ClearNewlyAddedFlags();
         IsPhaseOneActive = true;
@@ -62,45 +81,8 @@ public sealed class GameSession
         _canRoll = true;
         _hasStoppedRolling = false;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
+        _tokenPhaseCoordinator.Clear();
         State = GameState.RollPhase;
-    }
-
-    private RollResult RollDie(Die die)
-    {
-        EnsureState(GameState.RollPhase);
-        if (_yumYumWindow.IsAwaiting)
-            throw new InvalidOperationException("Resolve the Yum Yum window before rolling.");
-
-        return PhaseOne.TryRollForToken(die);
-    }
-
-    private bool TryRequestVoluntaryStop(out string? error)
-    {
-        error = null;
-        EnsureState(GameState.RollPhase);
-        if (!IsPhaseOneActive)
-        {
-            error = "RollPhase is not active.";
-            return false;
-        }
-
-        if (_yumYumWindow.IsAwaiting)
-        {
-            error = "Already awaiting Yum Yum responses.";
-            return false;
-        }
-
-        if (!PhaseOne.CanVoluntarilyStop())
-        {
-            error = "Cannot stop while busted or forced rolls remain.";
-            return false;
-        }
-
-        _hasStoppedRolling = true;
-
-        _yumYumWindow.Open(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
-        State = GameState.AwaitingYumYum;
-        return true;
     }
 
     public IReadOnlyList<GameAction> GetAllowedActionsForPlayer(int playerIndex)
@@ -129,6 +111,9 @@ public sealed class GameSession
 
             return Array.Empty<GameAction>();
         }
+
+        if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
+            return _tokenPhaseCoordinator.GetAllowedActions(playerIndex);
 
         if (playerIndex != CurrentPlayerIndex)
             return Array.Empty<GameAction>();
@@ -225,74 +210,35 @@ public sealed class GameSession
                 EndTurn();
                 return true;
 
+            case GameAction.TokenBanditMatchPass:
+                return TryBanditPass(playerIndex, out error);
+
             default:
+                if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
+                    return _tokenPhaseCoordinator.TryApplyGameAction(playerIndex, action, out error);
+
                 error = "Unknown action.";
                 return false;
         }
     }
 
-    public bool TryStealPass(int victimIndex, out string? error)
-    {
-        EnsureState(GameState.AwaitingStealResponse);
-        if (!_steal.TryRefuseToBlockSteal(victimIndex, out var aftermath, out error))
-            return false;
+    public bool TryBanditPass(int opponentIndex, out string? error) =>
+        _tokenPhaseCoordinator.TryBanditPass(opponentIndex, out error);
 
-        if (aftermath == StealAttemptAftermath.AwaitingCardPick)
-            State = GameState.AwaitingStealCardPick;
+    public bool TryBanditStashMatchingCard(int opponentIndex, Guid cardId, out string? error) =>
+        _tokenPhaseCoordinator.TryBanditStashMatchingCard(opponentIndex, cardId, out error);
 
-        return true;
-    }
+    public bool TryTokenPhaseStashTrashPickCard(int playerIndex, Guid cardId, out string? error) =>
+        _tokenPhaseCoordinator.TryStashTrashPickCard(playerIndex, cardId, out error);
 
-    public bool TryStealPlayDoggo(int victimIndex, out string? error)
-    {
-        EnsureState(GameState.AwaitingStealResponse);
-        if (!_steal.TryPlayDoggo(victimIndex, _players, DiscardPile, _drawPile, CurrentPlayerIndex, out var aftermath, out error))
-            return false;
+    public bool TryTokenPhaseDoubleStash(int playerIndex, IReadOnlyList<Guid> cardIds, out string? error) =>
+        _tokenPhaseCoordinator.TryDoubleStashSubmit(playerIndex, cardIds, out error);
 
-        if (aftermath == StealAttemptAftermath.Completed)
-            State = GameState.RollPhase;
+    public bool TryTokenPhaseRecyclePick(int playerIndex, TokenAction replacement, out string? error) =>
+        _tokenPhaseCoordinator.TryRecycleReplacementPick(playerIndex, replacement, out error);
 
-        return true;
-    }
-
-    public bool TryStealPlayKitteh(int victimIndex, out string? error)
-    {
-        EnsureState(GameState.AwaitingStealResponse);
-        return _steal.TryPlayKitteh(victimIndex, _players, DiscardPile, out error);
-    }
-
-    public bool TryCompleteStealWithCard(int thiefIndex, Guid cardId, out string? error)
-    {
-        EnsureState(GameState.AwaitingStealCardPick);
-        if (!_steal.TryCompletePick(thiefIndex, cardId, _players, CurrentPlayerIndex, out error))
-            return false;
-
-        State = GameState.RollPhase;
-        return true;
-    }
-
-    /// <summary>Opponent at the current response slot passes or plays Yum Yum (at most one play per stop).</summary>
-    public bool TryYumYumRespond(int opponentPlayerIndex, bool playYumYum, out string? error)
-    {
-        EnsureState(GameState.AwaitingYumYum);
-        return _yumYumWindow.TryRespond(
-            opponentPlayerIndex,
-            playYumYum,
-            _players,
-            DiscardPile,
-            PhaseOne,
-            onYumYumPlayedAllowRollsAgain: () => _hasStoppedRolling = false,
-            onWindowClosedReturnToRollPhase: () => State = GameState.RollPhase,
-            out error);
-    }
-
-    /// <summary>Nanners: clear bust and stop further rolling this phase.</summary>
-    public bool TryRecoverFromBustWithNanners(out string? error) =>
-        TryExecuteRollPhaseHandler(GameAction.PlayNanners, CurrentPlayerIndex, out error);
-
-    /// <summary>Blammo: clear bust and require one forced roll.</summary>
-    public bool TryRecoverFromBustWithBlammo(out string? error) =>
-        TryExecuteRollPhaseHandler(GameAction.PlayBlammo, CurrentPlayerIndex, out error);
+    public IReadOnlyList<TokenAction> GetTokenPhaseRecycleOptions() =>
+        _tokenPhaseCoordinator.GetRecycleReplacementOptions();
 
     public bool TryAdvanceToResolveTokens(out string? error)
     {
@@ -300,7 +246,6 @@ public sealed class GameSession
         EnsureState(GameState.RollPhase);
 
         if (PhaseOne.IsBusted)
-            // Bust with no Nanners/Blammo recovery — TokenPhase receives no tokens
             GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
         else
             GoToPhaseTwo(CurrentPlayerIndex, PhaseOne.Tokens);
@@ -321,42 +266,6 @@ public sealed class GameSession
         return TryExecuteRollPhaseHandler(action, playerIndex, out error);
     }
 
-    private RollPhaseOfferSnapshot CreateRollPhaseOfferSnapshot(bool isBustedBranch) => new(
-        IsBustedBranch: isBustedBranch,
-        CurrentPlayer: CurrentPlayer,
-        Players: _players,
-        CurrentPlayerIndex: CurrentPlayerIndex,
-        DiscardPileCount: DiscardPile.Count,
-        HasFeeshSelector: OnFeeshCardSelection is not null,
-        HasShinyVictimSelector: ChooseShinyStealVictim is not null);
-
-    private RollPhasePlayContext CreateRollPhasePlayContext() => new()
-    {
-        Players = _players,
-        CurrentPlayerIndex = CurrentPlayerIndex,
-        PhaseOne = PhaseOne,
-        DiscardPile = DiscardPile,
-        Steal = _steal,
-        CurrentState = State,
-        IsPhaseOneActive = IsPhaseOneActive,
-        OnFeeshCardSelection = OnFeeshCardSelection,
-        ChooseShinyStealVictim = ChooseShinyStealVictim,        
-        ApplyState = s => State = s,
-        ApplyCanRoll = v => _canRoll = v,
-        ApplyHasStoppedRolling = v => _hasStoppedRolling = v
-    };
-
-    private bool TryExecuteRollPhaseHandler(GameAction action, int playerIndex, out string? error)
-    {
-        if (!_rollPhaseHandlers.TryGetHandler(action, out var handler) || handler is null)
-        {
-            error = "Unknown roll-phase action.";
-            return false;
-        }
-
-        return handler.TryExecute(CreateRollPhasePlayContext(), playerIndex, out error);
-    }
-
     public GameView GetViewForPlayer(int playerIndex)
     {
         var responderIndex = GetCurrentYumYumResponderIndex();
@@ -365,6 +274,10 @@ public sealed class GameSession
         var hand = _players[playerIndex].Hand.Select(e => e.Card.Name).ToList();
 
         var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
+
+        var tokenPhase = _tokenPhaseCoordinator.IsActive
+            ? _tokenPhaseCoordinator.BuildView(playerIndex)
+            : null;
 
         return new GameView(
             State,
@@ -376,7 +289,8 @@ public sealed class GameSession
             hand,
             responderIndex,
             responderName,
-            stealPhase);
+            stealPhase,
+            tokenPhase);
     }
 
     public void EndTurn()
@@ -390,22 +304,35 @@ public sealed class GameSession
 
     public int? GetCurrentYumYumResponderIndex() => _yumYumWindow.GetCurrentResponderPlayerIndex();
 
-    private void GoToPhaseTwo(int playerIndex, IReadOnlyList<TokenAction> tokens)
+    public IEnumerable<int> EnumerateOpponentIndicesClockwise()
     {
-        IsPhaseOneActive = false;
-        _yumYumWindow.Reset();
-        ClearStealChain();
-        _hasStoppedRolling = true;
-        State = GameState.TokenPhase;
-        _phaseTwo.ResolvePhaseTwo(playerIndex, tokens);
-        LastPhaseTwoTokens = tokens.ToList();
-        State = GameState.TurnEnd;
+        for (var step = 1; step < _players.Count; step++)
+            yield return (CurrentPlayerIndex + step) % _players.Count;
     }
 
     public static IEnumerable<int> GetOpponentIndicesClockwise(int currentPlayerIndex, int playerCount)
     {
         for (var step = 1; step < playerCount; step++)
             yield return (currentPlayerIndex + step) % playerCount;
+    }
+
+    private void GoToPhaseTwo(int playerIndex, IReadOnlyList<TokenAction> tokens)
+    {
+        IsPhaseOneActive = false;
+        _yumYumWindow.Reset();
+        ClearStealChain();
+        _hasStoppedRolling = true;
+        LastPhaseTwoTokens = tokens.ToList();
+
+        if (tokens.Count == 0)
+        {
+            _tokenPhaseCoordinator.Clear();
+            State = GameState.TurnEnd;
+            return;
+        }
+
+        _tokenPhaseCoordinator.Begin(tokens);
+        State = GameState.TokenPhase;
     }
 
     private void ClearStealChain()

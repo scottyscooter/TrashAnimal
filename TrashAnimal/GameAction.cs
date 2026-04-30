@@ -23,6 +23,23 @@ public enum GameAction
     StealPlayDoggo,
     StealPlayKitteh,
 
+    // TokenPhase (active player unless noted)
+    PlayMmmPieTokenPhase,
+    PlayShinyTokenPhase,
+    PlayFeeshTokenPhase,
+    ResolveTokenStashTrash,
+    ResolveTokenDoubleStash,
+    ResolveTokenDoubleTrash,
+    ResolveTokenBandit,
+    ResolveTokenSteal,
+    ResolveTokenRecycle,
+    TokenStashTrashDrawOne,
+    TokenStashTrashStashMode,
+    TokenDoubleStashSubmit,
+
+    // Bandit response (current opponent only); stash uses TryBanditStashMatchingCard.
+    TokenBanditMatchPass,
+
     // Turn lifecycle
     EndTurn
 }

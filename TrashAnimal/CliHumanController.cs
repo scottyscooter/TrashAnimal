@@ -78,5 +78,94 @@ public sealed class CliHumanController : IPlayerController
         var choice = Cli.ReadIntInRange("Choice: ", 1, slots.Count);
         return slots[choice - 1].CardId;
     }
+
+    public void ChooseBanditResponse(GameView view, out bool stash, out Guid? cardId)
+    {
+        stash = false;
+        cardId = null;
+        var tp = view.TokenPhase ?? throw new InvalidOperationException("TokenPhase view missing.");
+        var stashable = tp.StashableHandCardsForCurrentPrompt;
+        if (stashable.Count == 0)
+        {
+            Console.WriteLine($"{DisplayName}: no matching card to stash — pass.");
+            return;
+        }
+
+        var pass = !Cli.ReadYesNo($"{DisplayName}: stash a matching {tp.BanditRevealedCardName}? (y/n) ");
+        if (pass)
+            return;
+
+        Console.WriteLine("Pick a card to stash:");
+        for (var i = 0; i < stashable.Count; i++)
+            Console.WriteLine($"{i + 1}. {stashable[i].Name}");
+
+        var choice = Cli.ReadIntInRange("Choice: ", 1, stashable.Count);
+        stash = true;
+        cardId = stashable[choice - 1].CardId;
+    }
+
+    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    {
+        if (stashable.Count == 0)
+        {
+            Console.WriteLine($"{DisplayName}: no stashable cards — submitting 0.");
+            return Array.Empty<Guid>();
+        }
+
+        Console.WriteLine($"{DisplayName}: DoubleStash — pick 0–2 stashable cards (enter blank line to finish).");
+        var chosen = new List<Guid>();
+        for (var n = 0; n < 2; n++)
+        {
+            Console.WriteLine("Stashable:");
+            for (var i = 0; i < stashable.Count; i++)
+            {
+                var already = chosen.Contains(stashable[i].Id) ? " (already picked)" : "";
+                Console.WriteLine($"{i + 1}. {stashable[i].Name}{already}");
+            }
+
+            Console.Write($"Card {n + 1} (or Enter to stop): ");
+            var line = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(line))
+                break;
+
+            if (!int.TryParse(line.Trim(), out var idx) || idx < 1 || idx > stashable.Count)
+            {
+                Console.WriteLine("Invalid — stopping picks.");
+                break;
+            }
+
+            var id = stashable[idx - 1].Id;
+            if (!chosen.Contains(id))
+                chosen.Add(id);
+        }
+
+        return chosen;
+    }
+
+    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    {
+        if (stashable.Count == 0)
+            throw new InvalidOperationException("No stashable cards.");
+
+        Console.WriteLine($"{DisplayName}: choose a card to stash face down:");
+        for (var i = 0; i < stashable.Count; i++)
+            Console.WriteLine($"{i + 1}. {stashable[i].Name}");
+
+        var choice = Cli.ReadIntInRange("Choice: ", 1, stashable.Count);
+        return stashable[choice - 1].Id;
+    }
+
+    public TokenAction ChooseRecycleReplacement(GameView view, IReadOnlyList<TokenAction> options)
+    {
+        if (options.Count == 0)
+            throw new InvalidOperationException("No recycle options.");
+
+        Console.WriteLine($"{DisplayName}: choose replacement token:");
+        for (var i = 0; i < options.Count; i++)
+            Console.WriteLine($"{i + 1}. {options[i]}");
+
+        var choice = Cli.ReadIntInRange("Choice: ", 1, options.Count);
+        return options[choice - 1];
+    }
 }
 

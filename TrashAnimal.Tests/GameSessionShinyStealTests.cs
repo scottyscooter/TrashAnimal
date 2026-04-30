@@ -10,7 +10,7 @@ public sealed class GameSessionShinyStealTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var deck = new Deck();
-        var session = new GameSession(new[] { p0, p1 }, new PhaseTwoNoop(), deck);
+        var session = new GameSession(new[] { p0, p1 }, deck);
         session.ChooseShinyStealVictim = (_, candidates) => candidates[0];
         session.OnFeeshCardSelection = (_, __) => null;
         return (p0, p1, deck, session);

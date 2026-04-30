@@ -18,5 +18,8 @@ public sealed class RollPhasePlayContext
     public required Action<bool> ApplyCanRoll { get; init; }
     public required Action<bool> ApplyHasStoppedRolling { get; init; }
 
+    /// <summary>Invoked after a stash steal begins from Shiny so the session can record which state to return to when the steal completes.</summary>
+    public Action? OnStashStealBegun { get; init; }
+
     public Player CurrentPlayer => Players[CurrentPlayerIndex];
 }

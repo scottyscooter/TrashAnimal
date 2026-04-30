@@ -26,7 +26,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var deck = new Deck();
-        var session = new GameSession(new[] { p0, p1 }, new PhaseTwoNoop(), deck);
+        var session = new GameSession(new[] { p0, p1 }, deck);
         session.OnFeeshCardSelection = onFeeshCardSelection;
         session.ChooseShinyStealVictim = chooseShinyVictim;
         return (p0, p1, session);
@@ -77,7 +77,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterWindow);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err), err);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(nannersOnDiscard, p0.Hand.Select(e => e.Card));
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2), err2);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, actions);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err), err);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Empty(p1.StashPile);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4), err4);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 
     [Fact]
@@ -230,6 +230,6 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterSteal);
 
         Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4), err4);
-        Assert.Equal(GameState.TurnEnd, session.State);
+        Assert.Equal(GameState.TokenPhase, session.State);
     }
 }
