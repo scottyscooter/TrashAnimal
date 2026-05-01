@@ -89,12 +89,11 @@ public sealed class CliHumanController : IPlayerController
         stash = false;
         cardId = null;
         var tp = view.TokenPhase ?? throw new InvalidOperationException("TokenPhase view missing.");
-        var stashable = tp.StashableHandCardsForCurrentPrompt;
-        if (stashable.Count == 0)
-        {
-            Console.WriteLine($"{DisplayName}: no matching card to stash — pass.");
-            return;
-        }
+        var stashable = tp.StashableHandCardsForCurrentPrompt;        
+        
+        // Do not disclose to other players that there are no matching cards to stash
+        if (stashable.Count == 0) 
+            return;        
 
         var pass = !Cli.ReadYesNo($"{DisplayName}: stash a matching {tp.BanditRevealedCardName}? (y/n) ");
         if (pass)
@@ -124,6 +123,8 @@ public sealed class CliHumanController : IPlayerController
             Console.WriteLine("Stashable:");
             for (var i = 0; i < stashable.Count; i++)
             {
+                // Todo Exclude already picked cards from being picked again
+                // Todo display already picked card(s) to the user
                 var already = chosen.Contains(stashable[i].Id) ? " (already picked)" : "";
                 Console.WriteLine($"{i + 1}. {stashable[i].Name}{already}");
             }
