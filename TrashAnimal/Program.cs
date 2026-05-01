@@ -65,6 +65,22 @@ Console.WriteLine("Game start. Press Ctrl+C to quit.");
 
 while (true)
 {
+    if (session.State == GameState.GameEnded)
+    {
+        Console.WriteLine();
+        foreach (var line in session.GetGameEndScoreSummary())
+            Console.WriteLine($"{line.PlayerName}: {line.TotalScore}");
+
+        while (true)
+        {
+            Console.WriteLine();
+            Console.Write("Type gg to exit: ");
+            var input = Console.ReadLine();
+            if (input is not null && input.Trim().Equals("gg", StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+    }
+
     if (session.State == GameState.TurnEnd)
     {
         Console.WriteLine();

@@ -89,6 +89,7 @@ internal sealed class TokenPhaseBanditHandler
 
         var drawn = _session.DrawPile.DealCards(1).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
+        _session.RegisterDrawOutcome(drawn);
 
         AdvanceBanditWindow(state);
         return true;
@@ -107,6 +108,7 @@ internal sealed class TokenPhaseBanditHandler
         var card = drawn[0];
         state.BanditRevealedName = card.Name;
         _session.CurrentPlayer.AddCards(new[] { card }, markReceivedOnOwnerCurrentTurn: true);
+        _session.RegisterDrawOutcome(drawn);
 
         var order = new List<int>();
         foreach (var idx in _session.EnumerateOpponentIndicesClockwise())

@@ -86,10 +86,8 @@ public class Deck : IDrawPile
         return Cards;
     }
 
-    public int GetDeckCount()
-    {
-        return Cards.Count;
-    }
+    /// <inheritdoc />
+    public int GetDeckCount() => Cards.Count;
 
     /// <inheritdoc />
     public IEnumerable<Card> DealCards(int count = 1)

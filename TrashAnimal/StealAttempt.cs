@@ -107,11 +107,13 @@ public sealed class StealAttempt
         IList<Card> discardPile,
         IDrawPile drawPile,
         int currentTurnPlayerIndex,
+        out IReadOnlyList<Card> cardsDrawnFromDrawPile,
         out StealAttemptAftermath aftermath,
         out string? error)
     {
         error = null;
         aftermath = StealAttemptAftermath.None;
+        cardsDrawnFromDrawPile = Array.Empty<Card>();
         if (victimIndex != _victimIndex)
         {
             error = "Only the steal victim may play Doggo.";
@@ -127,9 +129,10 @@ public sealed class StealAttempt
 
         discardPile.Add(doggo);
 
-        var drawn = drawPile.DealCards(2);
+        var drawn = drawPile.DealCards(2).ToList();
+        cardsDrawnFromDrawPile = drawn;
         victim.AddCards(drawn, victim.Index == currentTurnPlayerIndex);
-        
+
         Clear();
         aftermath = StealAttemptAftermath.Completed;
         return true;

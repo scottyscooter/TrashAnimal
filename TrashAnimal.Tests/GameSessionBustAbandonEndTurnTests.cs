@@ -18,6 +18,8 @@ public sealed class GameSessionBustAbandonEndTurnTests
 
     private sealed class EmptyDrawPile : IDrawPile
     {
+        public int GetDeckCount() => 0;
+
         public IEnumerable<Card> DealCards(int count) => Array.Empty<Card>();
     }
 

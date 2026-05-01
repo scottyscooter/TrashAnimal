@@ -99,6 +99,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
 
         var drawn = _session.DrawPile.DealCards(1).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
+        _session.RegisterDrawOutcome(drawn);
         return FinishCurrentTokenPassOrRepeat(state, out error);
     }
 
@@ -236,6 +237,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
     {
         var drawn = _session.DrawPile.DealCards(2).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
+        _session.RegisterDrawOutcome(drawn);
     }
 
     private bool StartHandSteal(out string? error)

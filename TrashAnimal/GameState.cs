@@ -7,6 +7,7 @@ public enum GameState
     AwaitingStealResponse,
     AwaitingStealCardPick,
     TokenPhase,
-    TurnEnd
+    TurnEnd,
+    GameEnded
 }
 

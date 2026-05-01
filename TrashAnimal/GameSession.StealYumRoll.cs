@@ -57,8 +57,18 @@ public sealed partial class GameSession
     {
         EnsureState(GameState.AwaitingStealResponse);
         var wasStealToken = _tokenPhaseCoordinator.IsActive && _tokenPhaseCoordinator.ActiveTokenIsSteal;
-        if (!_steal.TryPlayDoggo(victimIndex, _players, DiscardPile, _drawPile, CurrentPlayerIndex, out var aftermath, out error))
+        if (!_steal.TryPlayDoggo(
+                victimIndex,
+                _players,
+                DiscardPile,
+                _drawPile,
+                CurrentPlayerIndex,
+                out var drawnFromPile,
+                out var aftermath,
+                out error))
             return false;
+
+        RegisterDrawOutcome(drawnFromPile);
 
         if (aftermath == StealAttemptAftermath.Completed)
         {

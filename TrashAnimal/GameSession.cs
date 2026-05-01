@@ -87,6 +87,9 @@ public sealed partial class GameSession
 
     public IReadOnlyList<GameAction> GetAllowedActionsForPlayer(int playerIndex)
     {
+        if (State == GameState.GameEnded)
+            return Array.Empty<GameAction>();
+
         if (State == GameState.AwaitingStealResponse)
         {
             if (playerIndex != _steal.VictimIndex)
@@ -162,6 +165,12 @@ public sealed partial class GameSession
     public bool ApplyAction(int playerIndex, GameAction action, Die die, out string? error)
     {
         error = null;
+
+        if (State == GameState.GameEnded)
+        {
+            error = "The game has ended.";
+            return false;
+        }
 
         var allowed = GetAllowedActionsForPlayer(playerIndex);
         if (!allowed.Contains(action))
@@ -268,6 +277,7 @@ public sealed partial class GameSession
 
         var drawn = _drawPile.DealCards(1).ToList();
         CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
+        RegisterDrawOutcome(drawn);
 
         GoToPhaseTwo(CurrentPlayerIndex, Array.Empty<TokenAction>());
         EndTurn();
@@ -318,6 +328,12 @@ public sealed partial class GameSession
     {
         if (State != GameState.TurnEnd)
             throw new InvalidOperationException("Turn cannot end until TokenPhase has completed.");
+
+        if (_endGamePendingAfterCurrentTurn)
+        {
+            FinalizeGameEnd();
+            return;
+        }
 
         CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
         BeginTurn();
