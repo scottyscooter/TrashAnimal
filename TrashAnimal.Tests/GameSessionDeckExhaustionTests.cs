@@ -120,10 +120,11 @@ public sealed class GameSessionDeckExhaustionTests
     }
 
     [Fact]
-    public void GetGameEndScoreSummary_returns_stub_lines_after_GameEnded()
+    public void GetGameEndScoreSummary_returns_scored_lines_after_GameEnded()
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
+        p0.AddToStash(new Card(CardName.Blammo), faceUp: true);
         var pile = new CountingDrawPile(1);
         var session = new GameSession(new[] { p0, p1 }, pile);
         var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
@@ -133,8 +134,10 @@ public sealed class GameSessionDeckExhaustionTests
 
         var summary = session.GetGameEndScoreSummary();
         Assert.Equal(2, summary.Count);
-        Assert.All(summary, line => Assert.Equal(0, line.TotalScore));
-        Assert.Contains(summary, line => line.PlayerName == "Alice");
-        Assert.Contains(summary, line => line.PlayerName == "Bob");
+        Assert.Contains(summary, line => line.PlayerName == "Alice" && line.TotalScore == 1);
+        Assert.Contains(summary, line => line.PlayerName == "Bob" && line.TotalScore == 0);
+
+        var result = session.GetGameEndResult();
+        Assert.Equal(0, result.WinningPlayerIndex);
     }
 }

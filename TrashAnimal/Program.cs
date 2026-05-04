@@ -68,8 +68,11 @@ while (true)
     if (session.State == GameState.GameEnded)
     {
         Console.WriteLine();
-        foreach (var line in session.GetGameEndScoreSummary())
+        var gameEndResult = session.GetGameEndResult();
+        foreach (var line in gameEndResult.ScoreLines)
             Console.WriteLine($"{line.PlayerName}: {line.TotalScore}");
+        var winningLine = gameEndResult.ScoreLines.Single(line => line.PlayerIndex == gameEndResult.WinningPlayerIndex);
+        Console.WriteLine($"Winner: {winningLine.PlayerName}");
 
         while (true)
         {
