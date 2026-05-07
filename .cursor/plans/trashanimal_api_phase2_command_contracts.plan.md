@@ -4,13 +4,13 @@ overview: Define all API request/response DTOs in TrashAnimal.Api and establish 
 todos:
   - id: define-dtos
     content: Define request/response DTOs for create game, get view, submit action, and choice payloads
-    status: pending
+    status: completed
   - id: map-enums
     content: Map API-layer enums to engine enums (GameAction, GameState, TokenAction, CardName)
-    status: pending
+    status: completed
   - id: verify-string-enums
     content: Verify all API enums serialize as strings end-to-end
-    status: pending
+    status: completed
 isProject: false
 ---
 
