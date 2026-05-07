@@ -4,13 +4,13 @@ overview: Add IGameSessionRepository and per-session concurrency guardrails in T
 todos:
   - id: session-repository
     content: Define IGameSessionRepository and implement an in-memory version
-    status: pending
+    status: completed
   - id: concurrency-guard
     content: Add per-session lock or queue in GameApplicationService to prevent concurrent mutation
-    status: pending
+    status: completed
   - id: game-id-routing
     content: Introduce gameId and playerSeat as first-class route/context values on all endpoints
-    status: pending
+    status: completed
 isProject: false
 ---
 
