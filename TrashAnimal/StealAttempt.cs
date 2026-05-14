@@ -32,30 +32,6 @@ public sealed class StealAttempt
         _initialZone = null;
     }
 
-    public static bool AnyOpponentHasStashCards(IReadOnlyList<Player> players, int currentPlayerIndex)
-    {
-        for (var i = 0; i < players.Count; i++)
-        {
-            if (i == currentPlayerIndex)
-                continue;
-            if (players[i].StashPile.Count > 0)
-                return true;
-        }
-
-        return false;
-    }
-
-    public static IEnumerable<int> GetOpponentIndicesWithNonEmptyStash(IReadOnlyList<Player> players, int thiefIndex)
-    {
-        for (var i = 0; i < players.Count; i++)
-        {
-            if (i == thiefIndex)
-                continue;
-            if (players[i].StashPile.Count > 0)
-                yield return i;
-        }
-    }
-
     public IReadOnlyList<GameAction> GetAllowedResponseActions(Player victim)
     {
         var actions = new List<GameAction> { GameAction.StealPass };

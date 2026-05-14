@@ -220,6 +220,39 @@ public sealed class GameApplicationService
             return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
         }
 
+        if (request.Action == GameAction.PlayFeesh)
+        {
+            if (!request.CardId.HasValue)
+                return GameCommandResult.Failure("PlayFeesh requires CardId to specify which card to retrieve from discard pile.");
+
+            _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Feesh to retrieve card {CardId}.", gameId, playerSeat, request.CardId.Value);
+
+            var succeeded = entry.Session.TryPlayFeeshWithCardChoice(playerSeat, request.CardId.Value, out var error);
+            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        }
+
+        if (request.Action == GameAction.PlayShiny)
+        {
+            if (!request.VictimSeat.HasValue)
+                return GameCommandResult.Failure("PlayShiny requires VictimSeat to specify which opponent to steal from.");
+
+            _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Shiny to steal from player {VictimSeat}.", gameId, playerSeat, request.VictimSeat.Value);
+
+            var succeeded = entry.Session.TryPlayShinyWithVictimChoice(playerSeat, request.VictimSeat.Value, out var error);
+            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        }
+
+        if (request.Action == GameAction.ResolveTokenSteal)
+        {
+            if (!request.VictimSeat.HasValue)
+                return GameCommandResult.Failure("ResolveTokenSteal requires VictimSeat to specify which opponent to steal from.");
+
+            _logger.LogInformation("Game {GameId}: player {PlayerSeat} resolving token steal against player {VictimSeat}.", gameId, playerSeat, request.VictimSeat.Value);
+
+            var succeeded = entry.Session.TryStartTokenStealWithVictimChoice(playerSeat, request.VictimSeat.Value, out var error);
+            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        }
+
         if (request.CardId.HasValue)
             return await ExecuteCardPickUnlockedAsync(entry, gameId, playerSeat, request.CardId.Value);
 

@@ -1,3 +1,5 @@
+using TrashAnimal.Helpers;
+
 namespace TrashAnimal.TokenPhase;
 
 // todo refactor this. There is overlap between card functionality from roll phase being used here
@@ -55,8 +57,9 @@ internal sealed class TokenPhaseInterruptCardPlay
             error = "Shiny cannot be played right now.";
             return false;
         }
-
-        if (!StealAttempt.AnyOpponentHasStashCards(_session.Players, _session.CurrentPlayerIndex))
+        
+        var candidates = Opponents.GetAllWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).ToList();
+        if (candidates.Count == 0)
         {
             error = "No opponent has a card in their stash to steal.";
             return false;
@@ -68,7 +71,6 @@ internal sealed class TokenPhaseInterruptCardPlay
             return false;
         }
 
-        var candidates = StealAttempt.GetOpponentIndicesWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).ToList();
         var victimIndex = _session.ChooseShinyStealVictim(_session.CurrentPlayerIndex, candidates);
         if (!candidates.Contains(victimIndex))
         {
@@ -168,7 +170,7 @@ internal sealed class TokenPhaseInterruptCardPlay
         var entry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Shiny);
         return entry is not null
                && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
-               && StealAttempt.AnyOpponentHasStashCards(_session.Players, _session.CurrentPlayerIndex)
+               && Opponents.GetAllWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).Any()
                && _session.ChooseShinyStealVictim is not null;
     }
 

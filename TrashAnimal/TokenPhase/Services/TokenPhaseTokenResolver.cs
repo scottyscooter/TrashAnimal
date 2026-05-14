@@ -1,3 +1,5 @@
+using TrashAnimal.Helpers;
+
 namespace TrashAnimal.TokenPhase;
 
 internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
@@ -249,7 +251,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
             return false;
         }
 
-        var candidates = OpponentIndicesWithNonEmptyHand(_session.Players, _session.CurrentPlayerIndex).ToList();
+        var candidates = Opponents.GetAllWithNonEmptyHand(_session.Players, _session.CurrentPlayerIndex).ToList();
         if (candidates.Count == 0)
         {
             error = "No opponent has a card in hand to steal.";
@@ -273,18 +275,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         _session.ArmStealResumeState(GameState.TokenPhase);
         _session.SetGameState(GameState.AwaitingStealResponse);
         return true;
-    }
-
-    private static IEnumerable<int> OpponentIndicesWithNonEmptyHand(IReadOnlyList<Player> players, int thiefIndex)
-    {
-        for (var i = 0; i < players.Count; i++)
-        {
-            if (i == thiefIndex)
-                continue;
-            if (players[i].Hand.Count > 0)
-                yield return i;
-        }
-    }
+    }    
 
     private bool FinishCurrentTokenPassOrRepeat(TokenPhaseState state, out string? error)
     {

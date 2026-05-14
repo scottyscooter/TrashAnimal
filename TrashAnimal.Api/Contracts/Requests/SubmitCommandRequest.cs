@@ -10,6 +10,8 @@ namespace TrashAnimal.Api.Contracts.Requests;
 /// <remarks>
 /// Payload field usage by action:
 /// <list type="bullet">
+///   <item>PlayFeesh — <see cref="CardId"/> (card to retrieve from discard pile)</item>
+///   <item>PlayShiny — <see cref="VictimSeat"/> (opponent to steal from)</item>
 ///   <item>Steal card pick (AwaitingStealCardPick) — <see cref="CardId"/></item>
 ///   <item>Bandit stash — <see cref="CardId"/></item>
 ///   <item>Stash-trash card pick — <see cref="CardId"/></item>

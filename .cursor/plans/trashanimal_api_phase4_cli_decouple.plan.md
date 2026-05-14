@@ -4,14 +4,16 @@ overview: Remove all CLI-coupled decision paths from GameSession so every intera
 todos:
   - id: audit-callbacks
     content: Audit and replace delegate-based choice hooks (OnFeeshCardSelection, ChooseShinyStealVictim, ChooseTokenHandStealVictim) with explicit command endpoints or inline payloads
-    status: pending
+    status: completed
   - id: remove-console-coupling
     content: Ensure no Console I/O leaks into TrashAnimal.Api execution paths
-    status: pending
+    status: completed
   - id: verify-all-branches-reachable
     content: Confirm every playable branch is triggerable via ApplyAction / Try* without CLI involvement
-    status: pending
+    status: completed
 isProject: false
+completed: true
+completedAt: 2026-05-07
 ---
 
 # Phase 4: Replace CLI Interaction Paths

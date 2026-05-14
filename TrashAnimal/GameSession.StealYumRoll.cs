@@ -10,8 +10,8 @@ public sealed partial class GameSession
         Players: _players,
         CurrentPlayerIndex: CurrentPlayerIndex,
         DiscardPileCount: DiscardPile.Count,
-        HasFeeshSelector: OnFeeshCardSelection is not null,
-        HasShinyVictimSelector: ChooseShinyStealVictim is not null);
+        HasFeeshSelector: true,
+        HasShinyVictimSelector: true);
 
     private RollPhasePlayContext CreateRollPhasePlayContext() => new()
     {
