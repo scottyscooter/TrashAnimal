@@ -4,13 +4,13 @@ overview: Wire the ASP.NET Core Secret Manager into TrashAnimal.Api so credentia
 todos:
   - id: init-user-secrets
     content: Run dotnet user-secrets init on TrashAnimal.Api to add UserSecretsId to the .csproj
-    status: pending
+    status: completed
   - id: document-secret-keys
     content: Add an Expected Secret Keys section to the plan listing all keys developers must set locally
-    status: pending
+    status: completed
   - id: developer-setup-docs
     content: Add a DEVELOPER_SETUP.md (or README section) explaining the dotnet user-secrets workflow for new contributors
-    status: pending
+    status: completed
 isProject: false
 ---
 
