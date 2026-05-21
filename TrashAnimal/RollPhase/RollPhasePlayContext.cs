@@ -21,5 +21,8 @@ public sealed class RollPhasePlayContext
     /// <summary>Invoked after a stash steal begins from Shiny so the session can record which state to return to when the steal completes.</summary>
     public Action? OnStashStealBegun { get; init; }
 
+    /// <summary>Invoked when a bust-recovery card (e.g. Nanners) is added to the discard pile, so the session can exclude it from the Feesh-eligible count.</summary>
+    public Action<Guid>? NotifyBustRecoveryCardDiscarded { get; init; }
+
     public Player CurrentPlayer => Players[CurrentPlayerIndex];
 }

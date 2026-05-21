@@ -33,6 +33,7 @@ public sealed class NannersBustRecoveryHandler : IGameplayHandler
         }
 
         context.DiscardPile.Add(card);
+        context.NotifyBustRecoveryCardDiscarded?.Invoke(card.Id);
         context.PhaseOne.ClearBustIgnoringLastRoll();
         context.ApplyCanRoll(false);
         context.ApplyHasStoppedRolling(true);

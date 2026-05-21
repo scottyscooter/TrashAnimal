@@ -20,6 +20,6 @@ public sealed class SignalRGameUpdatePublisher : IGameUpdatePublisher
     public Task PublishAsync(GameUpdateEnvelope envelope)
     {
         var groupName = GameHub.GroupNameFor(envelope.GameId);
-        return _hubContext.Clients.Group(groupName).SendAsync("GameUpdated", envelope);
+        return _hubContext.Clients.Group(groupName).SendAsync(GameHub.GameUpdatedEvent, envelope);
     }
 }

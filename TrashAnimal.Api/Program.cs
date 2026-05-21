@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Scalar.AspNetCore;
 using TrashAnimal.Api.Application;
 using TrashAnimal.Api.Hubs;
 using TrashAnimal.Api.Sessions;
@@ -31,7 +32,19 @@ builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
         options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// OpenAPI document generation — served only in Development to avoid exposing the spec in production.
+builder.Services.AddOpenApi();
+
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    // Serves the raw OpenAPI document at /openapi/v1.json
+    app.MapOpenApi();
+
+    // Serves the Scalar interactive API browser at /scalar/v1
+    app.MapScalarApiReference();
+}
 
 app.MapControllers();
 app.MapHub<GameHub>("/hubs/game");

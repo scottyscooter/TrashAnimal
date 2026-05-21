@@ -4,16 +4,16 @@ overview: Define the minimal API contract the web frontend consumes — endpoint
 todos:
   - id: endpoint-spec
     content: Document all HTTP endpoints with request/response shapes
-    status: pending
+    status: completed
   - id: signalr-events
     content: Document SignalR hub events and expected client behavior
-    status: pending
+    status: completed
   - id: hidden-info-boundary
     content: Confirm per-player GameView projections enforce hidden-information rules
-    status: pending
+    status: completed
   - id: openapi-setup
     content: Add Microsoft.AspNetCore.OpenApi package, wire AddOpenApi/MapOpenApi in Program.cs, and add Scalar UI for local browsing
-    status: pending
+    status: in_progress
 isProject: false
 ---
 

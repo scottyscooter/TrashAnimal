@@ -7,6 +7,7 @@ namespace TrashAnimal.Api.Controllers;
 
 [ApiController]
 [Route("games")]
+[Produces("application/json")]
 public sealed class GamesController : ControllerBase
 {
     private readonly GameApplicationService _gameApplicationService;
@@ -16,7 +17,27 @@ public sealed class GamesController : ControllerBase
         _gameApplicationService = gameApplicationService;
     }
 
-    /// <summary>Creates a new game session and returns the game ID with the initial view for seat 0.</summary>
+    /// <summary>Creates a new game session.</summary>
+    /// <remarks>
+    /// Request body:
+    /// <code>
+    /// {
+    ///   "playerNames": ["Alice", "Bob"],
+    ///   "dieSeed": 42          // optional; omit for a random die
+    /// }
+    /// </code>
+    ///
+    /// 201 response body:
+    /// <code>
+    /// {
+    ///   "gameId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    ///   "view": { ...GameView for seat 0... },
+    ///   "allowedActions": ["RollDie"]
+    /// }
+    /// </code>
+    ///
+    /// The <c>Location</c> header points to <c>GET /games/{gameId}/view?playerSeat=0</c>.
+    /// </remarks>
     [HttpPost]
     [ProducesResponseType(typeof(GameCreationResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -30,9 +51,38 @@ public sealed class GamesController : ControllerBase
         return CreatedAtAction(nameof(GetView), new { gameId = result.GameId, playerSeat = 0 }, response);
     }
 
-    /// <summary>
-    /// Returns the per-player view, the set of currently allowed actions, and the session revision.
-    /// </summary>
+    /// <summary>Returns the per-player game view for the specified seat.</summary>
+    /// <remarks>
+    /// Query parameters:
+    /// <list type="bullet">
+    ///   <item><c>playerSeat</c> (int, required) — zero-based seat index of the requesting player.</item>
+    /// </list>
+    ///
+    /// 200 response body:
+    /// <code>
+    /// {
+    ///   "view": {
+    ///     "state": "RollPhase",
+    ///     "currentPlayerIndex": 0,
+    ///     "currentPlayerName": "Alice",
+    ///     "isBusted": false,
+    ///     "forcedRollRemaining": false,
+    ///     "phaseOneTokens": ["StashTrash"],
+    ///     "handCardNames": ["Shiny", "Feesh"],
+    ///     "yumYumResponderIndex": null,
+    ///     "yumYumResponderName": null,
+    ///     "stealPhase": null,
+    ///     "tokenPhase": null
+    ///   },
+    ///   "allowedActions": ["RollDie", "StopRolling"],
+    ///   "revision": 3
+    /// }
+    /// </code>
+    ///
+    /// <c>handCardNames</c> contains only the requesting player's own cards.
+    /// Opponent hand contents are never included (see hidden-information constraint).
+    /// Poll this endpoint after receiving a <c>GameUpdated</c> SignalR notification.
+    /// </remarks>
     [HttpGet("{gameId:guid}/view")]
     [ProducesResponseType(typeof(PlayerViewResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -46,11 +96,40 @@ public sealed class GamesController : ControllerBase
         return Ok(new PlayerViewResponse(view, allowedActions, revision));
     }
 
-    /// <summary>
-    /// Submits a game command. Use <see cref="SubmitCommandRequest.Action"/> as the primary discriminator;
-    /// supply <see cref="SubmitCommandRequest.CardId"/>, <see cref="SubmitCommandRequest.CardIds"/>, or
-    /// <see cref="SubmitCommandRequest.RecycleReplacement"/> when the action requires a payload.
-    /// </summary>
+    /// <summary>Submits a game command for a player.</summary>
+    /// <remarks>
+    /// <c>action</c> is the primary discriminator. Supply additional payload fields only when
+    /// the action requires them:
+    ///
+    /// | Scenario | <c>action</c> value | Extra fields |
+    /// |---|---|---|
+    /// | Standard game action | any <c>GameAction</c> value | — |
+    /// | Steal card pick (AwaitingStealCardPick) | *(omit / any)* | <c>cardId</c> |
+    /// | Stash-trash card pick (TokenPhase) | *(omit / any)* | <c>cardId</c> |
+    /// | Bandit stash card (TokenPhase) | *(omit / any)* | <c>cardId</c> |
+    /// | Double stash submit (TokenPhase) | *(omit / any)* | <c>cardIds</c> |
+    /// | Recycle replacement pick (TokenPhase) | *(omit / any)* | <c>recycleReplacement</c> |
+    ///
+    /// 200 response body (success):
+    /// <code>
+    /// {
+    ///   "succeeded": true,
+    ///   "errorMessage": null,
+    ///   "view": { ...updated GameView for the acting player... },
+    ///   "allowedActions": ["EndTurn"]
+    /// }
+    /// </code>
+    ///
+    /// 422 response body (game rule rejection):
+    /// <code>
+    /// {
+    ///   "succeeded": false,
+    ///   "errorMessage": "Action is not allowed right now.",
+    ///   "view": null,
+    ///   "allowedActions": null
+    /// }
+    /// </code>
+    /// </remarks>
     [HttpPost("{gameId:guid}/commands")]
     [ProducesResponseType(typeof(GameCommandResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(GameCommandResponse), StatusCodes.Status422UnprocessableEntity)]
@@ -72,10 +151,22 @@ public sealed class GamesController : ControllerBase
         return Ok(GameCommandResponse.FromSuccess(result.View!, result.AllowedActions!));
     }
 
-    /// <summary>
-    /// Returns the final scoreboard. Only available after the game has reached
-    /// <see cref="GameState.GameEnded"/>.
-    /// </summary>
+    /// <summary>Returns the final scoreboard for a completed game.</summary>
+    /// <remarks>
+    /// Only available after the game has reached <c>GameState.GameEnded</c>.
+    /// Returns 404 both when the game does not exist and when it has not yet ended.
+    ///
+    /// 200 response body:
+    /// <code>
+    /// {
+    ///   "scoreLines": [
+    ///     { "playerIndex": 0, "playerName": "Alice", "totalScore": 12 },
+    ///     { "playerIndex": 1, "playerName": "Bob",   "totalScore":  9 }
+    ///   ],
+    ///   "winningPlayerIndex": 0
+    /// }
+    /// </code>
+    /// </remarks>
     [HttpGet("{gameId:guid}/result")]
     [ProducesResponseType(typeof(GameResultResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -16,6 +16,7 @@ public sealed partial class GameSession
 
     private readonly StealAttempt _steal = new();
     private GameState _stealResumeState = GameState.RollPhase;
+    private Guid? _bustRecoveryCardDiscardedId;
 
     public GameSession(IReadOnlyList<Player> players, IDrawPile drawPile)
     {
@@ -80,6 +81,7 @@ public sealed partial class GameSession
         PhaseOne.Reset();
         _canRoll = true;
         _hasStoppedRolling = false;
+        _bustRecoveryCardDiscardedId = null;
         LastPhaseTwoTokens = Array.Empty<TokenAction>();
         _tokenPhaseCoordinator.Clear();
         State = GameState.RollPhase;

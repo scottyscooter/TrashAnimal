@@ -9,9 +9,14 @@ public sealed partial class GameSession
         CurrentPlayer: CurrentPlayer,
         Players: _players,
         CurrentPlayerIndex: CurrentPlayerIndex,
-        DiscardPileCount: DiscardPile.Count,
+        DiscardPileCount: ComputeFeeshEligibleDiscardCount(),
         HasFeeshSelector: true,
         HasShinyVictimSelector: true);
+
+    private int ComputeFeeshEligibleDiscardCount() =>
+        _bustRecoveryCardDiscardedId.HasValue
+            ? DiscardPile.Count(c => c.Id != _bustRecoveryCardDiscardedId.Value)
+            : DiscardPile.Count;
 
     private RollPhasePlayContext CreateRollPhasePlayContext() => new()
     {
@@ -27,7 +32,8 @@ public sealed partial class GameSession
         ApplyState = s => State = s,
         ApplyCanRoll = v => _canRoll = v,
         ApplyHasStoppedRolling = v => _hasStoppedRolling = v,
-        OnStashStealBegun = () => ArmStealResumeState(GameState.RollPhase)
+        OnStashStealBegun = () => ArmStealResumeState(GameState.RollPhase),
+        NotifyBustRecoveryCardDiscarded = id => _bustRecoveryCardDiscardedId = id
     };
 
     private bool TryExecuteRollPhaseHandler(GameAction action, int playerIndex, out string? error)
