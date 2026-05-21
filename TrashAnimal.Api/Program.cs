@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using TrashAnimal.Api.Application;
+using TrashAnimal.Api.Hubs;
 using TrashAnimal.Api.Sessions;
 using TrashAnimal.Api.Startup;
 using TrashAnimal.Api.Updates;
@@ -14,7 +15,7 @@ builder.Services.RegisterValidators();
 
 // Services
 builder.Services.AddSingleton<IGameSessionRepository, InMemoryGameSessionRepository>();
-builder.Services.AddScoped<IGameUpdatePublisher, StubGameUpdatePublisher>();
+builder.Services.AddScoped<IGameUpdatePublisher, SignalRGameUpdatePublisher>();
 builder.Services.AddScoped<GameApplicationService>();
 
 // Controllers + JSON: all enums must serialize as strings across all endpoints.
@@ -26,9 +27,14 @@ builder.Services.AddControllers()
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 var app = builder.Build();
 
 app.MapControllers();
+app.MapHub<GameHub>("/hubs/game");
 
 app.Run();
 

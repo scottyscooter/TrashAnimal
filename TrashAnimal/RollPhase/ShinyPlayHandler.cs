@@ -1,3 +1,5 @@
+using TrashAnimal.Helpers;
+
 namespace TrashAnimal.RollPhase;
 
 public sealed class ShinyPlayHandler : IGameplayHandler
@@ -6,7 +8,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
         snapshot.CurrentPlayer.Hand.Any(e => e.Card.Name == CardName.Shiny)
-        && StealAttempt.AnyOpponentHasStashCards((IReadOnlyList<Player>)snapshot.Players, snapshot.CurrentPlayerIndex)
+        && Opponents.GetAllWithNonEmptyStash((IReadOnlyList<Player>)snapshot.Players, snapshot.CurrentPlayerIndex).Any()
         && snapshot.HasShinyVictimSelector;
 
     public bool TryExecute(RollPhasePlayContext context, int playerIndex, out string? error)
@@ -15,7 +17,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
         if (!RollPhaseActivePlayerRollGuard.TryEnsureRollPhaseActivePlayer(context, playerIndex, out error))
             return false;
 
-        if (!StealAttempt.AnyOpponentHasStashCards((IReadOnlyList<Player>)context.Players, context.CurrentPlayerIndex))
+        if (!Opponents.GetAllWithNonEmptyStash((IReadOnlyList<Player>)context.Players, context.CurrentPlayerIndex).Any())
         {
             error = "No opponent has a card in their stash to steal.";
             return false;
@@ -27,7 +29,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
             return false;
         }
 
-        var candidates = StealAttempt.GetOpponentIndicesWithNonEmptyStash((IReadOnlyList<Player>)context.Players, context.CurrentPlayerIndex)
+        var candidates = Opponents.GetAllWithNonEmptyStash((IReadOnlyList<Player>)context.Players, context.CurrentPlayerIndex)
             .ToList();
         var victimIndex = context.ChooseShinyStealVictim(context.CurrentPlayerIndex, candidates);
         if (!candidates.Contains(victimIndex))

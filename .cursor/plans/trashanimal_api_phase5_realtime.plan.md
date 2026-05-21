@@ -4,13 +4,13 @@ overview: Add a SignalR hub to TrashAnimal.Api so connected clients receive push
 todos:
   - id: signalr-hub
     content: Add SignalR hub with per-game groups in TrashAnimal.Api
-    status: pending
+    status: done
   - id: update-publisher
     content: Implement GameUpdatePublisher that notifies the game group after each successful mutation
-    status: pending
+    status: done
   - id: client-reconnect
     content: Define reconnect/missed-update strategy using session revision
-    status: pending
+    status: done
 isProject: false
 ---
 
