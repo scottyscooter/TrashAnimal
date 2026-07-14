@@ -4,13 +4,13 @@ overview: Define the test strategy for TrashAnimal.Api covering API integration 
 todos:
   - id: api-integration-tests
     content: Add API integration tests for turn transitions, allowed/disallowed actions, token phase, and end-game
-    status: pending
+    status: done
   - id: contract-tests
     content: Add contract tests for enum string serialization, GameView DTO shape, and hidden-info boundaries
-    status: pending
+    status: done
   - id: engine-baseline
     content: Confirm existing TrashAnimal.Tests still pass without modification after all API phases are complete
-    status: pending
+    status: done
 isProject: false
 ---
 
