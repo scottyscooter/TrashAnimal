@@ -1,53 +1,41 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working anywhere in this repository. It covers what's shared/reusable across the whole solution — overview, cross-cutting architecture, build/test/run commands, and coding standards. **Project-specific detail lives in each project's own CLAUDE.md** — read the relevant one(s) before working in that project:
+
+- [TrashAnimal/CLAUDE.md](TrashAnimal/CLAUDE.md) — domain/game-engine (GameSession, RollPhase, TokenPhase, Scoring, CLI harness)
+- [TrashAnimal.Api/CLAUDE.md](TrashAnimal.Api/CLAUDE.md) — REST API + SignalR hub (endpoints, DTOs, CORS status, hosting config)
+- [TrashAnimal.Web/CLAUDE.md](TrashAnimal.Web/CLAUDE.md) — frontend (currently a barebones Vite + React + TypeScript scaffold; no architecture decisions made yet)
+
+There is no CLAUDE.md yet for `TrashAnimal.Tests` or `TrashAnimal.Api.Tests` — see "Testing Notes" below for what's known about them; add project-specific files there if/when they grow enough to warrant it.
 
 ## Project Overview
 
-**TrashAnimal** is a digital implementation of a card game built in .NET 10. The project consists of:
+**TrashAnimal** is a digital implementation of a card game. The solution consists of:
 
-- **TrashAnimal** — core domain logic (game rules, turn structure, card effects, scoring)
-- **TrashAnimal.Api** — REST API + SignalR hub for multiplayer game sessions
-- **TrashAnimal.Tests** — xUnit tests for domain game logic
-- **TrashAnimal.Api.Tests** — xUnit tests for API contracts and integration scenarios
+- **TrashAnimal** — core domain logic (game rules, turn structure, card effects, scoring); also builds as a console CLI for manual play/testing. .NET 10, zero external dependencies.
+- **TrashAnimal.Api** — ASP.NET Core 10 REST API + SignalR hub for multiplayer game sessions. In-memory only, no persistence yet.
+- **TrashAnimal.Web** — browser client. Vite + React 19 + TypeScript. Currently scaffold-only; not wired to the API yet.
+- **TrashAnimal.Tests** — xUnit tests for domain game logic.
+- **TrashAnimal.Api.Tests** — xUnit tests for API contracts and integration scenarios.
 
-The codebase targets .NET 10 with nullable reference types enabled (`<Nullable>enable</Nullable>`).
+`TrashAnimal.slnx` is the dotnet solution file; it currently lists `TrashAnimal`, `TrashAnimal.Api`, and `TrashAnimal.Tests` (not `TrashAnimal.Api.Tests`, and not `TrashAnimal.Web` — the latter is a plain npm project, not a .NET project, and builds/runs independently via `npm`).
 
-## Architecture
+The .NET projects target .NET 10 with nullable reference types enabled (`<Nullable>enable</Nullable>`).
 
-### Layering
+## Cross-Cutting Architecture
 
-**Domain Layer (TrashAnimal/)**
-- `GameSession` — orchestrator of turn structure, phase states (RollPhase, AwaitingStealResponse, TokenPhase, GameEnded), and action dispatch
-- Game model: `Player`, `Hand`, `Card`, `CardName`, `Deck`, `Die`, `StashPile`
-- Game mechanics: steal mechanics (`StealAttempt`), Yum Yum window (`YumYumWindow`), phase handlers (`RollPhaseGameplayHandlerRegistry`)
-- Scoring: `GameEndScoreLine`, final result computation
-
-**API Layer (TrashAnimal.Api/)**
-- `GamesController` — REST endpoints (create game, get view, submit commands, get result)
-- `GameHub` — SignalR push notifications on game state changes; clients join per-game groups and receive `GameUpdated` events
-- `GameApplicationService` — bridges HTTP/SignalR to domain; manages in-memory session repository
-- Contract DTOs: request (`CreateGameRequest`, `SubmitCommandRequest`) and response shapes (`PlayerViewResponse`, `GameCommandResponse`, `GameResultResponse`)
-- Options + validators: `GameApplicationServiceOptions`, `ServiceCollectionExtensions`
-
-**Key Architectural Boundaries**
-- Game state flows through `GameSession.GetAllowedActionsForPlayer()` → controller/hub receives validated actions → caller submits a command → `GameApplicationService.DispatchCommandAsync()` calls `GameSession.ApplyAction()` → domain publishes state change event
-- SignalR is **notification-only**; all game commands go through REST (`POST /games/{id}/commands`)
-- Hidden information: each player sees only their own hand via `PlayerViewResponse`; opponent card counts are visible but not card identities
-- Enums serialize as strings across all JSON (see Program.cs: `JsonStringEnumConverter` wired for controllers, minimal APIs, and SignalR JSON protocol)
-
-### GameSession Partial Classes
-
-`GameSession` is split across multiple files using partial classes (contrary to the no-partial-classes rule, this is an exception for logical grouping of a large game coordinator):
-- `GameSession.cs` — state machine transitions, turn/phase lifecycle
-- `GameSession.ApiSupport.cs` — conversion to `GameView` and action filtering for client
-- `GameSession.GameEnd.cs` — end-game scoring logic
-- `GameSession.StealYumRoll.cs` — steal attempt and Yum Yum sequencing
+**Key Architectural Boundaries** (full detail in each project's CLAUDE.md):
+- Game state flows through `GameSession.GetAllowedActionsForPlayer()` → controller/hub receives validated actions → caller submits a command → `GameApplicationService.DispatchCommandAsync()` calls into `GameSession` → domain publishes a state-change event.
+- SignalR is **notification-only**; all game commands go through REST (`POST /games/{id}/commands`). The hub only tells clients "something changed, go re-fetch" — never carries command payloads.
+- Hidden information: each player sees only their own hand via `PlayerViewResponse`/`GameView`; opponent card counts are visible but not card identities.
+- Enums serialize as strings across all JSON (`JsonStringEnumConverter` wired for controllers, minimal APIs, and the SignalR JSON protocol in `TrashAnimal.Api/Program.cs`).
+- `TrashAnimal.Web` will eventually consume the REST + SignalR surface described in [TrashAnimal.Api/CLAUDE.md](TrashAnimal.Api/CLAUDE.md) — **note that project currently has no CORS configured**, which will block browser calls from a different origin/port until addressed.
 
 ## Common Commands
 
 ### Prerequisites
 - .NET 10 SDK (`dotnet` CLI)
+- Node.js + npm (for `TrashAnimal.Web` — see [TrashAnimal.Web/CLAUDE.md](TrashAnimal.Web/CLAUDE.md) for frontend-specific commands)
 
 ### Running Locally
 
@@ -63,7 +51,7 @@ The API starts with `ASPNETCORE_ENVIRONMENT=Development` by default. OpenAPI spe
 dotnet build
 ```
 
-Targets all projects in the solution (TrashAnimal, TrashAnimal.Api, TrashAnimal.Tests, TrashAnimal.Api.Tests).
+Targets the projects listed in `TrashAnimal.slnx`. `TrashAnimal.Web` is not part of this — build it separately (`npm run build` inside that folder).
 
 ### Running Tests
 
@@ -111,12 +99,12 @@ Secrets are loaded only in the `Development` environment. Production will use Az
 
 ## Code Patterns & Standards
 
-These standards are enforced via cursor rules (`.cursor/rules/`):
+These standards apply solution-wide and are enforced via cursor rules (`.cursor/rules/`):
 
 ### File Structure
 - **Never exceed 500 lines per file.** At 400 lines, split immediately.
 - Use folders and naming to keep related files grouped logically.
-- Avoid partial classes unless you have a specific reason (e.g., separating large game state machine phases).
+- Avoid partial classes unless you have a specific reason (e.g., separating large game state machine phases — `GameSession` is the deliberate exception; see [TrashAnimal/CLAUDE.md](TrashAnimal/CLAUDE.md)).
 
 ### Naming
 - All identifiers must be intention-revealing: no `data`, `info`, `temp`, `helper`.
@@ -131,29 +119,12 @@ These standards are enforced via cursor rules (`.cursor/rules/`):
 
 ### Example: Card Play Handler Pattern
 
-The `RollPhaseGameplayHandlerRegistry` demonstrates the pattern for isolating card-specific rules. When adding a new card:
+The `RollPhaseGameplayHandlerRegistry` (in `TrashAnimal/RollPhase/`) demonstrates the pattern for isolating card-specific rules. When adding a new card:
 1. Create a handler implementing the card's eligibility + execution logic.
 2. Register it in the handler registry.
 3. `GameSession` queries the registry to populate allowed actions; on apply, dispatches to the handler.
 
-This keeps `GameSession` stable and card rules testable in isolation.
-
-## Key Directories
-
-- `TrashAnimal.Api/Application/` — `GameApplicationService`, result DTOs
-- `TrashAnimal.Api/Contracts/` — request/response DTOs (Requests, Responses)
-- `TrashAnimal.Api/Controllers/` — REST endpoints
-- `TrashAnimal.Api/Hubs/` — SignalR hub
-- `TrashAnimal.Api/Sessions/` — in-memory session repository
-- `TrashAnimal.Api/Startup/` — Options, validators, service registration
-- `TrashAnimal.Api/Updates/` — SignalR event/notification types
-- `TrashAnimal/RollPhase/` — roll phase handlers, eligibility, card play logic
-- `TrashAnimal/TokenPhase/` — token phase coordinator, special token handling
-- `TrashAnimal/Scoring/` — end-game scoring
-- `TrashAnimal/Helpers/` — utility classes (`Opponents`, etc.)
-- `TrashAnimal.Tests/` — domain game logic tests (named `GameSession*Tests.cs`)
-- `TrashAnimal.Api.Tests/Contract/` — API contract tests (shape, serialization)
-- `TrashAnimal.Api.Tests/Helpers/` — test helpers (`GameApiClient`, `CountingDrawPile`, `SequencedDie`)
+This keeps `GameSession` stable and card rules testable in isolation. See [TrashAnimal/CLAUDE.md](TrashAnimal/CLAUDE.md) for the full type breakdown.
 
 ## Testing Notes
 
@@ -161,11 +132,12 @@ This keeps `GameSession` stable and card rules testable in isolation.
 - API tests in `TrashAnimal.Api.Tests/` use `WebApplicationFactory<Program>` for integration testing; `GameApiClient` wraps HTTP calls.
 - Contract tests verify enum serialization, response shape, and API surface contracts.
 - Tests should not mock the repository; use real in-memory state for integration testing (as per project feedback: mocks can diverge from prod behavior).
+- Test helper locations: `TrashAnimal.Api.Tests/Contract/` (API contract tests), `TrashAnimal.Api.Tests/Helpers/` (`GameApiClient`, `CountingDrawPile`, `SequencedDie`).
 
 ## Configuration
 
-Game rules are configurable via `appsettings.json`:
-- `GameApplicationServiceOptions.StartingHandCounts` — array of hand sizes per player count (2, 3, 4, 5+ players)
+Game rules are configurable via `TrashAnimal.Api/appsettings.json`:
+- `GameApplicationServiceOptions.StartingHandCounts` — array of hand sizes per player count (2, 3, 4, 5+ players), validated to be 2–4 entries.
 
 Logging levels are controlled per-environment:
 - Development: Debug level for TrashAnimal.Api, Information for Microsoft.AspNetCore
