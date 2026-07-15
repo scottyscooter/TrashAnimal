@@ -12,6 +12,10 @@ public static class ServiceCollectionExtensions
             .BindConfiguration(nameof(GameApplicationServiceOptions))
             .ValidateOnStart();
 
+        services.AddOptions<CorsOptions>()
+            .BindConfiguration(nameof(CorsOptions))
+            .ValidateOnStart();
+
         return services;
     }
 
@@ -19,6 +23,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IValidateOptions<GameApplicationServiceOptions>,
             GameApplicationServiceOptionsValidator>();
+
+        services.AddSingleton<IValidateOptions<CorsOptions>, CorsOptionsValidator>();
 
         return services;
     }

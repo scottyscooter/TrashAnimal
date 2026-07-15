@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using TrashAnimal.Api.Sessions;
-using TrashAnimal.Api.Startup.Options;
 using TrashAnimal.Api.Updates;
 
 namespace TrashAnimal.Api.Tests.Helpers;
@@ -30,13 +29,6 @@ public sealed class TrashApiTestFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services =>
         {
-            // IEnumerable<int> binding appends config values on top of the C# default initialiser
-            // when appsettings.json is found on the content root path. PostConfigure runs last in
-            // the options pipeline and resets the collection to a clean 4-value set so the
-            // StartupValidator does not reject the host.
-            services.PostConfigure<GameApplicationServiceOptions>(opts =>
-                opts.StartingHandCounts = [3, 4, 5, 6]);
-
             services.RemoveAll<IGameUpdatePublisher>();
             services.AddScoped<IGameUpdatePublisher, StubGameUpdatePublisher>();
 
