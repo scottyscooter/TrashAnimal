@@ -7,7 +7,7 @@ function LobbyPage() {
   return (
     <section>
       <h1>Lobby</h1>
-      <p>Waiting room for game {gameId}</p>
+      <p>Waiting room for game to begin {gameId}</p>
       <button type="button" onClick={() => navigate(`/games/${gameId}`)}>
         Start game
       </button>
