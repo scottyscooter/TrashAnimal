@@ -4,7 +4,10 @@ using TrashAnimal.Api.Application;
 using TrashAnimal.Api.Hubs;
 using TrashAnimal.Api.Sessions;
 using TrashAnimal.Api.Startup;
+using TrashAnimal.Api.Startup.Options;
 using TrashAnimal.Api.Updates;
+
+const string FrontendCorsPolicy = "Frontend";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +16,16 @@ builder.Logging.AddConsole();
 
 builder.Services.RegisterOptions();
 builder.Services.RegisterValidators();
+
+// CORS — allows the browser client (a different origin/port in dev) to call the REST API
+// and negotiate the SignalR hub. Allowed origins are configured via CorsOptions:AllowedOrigins.
+var corsOptions = builder.Configuration.GetSection(nameof(CorsOptions)).Get<CorsOptions>() ?? new CorsOptions();
+builder.Services.AddCors(options =>
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+        policy.WithOrigins(corsOptions.AllowedOrigins.ToArray())
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials())); // required for SignalR's negotiate/websocket handshake
 
 // Services
 builder.Services.AddSingleton<IGameSessionRepository, InMemoryGameSessionRepository>();
@@ -45,6 +58,8 @@ if (app.Environment.IsDevelopment())
     // Serves the Scalar interactive API browser at /scalar/v1
     app.MapScalarApiReference();
 }
+
+app.UseCors(FrontendCorsPolicy);
 
 app.MapControllers();
 app.MapHub<GameHub>("/hubs/game");

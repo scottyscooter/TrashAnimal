@@ -29,7 +29,7 @@ The .NET projects target .NET 10 with nullable reference types enabled (`<Nullab
 - SignalR is **notification-only**; all game commands go through REST (`POST /games/{id}/commands`). The hub only tells clients "something changed, go re-fetch" — never carries command payloads.
 - Hidden information: each player sees only their own hand via `PlayerViewResponse`/`GameView`; opponent card counts are visible but not card identities.
 - Enums serialize as strings across all JSON (`JsonStringEnumConverter` wired for controllers, minimal APIs, and the SignalR JSON protocol in `TrashAnimal.Api/Program.cs`).
-- `TrashAnimal.Web` will eventually consume the REST + SignalR surface described in [TrashAnimal.Api/CLAUDE.md](TrashAnimal.Api/CLAUDE.md) — **note that project currently has no CORS configured**, which will block browser calls from a different origin/port until addressed.
+- `TrashAnimal.Web` will eventually consume the REST + SignalR surface described in [TrashAnimal.Api/CLAUDE.md](TrashAnimal.Api/CLAUDE.md); the API's `"Frontend"` CORS policy (configured via `CorsOptions:AllowedOrigins`, default `http://localhost:5173`) allows this.
 
 ## Common Commands
 

@@ -47,28 +47,17 @@ The single chokepoint between transport and domain:
 - Recommended client flow: connect → register `GameUpdated` handler → `JoinGameAsync(gameId)` → on `GameUpdated`, re-fetch the view → compare cached `Revision` against the fresh view's revision on reconnect (to detect missed updates) → `LeaveGameAsync` on navigating away / game end.
 - Enums are serialized as strings over the hub too (`AddJsonProtocol` + `JsonStringEnumConverter`), consistent with REST.
 
-## ⚠️ CORS is not configured
+## CORS
 
-There is currently **no CORS setup** in `Program.cs` — no `AddCors`/`UseCors`/`[EnableCors]` anywhere. `TrashAnimal.Web` (a different origin/port in dev) **will be blocked by the browser** on both the REST calls and the SignalR hub negotiation until this is added. When wiring up the frontend, add something like:
-
-```csharp
-builder.Services.AddCors(options =>
-    options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials())); // required for SignalR's negotiate/websocket handshake
-...
-app.UseCors("Frontend");
-```
+`Program.cs` registers a named `"Frontend"` CORS policy (`AddCors`/`UseCors`) allowing the origins listed in `CorsOptions:AllowedOrigins` (config-bound, validated on start via `CorsOptionsValidator` — requires at least one origin), with `AllowAnyHeader`/`AllowAnyMethod`/`AllowCredentials` (credentials are required for SignalR's negotiate/websocket handshake). `appsettings.json` and `appsettings.Development.json` both default this to `http://localhost:5173` (the Vite dev server for `TrashAnimal.Web`); update the setting per-environment if the frontend origin changes.
 
 ## Program.cs / Configuration
 
 - Pipeline: console logging → `RegisterOptions()`/`RegisterValidators()` (bind + `ValidateOnStart()` for `GameApplicationServiceOptions`) → DI registrations (`IGameSessionRepository` singleton, `IGameUpdatePublisher` scoped, `GameApplicationService` scoped) → `AddControllers().AddJsonOptions(...)` + `ConfigureHttpJsonOptions(...)` both wired with `JsonStringEnumConverter()` (**all enums serialize as strings**, MVC and minimal APIs alike) → `AddSignalR().AddJsonProtocol(...)` (same enum converter) → `MapControllers()` → `MapHub<GameHub>("/hubs/game")`.
 - OpenAPI: `AddOpenApi()` always registered; `MapOpenApi()` (`/openapi/v1.json`) and `MapScalarApiReference()` (`/scalar/v1`) only mapped when `Environment.IsDevelopment()`.
 - `public partial class Program { }` is exposed for `WebApplicationFactory<Program>` in `TrashAnimal.Api.Tests`.
-- `appsettings.json`: `GameApplicationServiceOptions.StartingHandCounts = [3,4,5,6]`; logging `Information` default, `Warning` for `Microsoft.AspNetCore`, `Information` for `TrashAnimal.Api`.
-- `appsettings.Development.json`: overrides logging only — `Debug` default and for `TrashAnimal.Api`, `Information` for `Microsoft.AspNetCore`.
+- `appsettings.json`: `GameApplicationServiceOptions.StartingHandCounts = [3,4,5,6]`; `CorsOptions.AllowedOrigins = ["http://localhost:5173"]`; logging `Information` default, `Warning` for `Microsoft.AspNetCore`, `Information` for `TrashAnimal.Api`.
+- `appsettings.Development.json`: overrides `CorsOptions.AllowedOrigins` (same default) and logging — `Debug` default and for `TrashAnimal.Api`, `Information` for `Microsoft.AspNetCore`.
 - `TrashAnimal.Api.csproj`: `Microsoft.NET.Sdk.Web`, `net10.0`, `Nullable`/`ImplicitUsings` enabled, `UserSecretsId = 41448837-7d38-4d93-ad0c-2f5aa1557cab`, references `TrashAnimal.csproj`, packages `Microsoft.AspNetCore.OpenApi` and `Scalar.AspNetCore`.
 
 ## Running
