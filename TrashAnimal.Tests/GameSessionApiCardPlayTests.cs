@@ -1,4 +1,5 @@
 using TrashAnimal;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
@@ -14,12 +15,6 @@ namespace TrashAnimal.Tests;
 /// </summary>
 public sealed class GameSessionApiCardPlayTests
 {
-    private sealed class SequencedDie(params TokenAction[] sequence) : Die(Random.Shared)
-    {
-        private readonly Queue<TokenAction> _rolls = new(sequence);
-        public override TokenAction Roll() => _rolls.Count > 0 ? _rolls.Dequeue() : TokenAction.StashTrash;
-    }
-
     /// <summary>
     /// Creates a two-player session with NO delegate selectors — the API mode baseline.
     /// </summary>
@@ -110,7 +105,7 @@ public sealed class GameSessionApiCardPlayTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         BustWithTwoIdenticalRolls(session, die);
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
 
@@ -130,7 +125,7 @@ public sealed class GameSessionApiCardPlayTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.Recycle, TokenAction.Recycle);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Recycle, TokenAction.Recycle).Object;
         BustWithTwoIdenticalRolls(session, die);
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
 

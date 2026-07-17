@@ -47,8 +47,8 @@ public sealed class EndGameScoringTests : IClassFixture<TrashApiTestFactory>
         p0.AddToStash(new Card(CardName.Blammo), faceUp: true);
 
         // Two identical Bandit rolls trigger a bust.
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
-        var session = new GameSession([p0, p1], new CountingDrawPile(1));
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(1).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         // Act: bust and abandon, which draws the last card and ends the game.
@@ -75,8 +75,8 @@ public sealed class EndGameScoringTests : IClassFixture<TrashApiTestFactory>
         var gameId = Guid.NewGuid();
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
-        var session = new GameSession([p0, p1], new CountingDrawPile(1));
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(1).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertCommandSucceedsAsync(gameId, playerSeat: 0, GameAction.RollDie);
