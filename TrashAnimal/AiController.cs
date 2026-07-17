@@ -66,19 +66,19 @@ public sealed class AiController : IPlayerController
         cardId = stashable[_rng.Next(stashable.Count)].CardId;
     }
 
-    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<StashableHandCard> stashable)
     {
         var count = stashable.Count == 0 ? 0 : _rng.Next(3);
         if (count == 0)
             return Array.Empty<Guid>();
 
-        return stashable.OrderBy(_ => _rng.Next()).Take(count).Select(s => s.Id).ToList();
+        return stashable.OrderBy(_ => _rng.Next()).Take(count).Select(s => s.CardId).ToList();
     }
 
-    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<StashableHandCard> stashable)
     {
         ArgumentOutOfRangeException.ThrowIfZero(stashable.Count);
-        return stashable[_rng.Next(stashable.Count)].Id;
+        return stashable[_rng.Next(stashable.Count)].CardId;
     }
 
     public TokenAction ChooseRecycleReplacement(GameView view, IReadOnlyList<TokenAction> options)

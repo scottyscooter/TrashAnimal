@@ -108,7 +108,7 @@ public sealed class CliHumanController : IPlayerController
         cardId = stashable[choice - 1].CardId;
     }
 
-    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    public IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<StashableHandCard> stashable)
     {
         if (stashable.Count == 0)
         {
@@ -125,7 +125,7 @@ public sealed class CliHumanController : IPlayerController
             {
                 // Todo Exclude already picked cards from being picked again
                 // Todo display already picked card(s) to the user
-                var already = chosen.Contains(stashable[i].Id) ? " (already picked)" : "";
+                var already = chosen.Contains(stashable[i].CardId) ? " (already picked)" : "";
                 Console.WriteLine($"{i + 1}. {stashable[i].Name}{already}");
             }
 
@@ -140,7 +140,7 @@ public sealed class CliHumanController : IPlayerController
                 break;
             }
 
-            var id = stashable[idx - 1].Id;
+            var id = stashable[idx - 1].CardId;
             if (!chosen.Contains(id))
                 chosen.Add(id);
         }
@@ -148,7 +148,7 @@ public sealed class CliHumanController : IPlayerController
         return chosen;
     }
 
-    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable)
+    public Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<StashableHandCard> stashable)
     {
         if (stashable.Count == 0)
             throw new InvalidOperationException("No stashable cards.");
@@ -158,7 +158,7 @@ public sealed class CliHumanController : IPlayerController
             Console.WriteLine($"{i + 1}. {stashable[i].Name}");
 
         var choice = Cli.ReadIntInRange("Choice: ", 1, stashable.Count);
-        return stashable[choice - 1].Id;
+        return stashable[choice - 1].CardId;
     }
 
     public TokenAction ChooseRecycleReplacement(GameView view, IReadOnlyList<TokenAction> options)

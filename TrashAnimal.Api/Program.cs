@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Scalar.AspNetCore;
 using TrashAnimal.Api.Application;
 using TrashAnimal.Api.Hubs;
+using TrashAnimal.Api.Lobbies;
 using TrashAnimal.Api.Sessions;
 using TrashAnimal.Api.Startup;
 using TrashAnimal.Api.Startup.Options;
@@ -31,6 +32,10 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton<IGameSessionRepository, InMemoryGameSessionRepository>();
 builder.Services.AddScoped<IGameUpdatePublisher, SignalRGameUpdatePublisher>();
 builder.Services.AddScoped<GameApplicationService>();
+
+builder.Services.AddSingleton<ILobbyRepository, InMemoryLobbyRepository>();
+builder.Services.AddScoped<ILobbyUpdatePublisher, SignalRLobbyUpdatePublisher>();
+builder.Services.AddScoped<LobbyApplicationService>();
 
 // Controllers + JSON: all enums must serialize as strings across all endpoints.
 builder.Services.AddControllers()
@@ -63,6 +68,7 @@ app.UseCors(FrontendCorsPolicy);
 
 app.MapControllers();
 app.MapHub<GameHub>("/hubs/game");
+app.MapHub<LobbyHub>("/hubs/lobby");
 
 app.Run();
 
