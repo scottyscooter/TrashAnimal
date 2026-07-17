@@ -227,7 +227,7 @@ while (true)
 
         if (playerAction == GameAction.TokenDoubleStashSubmit)
         {
-            var ids = controller.ChooseDoubleStashCardIds(view, tp?.StashableHandCardsForCurrentPrompt ?? Array.Empty<(Guid, CardName)>());
+            var ids = controller.ChooseDoubleStashCardIds(view, tp?.StashableHandCardsForCurrentPrompt ?? Array.Empty<StashableHandCard>());
             if (!session.TryTokenPhaseDoubleStash(currentPlayerIndex, ids, out var e2) && e2 is not null)
                 Console.WriteLine(e2);
             continue;

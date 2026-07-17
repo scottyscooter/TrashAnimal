@@ -9,5 +9,8 @@ public sealed record TokenPhaseView(
     TokenAction? ActiveToken,
     CardName? BanditRevealedCardName,
     int? BanditCurrentResponderIndex,
-    IReadOnlyList<(Guid CardId, CardName Name)> StashableHandCardsForCurrentPrompt,
+    IReadOnlyList<StashableHandCard> StashableHandCardsForCurrentPrompt,
     IReadOnlyList<TokenAction> RecycleReplacementOptions);
+
+/// <summary>One hand card eligible to be stashed in the current TokenPhase prompt.</summary>
+public sealed record StashableHandCard(Guid CardId, CardName Name);

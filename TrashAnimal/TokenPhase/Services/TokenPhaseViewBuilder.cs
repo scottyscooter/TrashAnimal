@@ -20,7 +20,7 @@ internal sealed class TokenPhaseViewBuilder
                 null,
                 null,
                 null,
-                Array.Empty<(Guid, CardName)>(),
+                Array.Empty<StashableHandCard>(),
                 Array.Empty<TokenAction>());
 
         var remaining = state.RemainingTokens.OrderBy(t => t).ToList();
@@ -53,29 +53,29 @@ internal sealed class TokenPhaseViewBuilder
         return list.OrderBy(t => t).ToList();
     }
 
-    private IReadOnlyList<(Guid CardId, CardName Name)> GetStashableHandTuplesForView(TokenPhaseState state, int viewPlayerIndex)
+    private IReadOnlyList<StashableHandCard> GetStashableHandTuplesForView(TokenPhaseState state, int viewPlayerIndex)
     {
         if (state.Step == TokenPhaseStep.BanditAwaitOpponentResponse)
         {
             var idx = TokenPhaseBanditHandler.GetCurrentResponderIndex(state);
             if (idx != viewPlayerIndex || state.BanditRevealedName is null)
-                return Array.Empty<(Guid, CardName)>();
+                return Array.Empty<StashableHandCard>();
 
             return _session.Players[viewPlayerIndex].Hand
                 .Where(e => e.Card.Name == state.BanditRevealedName && _eligibility.CanOfferCardForStashPrompt(e.Card.Name))
-                .Select(e => (e.Card.Id, e.Card.Name))
+                .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
                 .ToList();
         }
 
         if (viewPlayerIndex != _session.CurrentPlayerIndex)
-            return Array.Empty<(Guid, CardName)>();
+            return Array.Empty<StashableHandCard>();
 
         if (state.Step is not (TokenPhaseStep.StashTrashChooseBranch or TokenPhaseStep.StashTrashPickCard or TokenPhaseStep.DoubleStashChoosingCards))
-            return Array.Empty<(Guid, CardName)>();
+            return Array.Empty<StashableHandCard>();
 
         return _session.CurrentPlayer.Hand
             .Where(e => _eligibility.CanOfferCardForStashPrompt(e.Card.Name))
-            .Select(e => (e.Card.Id, e.Card.Name))
+            .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
             .ToList();
     }
 }

@@ -22,10 +22,10 @@ public interface IPlayerController
     void ChooseBanditResponse(GameView view, out bool stash, out Guid? cardId);
 
     /// <summary>DoubleStash: 0–2 stash-eligible cards from hand.</summary>
-    IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable);
+    IReadOnlyList<Guid> ChooseDoubleStashCardIds(GameView view, IReadOnlyList<StashableHandCard> stashable);
 
     /// <summary>StashTrash stash branch: one stash-eligible card from hand.</summary>
-    Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<(Guid Id, CardName Name)> stashable);
+    Guid ChooseStashTrashStashCard(GameView view, IReadOnlyList<StashableHandCard> stashable);
 
     /// <summary>Recycle token: pick a replacement token type.</summary>
     TokenAction ChooseRecycleReplacement(GameView view, IReadOnlyList<TokenAction> options);
