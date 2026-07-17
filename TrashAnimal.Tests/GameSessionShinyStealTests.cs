@@ -76,7 +76,14 @@ public sealed class GameSessionShinyStealTests
         Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err), err);
         Assert.Equal(GameState.RollPhase, session.State);
         Assert.Equal(before - 2, deck.GetDeckCount());
-        Assert.Equal(2, p1.Hand.Count(e => e.Card.Name is not CardName.Doggo));
+
+        // The played Doggo was already removed from hand before the draw, so the victim's
+        // hand now holds only the two freshly-drawn replacement cards. Assert on count only —
+        // Deck() shuffles on construction (see Deck.cs), so which two cards get dealt is
+        // random; filtering by CardName here would flake whenever one of the two happens to
+        // be one of the deck's own Doggo cards (a real, legitimately-drawn card, not a leftover
+        // artifact of the one that was played).
+        Assert.Equal(2, p1.Hand.Count);
     }
 
     [Fact]
