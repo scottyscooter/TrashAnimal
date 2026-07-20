@@ -23,13 +23,20 @@ export function useLobbySignalR(lobbyId: string) {
       onReconnected: () => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.lobby(lobbyId) });
       },
-    }).then((sub) => {
-      if (cancelled) {
-        void sub.stop();
-        return;
-      }
-      subscription = sub;
-    });
+      onConnectionError: (error) => {
+        console.error(`LobbyHub connection error for lobby ${lobbyId}:`, error);
+      },
+    })
+      .then((sub) => {
+        if (cancelled) {
+          void sub.stop();
+          return;
+        }
+        subscription = sub;
+      })
+      .catch(() => {
+        // Initial connect/join failure — already reported via onConnectionError above.
+      });
 
     return () => {
       cancelled = true;

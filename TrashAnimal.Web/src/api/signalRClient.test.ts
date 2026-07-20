@@ -92,4 +92,64 @@ describe('signalRClient', () => {
     expect(connection.invoke).toHaveBeenCalledWith('LeaveLobbyAsync', 'lobby-1');
     expect(connection.stop).toHaveBeenCalledOnce();
   });
+
+  it('connectToGameHub reports and rethrows when the initial connect fails', async () => {
+    const error = new Error('negotiate failed');
+    connection.start.mockRejectedValueOnce(error);
+    const onConnectionError = vi.fn();
+
+    await expect(
+      connectToGameHub('game-1', { onGameUpdated: vi.fn(), onConnectionError }),
+    ).rejects.toBe(error);
+    expect(onConnectionError).toHaveBeenCalledWith(error);
+  });
+
+  it('connectToGameHub falls back to console.error when onConnectionError is not provided', async () => {
+    const error = new Error('negotiate failed');
+    connection.start.mockRejectedValueOnce(error);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(connectToGameHub('game-1', { onGameUpdated: vi.fn() })).rejects.toBe(error);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('SignalR connection error:', error);
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('connectToGameHub reports a failed re-join after reconnect via onConnectionError', async () => {
+    const onConnectionError = vi.fn();
+    await connectToGameHub('game-1', { onGameUpdated: vi.fn(), onConnectionError });
+
+    const error = new Error('rejoin failed');
+    connection.invoke.mockRejectedValueOnce(error);
+    const reconnectHandler = connection.onreconnected.mock.calls[0][0];
+    reconnectHandler();
+
+    await vi.waitFor(() => expect(onConnectionError).toHaveBeenCalledWith(error));
+  });
+
+  it('connectToGameHub reports a throwing onReconnected via onConnectionError', async () => {
+    const onConnectionError = vi.fn();
+    const error = new Error('reconnect handler failed');
+    await connectToGameHub('game-1', {
+      onGameUpdated: vi.fn(),
+      onReconnected: () => Promise.reject(error),
+      onConnectionError,
+    });
+
+    const reconnectHandler = connection.onreconnected.mock.calls[0][0];
+    reconnectHandler();
+
+    await vi.waitFor(() => expect(onConnectionError).toHaveBeenCalledWith(error));
+  });
+
+  it('connectToLobbyHub reports and rethrows when the initial connect fails', async () => {
+    const error = new Error('negotiate failed');
+    connection.start.mockRejectedValueOnce(error);
+    const onConnectionError = vi.fn();
+
+    await expect(
+      connectToLobbyHub('lobby-1', { onLobbyUpdated: vi.fn(), onConnectionError }),
+    ).rejects.toBe(error);
+    expect(onConnectionError).toHaveBeenCalledWith(error);
+  });
 });

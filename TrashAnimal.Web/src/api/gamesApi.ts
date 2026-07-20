@@ -60,7 +60,9 @@ export const gamesApi = {
   },
 
   getView(gameId: string, playerSeat: number): Promise<PlayerViewResponse> {
-    return getJson<PlayerViewResponse>(`/games/${gameId}/view?playerSeat=${playerSeat}`);
+    return getJson<PlayerViewResponse>(
+      `/games/${encodeURIComponent(gameId)}/view?playerSeat=${encodeURIComponent(playerSeat)}`,
+    );
   },
 
   /**
@@ -70,12 +72,14 @@ export const gamesApi = {
    * without a try/catch (review note 1).
    */
   submitCommand(gameId: string, request: SubmitCommandRequest): Promise<GameCommandResponse> {
-    return postJson<GameCommandResponse>(`/games/${gameId}/commands`, toWireRequest(request), {
-      expectedStatuses: [422],
-    });
+    return postJson<GameCommandResponse>(
+      `/games/${encodeURIComponent(gameId)}/commands`,
+      toWireRequest(request),
+      { expectedStatuses: [422] },
+    );
   },
 
   getResult(gameId: string): Promise<GameResultResponse> {
-    return getJson<GameResultResponse>(`/games/${gameId}/result`);
+    return getJson<GameResultResponse>(`/games/${encodeURIComponent(gameId)}/result`);
   },
 };

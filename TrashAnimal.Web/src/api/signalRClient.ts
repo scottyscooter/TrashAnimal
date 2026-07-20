@@ -14,7 +14,26 @@ export interface HubSubscription {
   stop: () => Promise<void>;
 }
 
-export interface GameHubHandlers {
+interface CommonHubHandlers {
+  /**
+   * Called whenever a hub operation fails asynchronously with nowhere else to propagate to: the
+   * initial connect/join, a reconnect's re-join, or `onReconnected` throwing. Centralized here
+   * (rather than left to each caller) because every one of those failures used to be silently
+   * `void`-d — the app would quietly fall back to no live updates with no signal anywhere. Falls
+   * back to `console.error` if the caller doesn't supply one, so this can never regress to silent.
+   */
+  onConnectionError?: (error: unknown) => void;
+}
+
+function reportConnectionError(handlers: CommonHubHandlers, error: unknown): void {
+  if (handlers.onConnectionError) {
+    handlers.onConnectionError(error);
+  } else {
+    console.error('SignalR connection error:', error);
+  }
+}
+
+export interface GameHubHandlers extends CommonHubHandlers {
   onGameUpdated: (envelope: GameUpdateEnvelope) => void;
   /**
    * Called after signalr's automatic reconnect completes. GameHub reconnect should compare the
@@ -25,17 +44,25 @@ export interface GameHubHandlers {
   onReconnected?: () => void | Promise<void>;
 }
 
-/** Connects to GameHub, joins the game's group, and registers the GameUpdated handler. */
+/**
+ * Connects to GameHub, joins the game's group, and registers the GameUpdated handler.
+ * Rejects if the initial connect or join fails (reported via `onConnectionError` first).
+ */
 export async function connectToGameHub(gameId: string, handlers: GameHubHandlers): Promise<HubSubscription> {
   const connection = createHubConnection('/hubs/game');
   connection.on('GameUpdated', (envelope: GameUpdateEnvelope) => handlers.onGameUpdated(envelope));
   connection.onreconnected(() => {
-    void connection.invoke('JoinGameAsync', gameId);
-    void handlers.onReconnected?.();
+    connection.invoke('JoinGameAsync', gameId).catch((error) => reportConnectionError(handlers, error));
+    Promise.resolve(handlers.onReconnected?.()).catch((error) => reportConnectionError(handlers, error));
   });
 
-  await connection.start();
-  await connection.invoke('JoinGameAsync', gameId);
+  try {
+    await connection.start();
+    await connection.invoke('JoinGameAsync', gameId);
+  } catch (error) {
+    reportConnectionError(handlers, error);
+    throw error;
+  }
 
   return {
     connection,
@@ -46,7 +73,7 @@ export async function connectToGameHub(gameId: string, handlers: GameHubHandlers
   };
 }
 
-export interface LobbyHubHandlers {
+export interface LobbyHubHandlers extends CommonHubHandlers {
   onLobbyUpdated: (envelope: LobbyUpdateEnvelope) => void;
   /**
    * LobbyHub reconnect always refetches rather than comparing a cached revision — LobbyView has
@@ -56,17 +83,25 @@ export interface LobbyHubHandlers {
   onReconnected?: () => void | Promise<void>;
 }
 
-/** Connects to LobbyHub, joins the lobby's group, and registers the LobbyUpdated handler. */
+/**
+ * Connects to LobbyHub, joins the lobby's group, and registers the LobbyUpdated handler.
+ * Rejects if the initial connect or join fails (reported via `onConnectionError` first).
+ */
 export async function connectToLobbyHub(lobbyId: string, handlers: LobbyHubHandlers): Promise<HubSubscription> {
   const connection = createHubConnection('/hubs/lobby');
   connection.on('LobbyUpdated', (envelope: LobbyUpdateEnvelope) => handlers.onLobbyUpdated(envelope));
   connection.onreconnected(() => {
-    void connection.invoke('JoinLobbyAsync', lobbyId);
-    void handlers.onReconnected?.();
+    connection.invoke('JoinLobbyAsync', lobbyId).catch((error) => reportConnectionError(handlers, error));
+    Promise.resolve(handlers.onReconnected?.()).catch((error) => reportConnectionError(handlers, error));
   });
 
-  await connection.start();
-  await connection.invoke('JoinLobbyAsync', lobbyId);
+  try {
+    await connection.start();
+    await connection.invoke('JoinLobbyAsync', lobbyId);
+  } catch (error) {
+    reportConnectionError(handlers, error);
+    throw error;
+  }
 
   return {
     connection,

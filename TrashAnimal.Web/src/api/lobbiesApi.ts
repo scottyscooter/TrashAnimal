@@ -19,14 +19,14 @@ export const lobbiesApi = {
   },
 
   getLobby(lobbyId: string): Promise<LobbyView> {
-    return getJson<LobbyView>(`/lobbies/${lobbyId}`);
+    return getJson<LobbyView>(`/lobbies/${encodeURIComponent(lobbyId)}`);
   },
 
   joinLobby(lobbyId: string, request: JoinLobbyRequest): Promise<LobbyJoinResponse> {
-    return postJson<LobbyJoinResponse>(`/lobbies/${lobbyId}/players`, request);
+    return postJson<LobbyJoinResponse>(`/lobbies/${encodeURIComponent(lobbyId)}/players`, request);
   },
 
   startLobby(lobbyId: string, request: StartLobbyRequest): Promise<LobbyStartResponse> {
-    return postJson<LobbyStartResponse>(`/lobbies/${lobbyId}/start`, request);
+    return postJson<LobbyStartResponse>(`/lobbies/${encodeURIComponent(lobbyId)}/start`, request);
   },
 };

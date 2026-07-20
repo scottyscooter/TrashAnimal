@@ -31,13 +31,20 @@ export function useGameSignalR(gameId: string, playerSeat: number) {
           queryClient.setQueryData(queryKey, fresh);
         }
       },
-    }).then((sub) => {
-      if (cancelled) {
-        void sub.stop();
-        return;
-      }
-      subscription = sub;
-    });
+      onConnectionError: (error) => {
+        console.error(`GameHub connection error for game ${gameId}:`, error);
+      },
+    })
+      .then((sub) => {
+        if (cancelled) {
+          void sub.stop();
+          return;
+        }
+        subscription = sub;
+      })
+      .catch(() => {
+        // Initial connect/join failure — already reported via onConnectionError above.
+      });
 
     return () => {
       cancelled = true;
