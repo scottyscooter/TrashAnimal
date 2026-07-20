@@ -150,13 +150,26 @@ Add the parallel Lobby vertical slice described in section A: `Lobbies/LobbyEntr
 
 **Task 2 — Frontend services/api layer** · tags: `frontend`
 Install `@tanstack/react-query`, `@microsoft/signalr`, `msw`. Build the typed API/services layer so nothing later has to hand-roll fetch/SignalR logic.
-- Subtask: `src/api/types.ts` — TS mirrors of all backend DTOs (game + lobby), enums as string-literal unions.
-- Subtask: `src/api/httpClient.ts` — fetch wrapper + typed `ApiError`.
-- Subtask: `src/api/lobbiesApi.ts` and `src/api/gamesApi.ts`.
-- Subtask: `src/api/signalRClient.ts` — shared hub-connection wrapper with reconnect handling.
+
+**Review notes (added after plan review — all 7 accepted):**
+1. **422 handling is intentionally asymmetric between `gamesApi` and `lobbiesApi`.** `gamesApi.submitCommand` treats its single 422 (`GameCommandResponse{Succeeded:false, ErrorMessage}`) as a normal parsed return value, never thrown — `GamesController`'s 422 is the only expected-rejection code and always carries a structured JSON envelope. `lobbiesApi.ts` keeps uniform-throw (`ApiError`) for its four expected-rejection codes instead (400 nickname validation, 403 not-admin, 409 duplicate/full/already-started, 422 invalid seat count) since none of those carry a JSON envelope (all are bare strings via `BadRequest("...")`/`UnprocessableEntity("...")`) and they're form-validation/conflict outcomes, not a live-game state race. Don't force parity by inventing a client-side success/failure wrapper `LobbiesController` doesn't actually model.
+2. **`SubmitCommandRequest` becomes a discriminated union per `GameAction` in `types.ts`**, not a flat mirror of the C# record's 5 optional fields — a strict union catches wrong-field mistakes (e.g. `VictimSeat` on an action expecting `CardId`) at compile time instead of letting them surface as runtime 422s across the ~10 phase-panel call sites Task 5 builds.
+3. **`LobbyHub` reconnect always refetches**, rather than replicating `GameHub`'s cached-`Revision` comparison — `LobbyView` has no `Revision` field (confirmed against the shipped Task 1 contract), and lobby state is small/low-frequency enough that unconditional refetch on reconnect is an accepted, documented asymmetry, not a gap. No backend change.
+4. **The API's dev port isn't pinned anywhere** (no `launchSettings.json`, no `UseUrls`/Kestrel config in `Program.cs`), so `dotnet run --project TrashAnimal.Api` has no committed, predictable port for `VITE_API_BASE_URL`'s fallback (or for `CorsOptions:AllowedOrigins`) to target. Small backend addition, tracked as its own subtask below.
+5. **`httpClient.ts`'s error-body parsing must tolerate both JSON and plain-text bodies** — `GamesController`'s 422 is JSON (`GameCommandResponse`), `LobbiesController`'s 400/409/422 are bare strings. Try JSON first, fall back to raw text; don't assume every error response parses.
+6. **`signalRClient.ts`'s reconnect/re-join logic isn't testable via `msw`** (`msw` intercepts fetch/XHR, not SignalR's transport negotiation). Cover it with `vi.mock('@microsoft/signalr')` at the unit level, backstopped by the real reconnect proof in Task 8's Playwright e2e suite (which runs against a live API).
+7. **A shared `msw` scaffold is needed now, not improvised later** — `src/test/msw/server.ts` (`setupServer`) wired into `src/test/setup.ts` (`beforeAll`/`afterEach`/`afterAll`) plus `src/test/msw/handlers.ts` with default success-path handlers. Task 5's phase-panel component tests reuse this directly.
+
+- Subtask: Pin a dev port for `TrashAnimal.Api` (`launchSettings.json` or an `ASPNETCORE_URLS` default, e.g. `http://localhost:5080`) so `VITE_API_BASE_URL`'s fallback is meaningful; update `appsettings*.json` `CorsOptions:AllowedOrigins` and `TrashAnimal.Api/CLAUDE.md` if the port changes (review note 4). Tag also `backend`.
+- Subtask: `src/api/types.ts` — TS mirrors of all backend DTOs (game + lobby), enums as string-literal unions, nullable C# reference types as `T | null` (not `T?`). Model `SubmitCommandRequest` as a discriminated union per `GameAction` (review note 2).
+- Subtask: `src/api/httpClient.ts` — fetch wrapper + typed `ApiError`, with error-body parsing that tolerates both JSON and plain-text response bodies (review note 5).
+- Subtask: `src/api/lobbiesApi.ts` and `src/api/gamesApi.ts`. `gamesApi.submitCommand` returns the parsed `GameCommandResponse` (including `Succeeded:false`) rather than throwing on 422; `lobbiesApi.ts` calls throw `ApiError` uniformly for 400/403/409/422 (review note 1).
+- Subtask: `src/api/signalRClient.ts` — shared hub-connection wrapper with reconnect handling. `LobbyHub` reconnect always refetches (no `Revision` field to compare); `GameHub` reconnect compares cached `Revision` (review note 3).
 - Subtask: React Query hooks in `src/hooks/` (`useLobby`, `useJoinLobby`, `useStartLobby`, `useLobbySignalR`, `useGameView`, `useSubmitCommand`, `useGameSignalR`, `useGameResult`).
 - Subtask: Wire `QueryClientProvider` into `src/main.tsx` and `src/test/test-utils.tsx`.
+- Subtask: Add shared `msw` scaffold — `src/test/msw/server.ts` + `src/test/msw/handlers.ts`, wired into `src/test/setup.ts` (review note 7). Tag also `test`.
 - Subtask: Unit-test the API layer against `msw` mocks. Tag also `test`.
+- Subtask: Cover `signalRClient.ts` reconnect/re-join logic via `vi.mock('@microsoft/signalr')` (review note 6). Tag also `test`.
 
 **Task 3 — Home + Lobby pages, real flow** · tags: `frontend`
 - Subtask: Rewrite `HomePage.tsx` + `components/home/CreateSessionForm.tsx` (nickname entry, create lobby, persist identity, navigate).

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working anywher
 
 - [TrashAnimal/CLAUDE.md](TrashAnimal/CLAUDE.md) — domain/game-engine (GameSession, RollPhase, TokenPhase, Scoring, CLI harness)
 - [TrashAnimal.Api/CLAUDE.md](TrashAnimal.Api/CLAUDE.md) — REST API + SignalR hub (endpoints, DTOs, CORS status, hosting config)
-- [TrashAnimal.Web/CLAUDE.md](TrashAnimal.Web/CLAUDE.md) — frontend (currently a barebones Vite + React + TypeScript scaffold; no architecture decisions made yet)
+- [TrashAnimal.Web/CLAUDE.md](TrashAnimal.Web/CLAUDE.md) — frontend (Vite + React + TypeScript; routing and a TanStack Query/SignalR services layer are built, page UI is still in progress)
 
 There is no CLAUDE.md yet for `TrashAnimal.Tests` or `TrashAnimal.Api.Tests` — see "Testing Notes" below for what's known about them; add project-specific files there if/when they grow enough to warrant it.
 
@@ -14,7 +14,7 @@ There is no CLAUDE.md yet for `TrashAnimal.Tests` or `TrashAnimal.Api.Tests` —
 
 - **TrashAnimal** — core domain logic (game rules, turn structure, card effects, scoring); also builds as a console CLI for manual play/testing. .NET 10, zero external dependencies.
 - **TrashAnimal.Api** — ASP.NET Core 10 REST API + SignalR hub for multiplayer game sessions. In-memory only, no persistence yet.
-- **TrashAnimal.Web** — browser client. Vite + React 19 + TypeScript. Currently scaffold-only; not wired to the API yet.
+- **TrashAnimal.Web** — browser client. Vite + React 19 + TypeScript. Has routing and a typed API/SignalR services layer (TanStack Query) wired to `TrashAnimal.Api`; page-level UI is still in progress.
 - **TrashAnimal.Tests** — xUnit tests for domain game logic.
 - **TrashAnimal.Api.Tests** — xUnit tests for API contracts and integration scenarios.
 

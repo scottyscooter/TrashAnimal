@@ -66,4 +66,4 @@ The single chokepoint between transport and domain:
 dotnet run --project TrashAnimal.Api
 ```
 
-Starts with `ASPNETCORE_ENVIRONMENT=Development` by default (enables OpenAPI/Scalar and user secrets). See the [repo-root CLAUDE.md](../CLAUDE.md) for the local secrets workflow (`dotnet user-secrets ...`).
+Starts with `ASPNETCORE_ENVIRONMENT=Development` by default (enables OpenAPI/Scalar and user secrets). `Properties/launchSettings.json` pins the dev URL to `http://localhost:5080` (the `http` profile's `applicationUrl`), so `TrashAnimal.Web`'s `VITE_API_BASE_URL` fallback has a stable, predictable target — update both if this port ever changes. See the [repo-root CLAUDE.md](../CLAUDE.md) for the local secrets workflow (`dotnet user-secrets ...`).

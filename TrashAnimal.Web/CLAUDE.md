@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**TrashAnimal.Web** is the browser client for the TrashAnimal card game. It is currently a **barebones scaffold** — the default Vite + React + TypeScript template with no game-specific code yet. Routing, state management, styling, and API/SignalR integration have not been designed or built.
+**TrashAnimal.Web** is the browser client for the TrashAnimal card game. Routing exists (see Testing Notes below) and the API/SignalR services layer is now built (see Backend Integration below); page-level UI is still mostly placeholder content pending Tasks 3–7 of the Playable Browser UI plan.
 
 This is a plain Node/npm project, not a .NET project. It is **not** part of `TrashAnimal.slnx` (the dotnet solution file) — it lives alongside the backend projects in the same repo but builds and runs independently via `npm`.
 
@@ -16,7 +16,10 @@ This is a plain Node/npm project, not a .NET project. It is **not** part of `Tra
 - **Vitest** — unit and component testing (Vite-native, fast)
 - **React Testing Library** — component testing utilities
 - **Playwright** — end-to-end testing
-- No routing, state management, or HTTP/SignalR client libraries installed yet
+- **React Router** (v7) — client-side routing
+- **TanStack Query** (`@tanstack/react-query`) — server state (REST) caching/invalidation
+- **`@microsoft/signalr`** — SignalR hub client (notification-only, see Backend Integration below)
+- **`msw`** — mocks REST calls in unit tests; does not intercept SignalR transport negotiation
 
 ## Common Commands
 
@@ -140,15 +143,18 @@ test('navigate from home to lobby', async ({ page }) => {
 });
 ```
 
-## Backend Integration (not yet implemented)
+## Backend Integration
 
-The client will eventually talk to `TrashAnimal.Api` (see repo-root CLAUDE.md):
-- REST endpoints under `/games` for all game commands (create game, submit actions, get result)
-- A SignalR hub (`GameHub`) for **notification-only** push updates — the client should never submit game actions over SignalR, only listen for `GameUpdated` events and re-fetch/re-render state via REST
-- Each player's view is scoped to their own hand; opponent card counts are visible but not identities (`PlayerViewResponse`) — the client must not assume it can see full game state
-- Enums are serialized as strings in all JSON payloads from the API
+The client talks to `TrashAnimal.Api` (see repo-root CLAUDE.md) through a dedicated services/api layer — no component calls `fetch`/SignalR directly.
 
-When this integration is built, prefer keeping API/SignalR client code in a dedicated layer (e.g. a `services/` or `api/` module) rather than calling `fetch`/SignalR directly from components, so the domain-shape of the game (turns, phases, steal attempts, Yum Yum windows) can be modeled consistently with the backend's mental model.
+- `src/api/types.ts` — TS mirrors of every backend DTO and domain enum (`GameView`, `GameAction`, `TokenAction`, `CardName`, `LobbyView`, etc.), camelCase to match ASP.NET Core's default JSON naming policy. `SubmitCommandRequest` is a discriminated union keyed by `kind` (not a flat mirror of the C# record's 5 optional fields) — it models every distinct shape `POST /games/{gameId}/commands` accepts (plain actions, `PlayFeesh`/`PlayShiny`/`ResolveTokenSteal`, and the contextual card-pick/double-stash/recycle-pick requests the backend routes by `GameState`/`TokenPhaseStep` rather than by the action field), so wrong-field mistakes are caught at compile time.
+- `src/api/httpClient.ts` — shared `fetch` wrapper + `ApiError`. Tolerates both JSON error bodies (`GamesController`'s 422, a structured `GameCommandResponse`) and bare-text error bodies (`LobbiesController`'s 400/403/409/422). `API_BASE_URL` reads `VITE_API_BASE_URL`, falling back to `http://localhost:5080` (see `TrashAnimal.Api/CLAUDE.md`'s pinned dev port).
+- `src/api/gamesApi.ts` — `submitCommand` returns the parsed `GameCommandResponse` (including `succeeded: false`) rather than throwing on 422, since that's `GamesController`'s only expected-rejection status and it always carries the structured envelope.
+- `src/api/lobbiesApi.ts` — throws `ApiError` uniformly for its four expected-rejection statuses (400/403/409/422), since `LobbiesController` returns bare strings for all of them and they're form-validation/conflict outcomes rather than a live-game state race. This asymmetry with `gamesApi` is intentional, not an oversight.
+- `src/api/signalRClient.ts` — `connectToGameHub`/`connectToLobbyHub` wrap `@microsoft/signalr` with automatic reconnect + group join/leave. `GameHub` is push-only (`GameUpdated` is a trigger to re-fetch via REST, never trusted as state, preserving the per-player hidden-information boundary). `LobbyHub` pushes the full `LobbyView` directly on `LobbyUpdated` (no hidden-information constraint on a seat list). On reconnect, the game hub's caller compares the cached `PlayerViewResponse.Revision` against a fresh fetch before updating; the lobby hub's caller always refetches unconditionally, since `LobbyView` has no `Revision` field — an accepted, documented asymmetry.
+- `src/hooks/` — TanStack Query hooks wrapping the above: `useLobby`, `useJoinLobby`, `useStartLobby`, `useLobbySignalR`, `useGameView`, `useSubmitCommand`, `useGameSignalR`, `useGameResult`. `QueryClientProvider` is wired in `src/main.tsx` (app) and `src/test/test-utils.tsx` (tests, with retries disabled).
+  - **Cache-update convention on mutation success:** default to `invalidateQueries` (forces a fresh GET, so the cache never diverges from the server's shape — `useStartLobby`, `useSubmitCommand`). Use `setQueryData` only where a hook is explicitly documented as filling a gap before a corresponding SignalR push would otherwise refresh it — `useJoinLobby` is the one current exception, since the join response's `lobby` field is already the full authoritative `LobbyView` and writing it directly closes the gap before `LobbyHub`'s `LobbyUpdated` arrives for that seat. New hooks should default to `invalidateQueries` and only reach for `setQueryData` with the same kind of justification, documented in a comment on the hook.
+- `src/test/msw/` — shared `msw` scaffold (`server.ts` + `handlers.ts`) wired into `src/test/setup.ts`'s `beforeAll`/`afterEach`/`afterAll`, with default success-path handlers for every endpoint. `signalRClient.ts`'s reconnect/re-join logic isn't testable via `msw` (it intercepts fetch/XHR, not SignalR's transport negotiation) — that's covered instead via `vi.mock('@microsoft/signalr')` in `src/api/signalRClient.test.ts`, backstopped by a real Playwright e2e reconnect test (Task 8).
 
 ## Conventions
 
@@ -159,4 +165,4 @@ Until project-specific conventions are established, follow the same spirit as th
 
 ## Status
 
-This file will need updates as soon as real architecture decisions are made (routing library, state management, API client structure, styling approach). Treat the "Stack" and "Backend Integration" sections above as provisional until then.
+Routing, state management (TanStack Query), and the API/SignalR client structure are now decided and built. Styling approach is still undecided; treat that aspect of the "Stack" section as provisional until Task 7 (responsive/accessibility polish) of the Playable Browser UI plan.
