@@ -9,6 +9,7 @@ import JoinForm from '../components/JoinForm'
 import StartGameButton from '../components/StartGameButton'
 
 const HOST_SEAT_INDEX = 0
+const MIN_SEATS_TO_START = 2
 
 function LobbyPage() {
   const { lobbyId } = useParams()
@@ -48,6 +49,7 @@ function LobbyPage() {
   }
 
   const isHost = identity?.seatIndex === HOST_SEAT_INDEX
+  const hasEnoughSeatsToStart = lobby.seats.length >= MIN_SEATS_TO_START
 
   return (
     <section className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
@@ -55,7 +57,8 @@ function LobbyPage() {
       <ShareLink lobbyId={lobbyId} />
       <PlayerList seats={lobby.seats} mySeatIndex={identity?.seatIndex ?? null} />
       {identity ? (
-        isHost && <StartGameButton lobbyId={lobbyId} clientToken={identity.clientToken} />
+        isHost &&
+        hasEnoughSeatsToStart && <StartGameButton lobbyId={lobbyId} clientToken={identity.clientToken} />
       ) : (
         <JoinForm lobbyId={lobbyId} />
       )}
