@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ToastProvider from '../components/Toast/ToastProvider';
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialRoute?: string;
@@ -25,9 +26,11 @@ const AllProviders = ({
 }) => {
   return (
     <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        {children}
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[initialRoute]}>
+          {children}
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>
   );
 };

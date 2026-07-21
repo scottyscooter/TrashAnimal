@@ -1,17 +1,13 @@
-import { useNavigate } from 'react-router-dom'
-
-const DEMO_GAME_ID = 'demo-game'
+import CreateSessionForm from '../components/CreateSessionForm'
+import ThemeToggle from '../components/ThemeToggle'
 
 function HomePage() {
-  const navigate = useNavigate()
-
   return (
-    <section>
+    <section className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
+      <ThemeToggle />
       <h1>TrashAnimal</h1>
-      <p>Home / Create-Join page</p>
-      <button type="button" onClick={() => navigate(`/games/${DEMO_GAME_ID}/lobby`)}>
-        Create game
-      </button>
+      <p>Start a new game and invite friends to join.</p>
+      <CreateSessionForm />
     </section>
   )
 }

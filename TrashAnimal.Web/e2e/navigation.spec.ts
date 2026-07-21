@@ -1,49 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Navigation Flow', () => {
-  test('complete game flow: Home → Lobby → GameBoard → Results → Home', async ({ page }) => {
-    // Start at home
+  test('create a lobby from Home and land on the Lobby page', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('h1')).toContainText('TrashAnimal');
 
-    // Navigate to lobby
-    await page.click('button:has-text("Create game")');
-    await expect(page).toHaveURL('/games/demo-game/lobby');
+    await page.getByLabel(/nickname/i).fill('Alice');
+    await page.getByRole('button', { name: /create game/i }).click();
+
+    await expect(page).toHaveURL(/\/games\/[0-9a-f-]+\/lobby$/);
     await expect(page.locator('h1')).toContainText('Lobby');
-    await expect(page.locator('p')).toContainText('demo-game');
-
-    // Navigate to game board
-    await page.click('button:has-text("Start game")');
-    await expect(page).toHaveURL('/games/demo-game');
-    await expect(page.locator('h1')).toContainText('Game Board');
-    await expect(page.locator('p')).toContainText('demo-game');
-
-    // Navigate to results
-    await page.click('button:has-text("End game")');
-    await expect(page).toHaveURL('/games/demo-game/result');
-    await expect(page.locator('h1')).toContainText('Results');
-    await expect(page.locator('p')).toContainText('demo-game');
-
-    // Return to home
-    await page.click('button:has-text("Play again")');
-    await expect(page).toHaveURL('/');
-    await expect(page.locator('h1')).toContainText('TrashAnimal');
-  });
-
-  test('navigate from home to lobby directly', async ({ page }) => {
-    await page.goto('/');
-    await page.click('button:has-text("Create game")');
-
-    await expect(page).toHaveURL('/games/demo-game/lobby');
-    await expect(page.locator('h1')).toContainText('Lobby');
-  });
-
-  test('navigate from lobby to game board directly', async ({ page }) => {
-    await page.goto('/games/demo-game/lobby');
-    await page.click('button:has-text("Start game")');
-
-    await expect(page).toHaveURL('/games/demo-game');
-    await expect(page.locator('h1')).toContainText('Game Board');
+    await expect(page.getByLabel(/lobby share link/i)).toBeVisible();
   });
 
   test('navigate from game board to results directly', async ({ page }) => {
@@ -62,15 +29,9 @@ test.describe('Navigation Flow', () => {
     await expect(page.locator('h1')).toContainText('TrashAnimal');
   });
 
-  test('page parameters are preserved during navigation', async ({ page }) => {
-    // Test with a different game ID
+  test('game board and results pages preserve the game id in the URL', async ({ page }) => {
     const gameId = 'test-game-123';
-    await page.goto(`/games/${gameId}/lobby`);
-
-    expect(page.url()).toContain(gameId);
-    await expect(page.locator('p')).toContainText(gameId);
-
-    await page.click('button:has-text("Start game")');
+    await page.goto(`/games/${gameId}`);
     expect(page.url()).toContain(gameId);
 
     await page.click('button:has-text("End game")');

@@ -2,15 +2,18 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { connectToLobbyHub, type HubSubscription } from '../api/signalRClient';
 import { queryKeys } from '../api/queryKeys';
+import { useToast } from '../components/Toast/useToast';
 
 /**
  * Subscribes to LobbyHub for the lifetime of the calling component. LobbyUpdated pushes the full
  * LobbyView directly (no hidden-information constraint), so the cache is updated in place with no
  * REST round trip. On reconnect the lobby query is invalidated unconditionally rather than
- * comparing revisions — LobbyView has no Revision field (review note 3).
+ * comparing revisions — LobbyView has no Revision field (review note 3). Connection errors surface
+ * as a toast rather than only a console.error, per the error-surface decision for Task 3.
  */
 export function useLobbySignalR(lobbyId: string) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -25,6 +28,7 @@ export function useLobbySignalR(lobbyId: string) {
       },
       onConnectionError: (error) => {
         console.error(`LobbyHub connection error for lobby ${lobbyId}:`, error);
+        showToast('Lost connection to the lobby. Trying to reconnect…');
       },
     })
       .then((sub) => {
@@ -42,5 +46,5 @@ export function useLobbySignalR(lobbyId: string) {
       cancelled = true;
       void subscription?.stop();
     };
-  }, [lobbyId, queryClient]);
+  }, [lobbyId, queryClient, showToast]);
 }
