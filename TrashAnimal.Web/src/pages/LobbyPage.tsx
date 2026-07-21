@@ -2,13 +2,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 function LobbyPage() {
   const navigate = useNavigate()
-  const { gameId } = useParams()
+  const { lobbyId } = useParams()
 
   return (
     <section>
       <h1>Lobby</h1>
-      <p>Waiting room for game to begin {gameId}</p>
-      <button type="button" onClick={() => navigate(`/games/${gameId}`)}>
+      <p>Waiting room for game to begin {lobbyId}</p>
+      <button type="button" onClick={() => navigate(`/games/${lobbyId}`)}>
         Start game
       </button>
     </section>

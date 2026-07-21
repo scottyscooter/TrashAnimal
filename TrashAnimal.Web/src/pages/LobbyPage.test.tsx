@@ -14,7 +14,7 @@ vi.mock('react-router-dom', async () => {
 
 describe('LobbyPage', () => {
   beforeEach(() => {
-    vi.mocked(router.useParams).mockReturnValue({ gameId: 'demo-game' } as any);
+    vi.mocked(router.useParams).mockReturnValue({ lobbyId: 'demo-game' } as any);
   });
 
   it('renders lobby heading', () => {
