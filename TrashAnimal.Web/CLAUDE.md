@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a plain Node/npm project, not a .NET project. It is **not** part of `TrashAnimal.slnx` (the dotnet solution file) — it lives alongside the backend projects in the same repo but builds and runs independently via `npm`.
 
+**Styling: Tailwind CSS v4**, wired via `@tailwindcss/vite` in `vite.config.ts` and `@import 'tailwindcss';` at the top of `src/index.css`. Existing hand-written global CSS (custom properties for color/typography, light/dark via `prefers-color-scheme`) lives alongside it in the same file — new component styling should prefer Tailwind utility classes.
+
 ## Stack
 
 - **Vite** (v8) — dev server + build tooling
@@ -20,6 +22,7 @@ This is a plain Node/npm project, not a .NET project. It is **not** part of `Tra
 - **TanStack Query** (`@tanstack/react-query`) — server state (REST) caching/invalidation
 - **`@microsoft/signalr`** — SignalR hub client (notification-only, see Backend Integration below)
 - **`msw`** — mocks REST calls in unit tests; does not intercept SignalR transport negotiation
+- **Tailwind CSS v4** (`@tailwindcss/vite`) — utility-first styling
 
 ## Common Commands
 
@@ -165,4 +168,4 @@ Until project-specific conventions are established, follow the same spirit as th
 
 ## Status
 
-Routing, state management (TanStack Query), and the API/SignalR client structure are now decided and built. Styling approach is still undecided; treat that aspect of the "Stack" section as provisional until Task 7 (responsive/accessibility polish) of the Playable Browser UI plan.
+Routing, state management (TanStack Query), the API/SignalR client structure, and the styling approach (Tailwind CSS v4) are now decided and built. Page-level UI is still in progress; Task 7 (responsive/accessibility polish) is where the styling approach gets exercised in full rather than decided.
