@@ -68,8 +68,18 @@ describe('LobbyPage', () => {
     expect(screen.queryByLabelText(/nickname/i)).not.toBeInTheDocument();
   });
 
-  it('only shows the Start Game button to the host (seat 0)', async () => {
+  it('only shows the Start Game button to the host (seat 0) once a second seat is filled', async () => {
     storeIdentity(0, 'test-client-token');
+    const twoSeatLobby: LobbyView = {
+      lobbyId: LOBBY_ID,
+      seats: [
+        { seatIndex: 0, nickname: 'Alice' },
+        { seatIndex: 1, nickname: 'Bob' },
+      ],
+      isStarted: false,
+      gameId: null,
+    };
+    server.use(http.get(`${API_BASE_URL}/lobbies/:lobbyId`, () => HttpResponse.json(twoSeatLobby)));
 
     render(<LobbyPage />);
 
@@ -78,6 +88,15 @@ describe('LobbyPage', () => {
 
   it('hides the Start Game button from a non-host seat', async () => {
     storeIdentity(1, 'test-client-token-2');
+
+    render(<LobbyPage />);
+
+    await screen.findByText('Alice');
+    expect(screen.queryByRole('button', { name: /start game/i })).not.toBeInTheDocument();
+  });
+
+  it('hides the Start Game button from the host while only one seat is filled', async () => {
+    storeIdentity(0, 'test-client-token');
 
     render(<LobbyPage />);
 
