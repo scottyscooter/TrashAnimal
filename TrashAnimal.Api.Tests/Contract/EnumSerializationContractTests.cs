@@ -121,7 +121,7 @@ public sealed class EnumSerializationContractTests : IClassFixture<TrashApiTestF
 
         var commandResponse = await _rawHttp.PostAsJsonAsync(
             $"/games/{gameId}/commands",
-            new SubmitCommandRequest(0, GameAction.RollDie),
+            (GameCommandRequest)new PlayActionCommand(0, GameAction.RollDie),
             StringEnumOptions);
 
         var rawJson = await commandResponse.Content.ReadAsStringAsync();
@@ -150,7 +150,7 @@ public sealed class EnumSerializationContractTests : IClassFixture<TrashApiTestF
 
         var commandResponse = await _rawHttp.PostAsJsonAsync(
             $"/games/{gameId}/commands",
-            new SubmitCommandRequest(0, GameAction.RollDie),
+            (GameCommandRequest)new PlayActionCommand(0, GameAction.RollDie),
             StringEnumOptions);
 
         var rawJson = await commandResponse.Content.ReadAsStringAsync();

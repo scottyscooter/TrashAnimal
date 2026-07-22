@@ -87,8 +87,8 @@ public sealed class GameApplicationService
     /// Dispatches a command from the HTTP layer to the correct engine mutation, acquiring the
     /// per-session lock for the entire read-mutate-respond cycle to prevent concurrent corruption.
     /// </summary>
-    public Task<GameCommandResult> DispatchCommandAsync(Guid gameId, SubmitCommandRequest request) =>
-        WithSessionLockAsync(gameId, entry => ExecuteCommandUnlockedAsync(entry, gameId, request));
+    public Task<GameCommandResult> DispatchCommandAsync(Guid gameId, GameCommandRequest request) =>
+        WithSessionLockAsync(gameId, entry => ExecuteUnlockedCommandAsync(entry, gameId, request));
 
     public Task<IReadOnlyList<TokenAction>?> GetRecycleOptionsAsync(Guid gameId)
     {
@@ -117,72 +117,101 @@ public sealed class GameApplicationService
         return Task.FromResult<GameEndResult?>(entry.Session.GetGameEndResult());
     }
 
-    private async Task<GameCommandResult> ExecuteCommandUnlockedAsync(
+    private async Task<GameCommandResult> ExecuteUnlockedCommandAsync(
         GameSessionEntry entry,
         Guid gameId,
-        SubmitCommandRequest request)
+        GameCommandRequest request)
     {
         var playerSeat = request.PlayerSeat;
 
         if (!IsValidPlayerSeat(entry.Session, playerSeat))
             return GameCommandResult.Failure("Invalid player seat.");
 
-        if (request.RecycleReplacement.HasValue)
+        return request switch
         {
-            _logger.LogInformation("Game {GameId}: player {PlayerSeat} picking recycle replacement {Replacement}.", gameId, playerSeat, request.RecycleReplacement.Value);
+            PlayActionCommand cmd => await ExecutePlayActionUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.Action),
+            PlayFeeshCommand cmd => await ExecutePlayFeeshUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.CardId),
+            PlayShinyCommand cmd => await ExecutePlayShinyUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.VictimSeat),
+            ResolveTokenStealCommand cmd => await ExecuteTokenStealUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.VictimSeat),
+            CardPickCommand cmd => await ExecuteCardPickUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.CardId),
+            DoubleStashCommand cmd => await ExecuteDoubleStashUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.CardIds),
+            RecyclePickCommand cmd => await ExecuteRecyclePickUnlockedAsync(entry, gameId, cmd.PlayerSeat, cmd.Replacement),
+            _ => GameCommandResult.Failure("Unknown command type.")
+        };
+    }
 
-            var succeeded = entry.Session.TryTokenPhaseRecyclePick(playerSeat, request.RecycleReplacement.Value, out var error);
-            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
-        }
+    private async Task<GameCommandResult> ExecutePlayActionUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        GameAction action)
+    {
+        _logger.LogInformation(
+            "Game {GameId}: player {PlayerSeat} submitting action {Action}.",
+            gameId, playerSeat, action);
 
-        if (request.CardIds is { Count: > 0 })
-        {
-            _logger.LogInformation("Game {GameId}: player {PlayerSeat} submitting double stash ({CardCount} cards).", gameId, playerSeat, request.CardIds.Count);
+        var succeeded = entry.Session.ApplyAction(playerSeat, action, entry.Die, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+    }
 
-            var succeeded = entry.Session.TryTokenPhaseDoubleStash(playerSeat, request.CardIds, out var error);
-            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
-        }
+    private async Task<GameCommandResult> ExecutePlayFeeshUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        Guid cardId)
+    {
+        _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Feesh to retrieve card {CardId}.", gameId, playerSeat, cardId);
 
-        if (request.Action == GameAction.PlayFeesh)
-        {
-            if (!request.CardId.HasValue)
-                return GameCommandResult.Failure("PlayFeesh requires CardId to specify which card to retrieve from discard pile.");
+        var succeeded = entry.Session.TryPlayFeeshWithCardChoice(playerSeat, cardId, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+    }
 
-            _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Feesh to retrieve card {CardId}.", gameId, playerSeat, request.CardId.Value);
+    private async Task<GameCommandResult> ExecutePlayShinyUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        int victimSeat)
+    {
+        _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Shiny to steal from player {VictimSeat}.", gameId, playerSeat, victimSeat);
 
-            var succeeded = entry.Session.TryPlayFeeshWithCardChoice(playerSeat, request.CardId.Value, out var error);
-            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
-        }
+        var succeeded = entry.Session.TryPlayShinyWithVictimChoice(playerSeat, victimSeat, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+    }
 
-        if (request.Action == GameAction.PlayShiny)
-        {
-            if (!request.VictimSeat.HasValue)
-                return GameCommandResult.Failure("PlayShiny requires VictimSeat to specify which opponent to steal from.");
+    private async Task<GameCommandResult> ExecuteTokenStealUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        int victimSeat)
+    {
+        _logger.LogInformation("Game {GameId}: player {PlayerSeat} resolving token steal against player {VictimSeat}.", gameId, playerSeat, victimSeat);
 
-            _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Shiny to steal from player {VictimSeat}.", gameId, playerSeat, request.VictimSeat.Value);
+        var succeeded = entry.Session.TryStartTokenStealWithVictimChoice(playerSeat, victimSeat, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+    }
 
-            var succeeded = entry.Session.TryPlayShinyWithVictimChoice(playerSeat, request.VictimSeat.Value, out var error);
-            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
-        }
+    private async Task<GameCommandResult> ExecuteDoubleStashUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        IReadOnlyList<Guid> cardIds)
+    {
+        _logger.LogInformation("Game {GameId}: player {PlayerSeat} submitting double stash ({CardCount} cards).", gameId, playerSeat, cardIds.Count);
 
-        if (request.Action == GameAction.ResolveTokenSteal)
-        {
-            if (!request.VictimSeat.HasValue)
-                return GameCommandResult.Failure("ResolveTokenSteal requires VictimSeat to specify which opponent to steal from.");
+        var succeeded = entry.Session.TryTokenPhaseDoubleStash(playerSeat, cardIds, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+    }
 
-            _logger.LogInformation("Game {GameId}: player {PlayerSeat} resolving token steal against player {VictimSeat}.", gameId, playerSeat, request.VictimSeat.Value);
+    private async Task<GameCommandResult> ExecuteRecyclePickUnlockedAsync(
+        GameSessionEntry entry,
+        Guid gameId,
+        int playerSeat,
+        TokenAction replacement)
+    {
+        _logger.LogInformation("Game {GameId}: player {PlayerSeat} picking recycle replacement {Replacement}.", gameId, playerSeat, replacement);
 
-            var succeeded = entry.Session.TryStartTokenStealWithVictimChoice(playerSeat, request.VictimSeat.Value, out var error);
-            return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
-        }
-
-        if (request.CardId.HasValue)
-            return await ExecuteCardPickUnlockedAsync(entry, gameId, playerSeat, request.CardId.Value);
-
-        _logger.LogInformation("Game {GameId}: player {PlayerSeat} submitting action {Action}.", gameId, playerSeat, request.Action);
-
-        var actionSucceeded = entry.Session.ApplyAction(playerSeat, request.Action, entry.Die, out var actionError);
-        return await BuildResultAsync(entry, gameId, playerSeat, actionSucceeded, actionError);
+        var succeeded = entry.Session.TryTokenPhaseRecyclePick(playerSeat, replacement, out var error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
     }
 
     private async Task<GameCommandResult> ExecuteCardPickUnlockedAsync(

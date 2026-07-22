@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Folder Structure
 
 - **`Application/`** — `GameApplicationService` (the bridge from HTTP/SignalR to the domain engine — see below), plus result records `GameCommandResult` and `GameCreationResult`.
-- **`Contracts/Requests/`** — `CreateGameRequest(PlayerNames, DieSeed?)`, `SubmitCommandRequest(PlayerSeat, Action, CardId?, CardIds?, RecycleReplacement?, VictimSeat?)`.
+- **`Contracts/Requests/`** — `CreateGameRequest(PlayerNames, DieSeed?)`, `GameCommandRequest` (polymorphic discriminated union base type with 7 concrete subtypes: `PlayActionCommand`, `PlayFeeshCommand`, `PlayShinyCommand`, `ResolveTokenStealCommand`, `CardPickCommand`, `DoubleStashCommand`, `RecyclePickCommand`).
 - **`Contracts/Responses/`** — `GameCreationResponse`, `PlayerViewResponse`, `GameCommandResponse` (with `FromSuccess`/`FromFailure` factories), `GameResultResponse`. These reuse domain types (`GameView`, `GameAction`, `GameEndScoreLine`, etc.) directly as DTO members — there is no separate API-side mapping layer.
 - **`Controllers/`** — `GamesController` (see Endpoints below).
 - **`Hubs/`** — `GameHub`, the push-only SignalR hub (see SignalR below).
@@ -28,12 +28,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `POST /games/{gameId}/commands` | Submit a game command (`SubmitCommandRequest`) | 200 `GameCommandResponse` on success, 422 on rule rejection, 404 if game not found |
 | `GET /games/{gameId}/result` | Final scoreboard (only valid once `GameState.GameEnded`) | 200 `GameResultResponse` or 404 |
 
-`SubmitCommandRequest.Action` is the primary discriminator; which optional field is populated depends on the action (`CardId` for Feesh play / card picks, `VictimSeat` for Shiny / token-steal resolution, `CardIds` for double-stash, `RecycleReplacement` for recycle picks) — see the XML doc on `GamesController.SubmitCommand` for the full table.
+The request body is a JSON polymorphic discriminated union keyed by `kind` — each subtype marshals only its required payload fields, preventing malformed combinations at the type level. See `GamesController.SubmitCommand` XML doc for the complete mapping.
 
 ## GameApplicationService (`Application/`)
 
 The single chokepoint between transport and domain:
-- `CreateGameAsync`, `GetViewAsync`, `DispatchCommandAsync` (the only mutation entry point — internally routes based on request shape/`GameState`/`TokenPhaseStep` via the private `ExecuteCommandUnlockedAsync`/`ExecuteCardPickUnlockedAsync` helpers), plus `GetRecycleOptionsAsync`, `GetGameEndResultAsync`.
+- `CreateGameAsync`, `GetViewAsync`, `DispatchCommandAsync` (the only mutation entry point — pattern-matches on the concrete `GameCommandRequest` subtype via `ExecuteUnlockedCommandAsync`, which dispatches to type-specific handlers or to `ExecuteCardPickUnlockedAsync` for context-dependent card picks), plus `GetRecycleOptionsAsync`, `GetGameEndResultAsync`.
 - Every mutation runs inside `WithSessionLockAsync`, which acquires `GameSessionEntry.Lock` (a per-session `SemaphoreSlim`) for the full read-mutate-respond cycle, preventing concurrent corruption of a single game's state.
 - On success: increments `entry.Revision`, publishes a `GameUpdateEnvelope` via `IGameUpdatePublisher`, then projects a fresh view/allowed-actions for the acting player.
 - Uses `GameApplicationServiceOptions.StartingHandCounts` to size hands at creation based on player count.

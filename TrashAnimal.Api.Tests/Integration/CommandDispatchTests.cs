@@ -41,7 +41,7 @@ public sealed class CommandDispatchTests : IClassFixture<TrashApiTestFactory>
 
         // EndTurn is never valid as the very first action; game starts in RollPhase.
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(0, GameAction.EndTurn));
+            new PlayActionCommand(0, GameAction.EndTurn));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);
@@ -56,7 +56,7 @@ public sealed class CommandDispatchTests : IClassFixture<TrashApiTestFactory>
         var unknownGameId = Guid.NewGuid();
 
         var (status, _) = await _client.SubmitCommandAsync(unknownGameId,
-            new SubmitCommandRequest(0, GameAction.RollDie));
+            new PlayActionCommand(0, GameAction.RollDie));
 
         Assert.Equal(HttpStatusCode.NotFound, status);
     }
@@ -104,7 +104,7 @@ public sealed class CommandDispatchTests : IClassFixture<TrashApiTestFactory>
 
         // PlayFeeshTokenPhase is only valid during the token phase, not during roll phase.
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(0, GameAction.PlayFeeshTokenPhase));
+            new PlayActionCommand(0, GameAction.PlayFeeshTokenPhase));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);

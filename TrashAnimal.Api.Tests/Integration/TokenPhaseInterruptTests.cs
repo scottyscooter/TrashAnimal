@@ -27,7 +27,7 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var gameId = created!.GameId;
 
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(0, GameAction.PlayFeeshTokenPhase));
+            new PlayActionCommand(0, GameAction.PlayFeeshTokenPhase));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);
@@ -41,7 +41,7 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var gameId = created!.GameId;
 
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(0, GameAction.PlayShinyTokenPhase));
+            new PlayActionCommand(0, GameAction.PlayShinyTokenPhase));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);
@@ -92,7 +92,7 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(0, GameAction.StopRolling));
+            new PlayActionCommand(0, GameAction.StopRolling));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);

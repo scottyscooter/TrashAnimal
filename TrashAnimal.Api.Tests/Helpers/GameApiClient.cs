@@ -47,7 +47,7 @@ public sealed class GameApiClient
     }
 
     public async Task<(HttpStatusCode Status, GameCommandResponse? Body)> SubmitCommandAsync(
-        Guid gameId, SubmitCommandRequest request)
+        Guid gameId, GameCommandRequest request)
     {
         var response = await _http.PostAsJsonAsync($"/games/{gameId}/commands", request, JsonOptions);
         var body = await response.Content.ReadFromJsonAsync<GameCommandResponse>(JsonOptions);
@@ -65,8 +65,8 @@ public sealed class GameApiClient
     }
 
     public Task<(HttpStatusCode Status, GameCommandResponse? Body)> RollDieAsync(Guid gameId, int playerSeat) =>
-        SubmitCommandAsync(gameId, new SubmitCommandRequest(playerSeat, GameAction.RollDie));
+        SubmitCommandAsync(gameId, new PlayActionCommand(playerSeat, GameAction.RollDie));
 
     public Task<(HttpStatusCode Status, GameCommandResponse? Body)> EndTurnAsync(Guid gameId, int playerSeat) =>
-        SubmitCommandAsync(gameId, new SubmitCommandRequest(playerSeat, GameAction.EndTurn));
+        SubmitCommandAsync(gameId, new PlayActionCommand(playerSeat, GameAction.EndTurn));
 }
