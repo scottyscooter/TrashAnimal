@@ -33,7 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## GameApplicationService (`Application/`)
 
 The single chokepoint between transport and domain:
-- `CreateGameAsync`, `GetViewAsync`, `DispatchCommandAsync` (the one the controller calls — internally routes based on request shape/`GameState`/`TokenPhaseStep`), plus narrower methods (`SubmitActionAsync`, `CompleteStealWithCardAsync`, `SubmitBanditPassAsync`, `SubmitBanditStashAsync`, `SubmitDoubleStashAsync`, `SubmitStashTrashPickAsync`, `SubmitRecyclePickAsync`, `GetRecycleOptionsAsync`, `GetGameEndResultAsync`).
+- `CreateGameAsync`, `GetViewAsync`, `DispatchCommandAsync` (the only mutation entry point — internally routes based on request shape/`GameState`/`TokenPhaseStep` via the private `ExecuteCommandUnlockedAsync`/`ExecuteCardPickUnlockedAsync` helpers), plus `GetRecycleOptionsAsync`, `GetGameEndResultAsync`.
 - Every mutation runs inside `WithSessionLockAsync`, which acquires `GameSessionEntry.Lock` (a per-session `SemaphoreSlim`) for the full read-mutate-respond cycle, preventing concurrent corruption of a single game's state.
 - On success: increments `entry.Revision`, publishes a `GameUpdateEnvelope` via `IGameUpdatePublisher`, then projects a fresh view/allowed-actions for the acting player.
 - Uses `GameApplicationServiceOptions.StartingHandCounts` to size hands at creation based on player count.
