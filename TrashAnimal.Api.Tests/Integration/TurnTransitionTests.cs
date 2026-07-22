@@ -87,7 +87,7 @@ public sealed class TurnTransitionTests : IClassFixture<TrashApiTestFactory>
     private async Task AssertCommandSucceedsAsync(Guid gameId, int playerSeat, GameAction action)
     {
         var (status, body) = await _client.SubmitCommandAsync(gameId,
-            new SubmitCommandRequest(playerSeat, action));
+            new PlayActionCommand(playerSeat, action));
 
         Assert.True(
             status == HttpStatusCode.OK && body?.Succeeded == true,

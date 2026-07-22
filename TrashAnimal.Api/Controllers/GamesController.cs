@@ -98,17 +98,17 @@ public sealed class GamesController : ControllerBase
 
     /// <summary>Submits a game command for a player.</summary>
     /// <remarks>
-    /// <c>action</c> is the primary discriminator. Supply additional payload fields only when
-    /// the action requires them:
+    /// The request body is a discriminated union keyed by <c>kind</c>:
     ///
-    /// | Scenario | <c>action</c> value | Extra fields |
+    /// | Scenario | <c>kind</c> value | Payload fields |
     /// |---|---|---|
-    /// | Standard game action | any <c>GameAction</c> value | — |
-    /// | Steal card pick (AwaitingStealCardPick) | *(omit / any)* | <c>cardId</c> |
-    /// | Stash-trash card pick (TokenPhase) | *(omit / any)* | <c>cardId</c> |
-    /// | Bandit stash card (TokenPhase) | *(omit / any)* | <c>cardId</c> |
-    /// | Double stash submit (TokenPhase) | *(omit / any)* | <c>cardIds</c> |
-    /// | Recycle replacement pick (TokenPhase) | *(omit / any)* | <c>recycleReplacement</c> |
+    /// | Standard game action | <c>"action"</c> | <c>action</c> (GameAction) |
+    /// | Play Feesh card | <c>"playFeesh"</c> | <c>cardId</c> (Guid) |
+    /// | Play Shiny card | <c>"playShiny"</c> | <c>victimSeat</c> (int) |
+    /// | Resolve token steal | <c>"resolveTokenSteal"</c> | <c>victimSeat</c> (int) |
+    /// | Card pick (context-dependent) | <c>"cardPick"</c> | <c>cardId</c> (Guid) |
+    /// | Double stash submit | <c>"doubleStash"</c> | <c>cardIds</c> (Guid[]) |
+    /// | Recycle pick | <c>"recyclePick"</c> | <c>replacement</c> (TokenAction) |
     ///
     /// 200 response body (success):
     /// <code>
@@ -136,7 +136,7 @@ public sealed class GamesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<GameCommandResponse>> SubmitCommand(
         Guid gameId,
-        [FromBody] SubmitCommandRequest request)
+        [FromBody] GameCommandRequest request)
     {
         var result = await _gameApplicationService.DispatchCommandAsync(gameId, request);
 

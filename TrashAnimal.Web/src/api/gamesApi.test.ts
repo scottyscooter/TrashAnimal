@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { API_BASE_URL } from './httpClient';
 import { gamesApi } from './gamesApi';
+import type { SubmitCommandRequest } from './types';
 
 describe('gamesApi', () => {
   it('createGame posts playerNames as the request body', async () => {

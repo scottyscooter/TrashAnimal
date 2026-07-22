@@ -13,7 +13,7 @@ import type {
  * A GameAction filler value used for the contextual command variants (card picks, double stash,
  * recycle pick) whose wire `action` field GamesController's dispatcher ignores — it routes those
  * requests by whichever of `recycleReplacement`/`cardIds`/`cardId` is populated and the session's
- * current GameState/TokenPhaseStep instead. See GameApplicationService.ExecuteCommandUnlockedAsync.
+ * current GameState/TokenPhaseStep instead. See GameApplicationService.ExecuteUnlockedCommandAsync.
  */
 const CONTEXTUAL_ACTION_FILLER = 'EndTurn';
 
