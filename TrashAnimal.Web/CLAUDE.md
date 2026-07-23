@@ -169,6 +169,31 @@ The client talks to `TrashAnimal.Api` (see repo-root CLAUDE.md) through a dedica
 - `src/components/Toast/` — `ToastProvider` (wired in `main.tsx` and `test-utils.tsx`) + `useToast()`. Error-surface convention: form-triggered mutation errors (create/join/start) render inline near the triggering control via `ApiError.message`; connection-level errors (`useLobbySignalR`'s `onConnectionError`) show as a toast. Duplicate-nickname join errors are the one case with extra handling — `JoinForm` substring-matches the known message text (no structured error code exists on `LobbiesController`'s bare-string bodies) and refocuses the nickname field.
 - `src/components/ThemeToggle.tsx` — cycles `useTheme`'s `system`/`light`/`dark`, rendered on `HomePage`.
 
+## Enum Contract Pattern
+
+**Single Source of Truth for Enums:** In `src/api/types.ts`, all domain enums (GameState, GameAction, CardName, TokenAction, etc.) are defined once as const arrays with `as const`, and TypeScript types are derived from them:
+
+```typescript
+export const GAME_STATE_VALUES = [
+  'RollPhase',
+  'AwaitingYumYum',
+  'AwaitingStealResponse',
+  // ...
+] as const;
+export type GameState = typeof GAME_STATE_VALUES[number];
+```
+
+**Why:** This ensures types and runtime validation can never drift. Contract tests import the const arrays and validate backend responses against them—if backend enums diverge, tests fail immediately. The const is the authority; the type is derived.
+
+**Pattern for New Enums:**
+1. Define the const array with `as const`
+2. Derive the type from it: `typeof ARRAY[number]`
+3. Export both
+4. Tests import the const for validation
+5. Never write type unions manually or create hardcoded lists in tests—always derive from the const
+
+This is **mandatory** for any new enum added to the frontend/backend contract.
+
 ## Conventions
 
 Until project-specific conventions are established, follow the same spirit as the backend (see repo-root CLAUDE.md `Code Patterns & Standards`):

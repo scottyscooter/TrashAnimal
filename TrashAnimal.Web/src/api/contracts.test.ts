@@ -1,4 +1,10 @@
 import { describe, it, expect, beforeAll } from 'vitest';
+import {
+  GAME_STATE_VALUES,
+  GAME_ACTION_VALUES,
+  CARD_NAME_VALUES,
+  TOKEN_ACTION_VALUES,
+} from './types';
 
 /**
  * API Contract Tests — Node.js integration tests against real TrashAnimal.Api
@@ -261,16 +267,7 @@ describe('API Contract Tests', () => {
       expect(typeof state).toBe('string');
       expect(isNaN(Number(state))).toBe(true); // Should not be a number
 
-      const validStates = [
-        'RollPhase',
-        'AwaitingYumYum',
-        'AwaitingStealResponse',
-        'AwaitingStealCardPick',
-        'TokenPhase',
-        'TurnEnd',
-        'GameEnded',
-      ];
-      expect(validStates).toContain(state);
+      expect(GAME_STATE_VALUES).toContain(state);
     });
 
     it('GameAction[] contains strings (not numeric enums)', async () => {
@@ -283,6 +280,7 @@ describe('API Contract Tests', () => {
       actions.forEach((action: unknown) => {
         expect(typeof action).toBe('string');
         expect(isNaN(Number(action as string))).toBe(true);
+        expect(GAME_ACTION_VALUES).toContain(action);
       });
     });
 
@@ -296,6 +294,7 @@ describe('API Contract Tests', () => {
       cardNames.forEach((cardName: unknown) => {
         expect(typeof cardName).toBe('string');
         expect(isNaN(Number(cardName as string))).toBe(true);
+        expect(CARD_NAME_VALUES).toContain(cardName);
       });
     });
 
@@ -308,8 +307,8 @@ describe('API Contract Tests', () => {
 
       tokens.forEach((token: unknown) => {
         expect(typeof token).toBe('string');
-        const validTokens = ['StashTrash', 'DoubleStash', 'DoubleTrash', 'Bandit', 'Steal', 'Recycle'];
-        expect(validTokens).toContain(token);
+        expect(isNaN(Number(token as string))).toBe(true);
+        expect(TOKEN_ACTION_VALUES).toContain(token);
       });
     });
   });

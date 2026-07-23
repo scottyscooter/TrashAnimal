@@ -1,4 +1,10 @@
 import { test, expect } from '@playwright/test';
+import {
+  GAME_STATE_VALUES,
+  GAME_ACTION_VALUES,
+  CARD_NAME_VALUES,
+  TOKEN_ACTION_VALUES,
+} from '../src/api/types';
 
 /**
  * API Contract Tests — Playwright E2E integration tests
@@ -221,16 +227,7 @@ test.describe('API Contract Tests (Playwright)', () => {
       expect(typeof state).toBe('string');
       expect(isNaN(Number(state))).toBe(true);
 
-      const validStates = [
-        'RollPhase',
-        'AwaitingYumYum',
-        'AwaitingStealResponse',
-        'AwaitingStealCardPick',
-        'TokenPhase',
-        'TurnEnd',
-        'GameEnded',
-      ];
-      expect(validStates).toContain(state);
+      expect(GAME_STATE_VALUES).toContain(state);
     });
 
     test('GameAction[] items are strings (not numeric)', async ({ request }) => {
@@ -243,6 +240,7 @@ test.describe('API Contract Tests (Playwright)', () => {
       actions.forEach((action: unknown) => {
         expect(typeof action).toBe('string');
         expect(isNaN(Number(action as string))).toBe(true);
+        expect(GAME_ACTION_VALUES).toContain(action);
       });
     });
 
@@ -256,6 +254,7 @@ test.describe('API Contract Tests (Playwright)', () => {
       cardNames.forEach((cardName: unknown) => {
         expect(typeof cardName).toBe('string');
         expect(isNaN(Number(cardName as string))).toBe(true);
+        expect(CARD_NAME_VALUES).toContain(cardName);
       });
     });
 
@@ -268,8 +267,8 @@ test.describe('API Contract Tests (Playwright)', () => {
       expect(Array.isArray(tokens)).toBe(true);
       tokens.forEach((token: unknown) => {
         expect(typeof token).toBe('string');
-        const validTokens = ['StashTrash', 'DoubleStash', 'DoubleTrash', 'Bandit', 'Steal', 'Recycle'];
-        expect(validTokens).toContain(token);
+        expect(isNaN(Number(token as string))).toBe(true);
+        expect(TOKEN_ACTION_VALUES).toContain(token);
       });
     });
   });

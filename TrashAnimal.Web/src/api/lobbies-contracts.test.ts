@@ -19,7 +19,6 @@ const API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5080';
 
 describe('Lobby API Contract Tests', () => {
   let lobbyId: string;
-  let adminToken: string;
 
   beforeAll(async () => {
     // Create a lobby for use in dependent tests
@@ -38,7 +37,6 @@ describe('Lobby API Contract Tests', () => {
 
     const data = await response.json();
     lobbyId = data.lobby.lobbyId;
-    adminToken = data.clientToken;
   });
 
   describe('POST /lobbies (CreateLobby)', () => {
