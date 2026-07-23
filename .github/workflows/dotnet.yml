@@ -33,6 +33,17 @@ jobs:
     - name: Install frontend dependencies
       run: npm ci
       working-directory: TrashAnimal.Web
-    - name: Test (frontend)
-      run: npm test
+    - name: Start backend API
+      run: dotnet run --project TrashAnimal.Api &
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
+        ASPNETCORE_URLS: http://localhost:5080
+    - name: Wait for API to be ready
+      run: |
+        timeout 30 bash -c 'until curl -f http://localhost:5080/health 2>/dev/null; do sleep 1; done' || \
+        timeout 30 bash -c 'until nc -z localhost 5080 2>/dev/null; do sleep 1; done'
+    - name: Test (frontend — unit + contract integration)
+      run: npm run test:run
       working-directory: TrashAnimal.Web
+      env:
+        VITE_API_BASE_URL: http://localhost:5080
