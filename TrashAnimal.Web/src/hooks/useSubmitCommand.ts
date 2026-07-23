@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { gamesApi } from '../api/gamesApi';
 import { queryKeys } from '../api/queryKeys';
-import type { SubmitCommandRequest } from '../api/types';
+import type { GameCommandRequest } from '../api/types';
 
 /**
  * Resolves with the parsed GameCommandResponse for both success and the 422 rule-rejection case —
@@ -18,7 +18,7 @@ export function useSubmitCommand(gameId: string, playerSeat: number) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: SubmitCommandRequest) => gamesApi.submitCommand(gameId, request),
+    mutationFn: (request: GameCommandRequest) => gamesApi.submitCommand(gameId, request),
     retry: false,
     onSuccess: (response) => {
       if (response.succeeded) {

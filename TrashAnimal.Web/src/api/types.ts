@@ -2,66 +2,87 @@
 // domain GameView/enums, and Updates/*Envelope). Enums serialize as strings (JsonStringEnumConverter),
 // and ASP.NET Core's default JSON naming policy is camelCase, so every field here is camelCase even
 // though the C# source is PascalCase.
+//
+// SINGLE SOURCE OF TRUTH PATTERN: Enum values are defined once as const arrays with `as const`,
+// and types are derived from them via `typeof`. This ensures runtime validation against contract
+// tests can never drift from type definitions. See CLAUDE.md for the project pattern.
 
-export type CardName =
-  | 'Blammo'
-  | 'Nanners'
-  | 'Feesh'
-  | 'Shiny'
-  | 'Yumyum'
-  | 'MmmPie'
-  | 'Kitteh'
-  | 'Doggo';
+export const CARD_NAME_VALUES = [
+  'Blammo',
+  'Nanners',
+  'Feesh',
+  'Shiny',
+  'Yumyum',
+  'MmmPie',
+  'Kitteh',
+  'Doggo',
+] as const;
+export type CardName = typeof CARD_NAME_VALUES[number];
 
-export type TokenAction = 'StashTrash' | 'DoubleStash' | 'DoubleTrash' | 'Bandit' | 'Steal' | 'Recycle';
+export const TOKEN_ACTION_VALUES = [
+  'StashTrash',
+  'DoubleStash',
+  'DoubleTrash',
+  'Bandit',
+  'Steal',
+  'Recycle',
+] as const;
+export type TokenAction = typeof TOKEN_ACTION_VALUES[number];
 
-export type GameState =
-  | 'RollPhase'
-  | 'AwaitingYumYum'
-  | 'AwaitingStealResponse'
-  | 'AwaitingStealCardPick'
-  | 'TokenPhase'
-  | 'TurnEnd'
-  | 'GameEnded';
+export const GAME_STATE_VALUES = [
+  'RollPhase',
+  'AwaitingYumYum',
+  'AwaitingStealResponse',
+  'AwaitingStealCardPick',
+  'TokenPhase',
+  'TurnEnd',
+  'GameEnded',
+] as const;
+export type GameState = typeof GAME_STATE_VALUES[number];
 
-export type TokenPhaseStep =
-  | 'ChoosingNextToken'
-  | 'StashTrashChooseBranch'
-  | 'StashTrashPickCard'
-  | 'DoubleStashChoosingCards'
-  | 'BanditAwaitOpponentResponse'
-  | 'RecycleChoosingReplacement';
+export const TOKEN_PHASE_STEP_VALUES = [
+  'ChoosingNextToken',
+  'StashTrashChooseBranch',
+  'StashTrashPickCard',
+  'DoubleStashChoosingCards',
+  'BanditAwaitOpponentResponse',
+  'RecycleChoosingReplacement',
+] as const;
+export type TokenPhaseStep = typeof TOKEN_PHASE_STEP_VALUES[number];
 
-export type StealTargetZone = 'Hand' | 'Stash';
+export const STEAL_TARGET_ZONE_VALUES = ['Hand', 'Stash'] as const;
+export type StealTargetZone = typeof STEAL_TARGET_ZONE_VALUES[number];
 
-export type GameAction =
-  | 'RollDie'
-  | 'StopRolling'
-  | 'AdvanceToResolveTokens'
-  | 'PlayShiny'
-  | 'PlayFeesh'
-  | 'PlayNanners'
-  | 'PlayBlammo'
-  | 'AbandonBust'
-  | 'YumYumPlay'
-  | 'YumYumPass'
-  | 'StealPass'
-  | 'StealPlayDoggo'
-  | 'StealPlayKitteh'
-  | 'PlayMmmPieTokenPhase'
-  | 'PlayShinyTokenPhase'
-  | 'PlayFeeshTokenPhase'
-  | 'ResolveTokenStashTrash'
-  | 'ResolveTokenDoubleStash'
-  | 'ResolveTokenDoubleTrash'
-  | 'ResolveTokenBandit'
-  | 'ResolveTokenSteal'
-  | 'ResolveTokenRecycle'
-  | 'TokenStashTrashDrawOne'
-  | 'TokenStashTrashStashMode'
-  | 'TokenDoubleStashSubmit'
-  | 'TokenBanditMatchPass'
-  | 'EndTurn';
+export const GAME_ACTION_VALUES = [
+  'RollDie',
+  'StopRolling',
+  'AdvanceToResolveTokens',
+  'PlayShiny',
+  'PlayFeesh',
+  'PlayNanners',
+  'PlayBlammo',
+  'AbandonBust',
+  'YumYumPlay',
+  'YumYumPass',
+  'StealPass',
+  'StealPlayDoggo',
+  'StealPlayKitteh',
+  'PlayMmmPieTokenPhase',
+  'PlayShinyTokenPhase',
+  'PlayFeeshTokenPhase',
+  'ResolveTokenStashTrash',
+  'ResolveTokenDoubleStash',
+  'ResolveTokenDoubleTrash',
+  'ResolveTokenBandit',
+  'ResolveTokenSteal',
+  'ResolveTokenRecycle',
+  'TokenStashTrashDrawOne',
+  'TokenStashTrashStashMode',
+  'TokenDoubleStashSubmit',
+  'TokenBanditMatchPass',
+  'EndTurn',
+] as const;
+export type GameAction = typeof GAME_ACTION_VALUES[number];
 
 export interface StealPickSlot {
   cardId: string;
@@ -132,45 +153,20 @@ export interface StartLobbyRequest {
 }
 
 /**
- * Wire shape accepted by POST /games/{gameId}/commands. GamesController's dispatcher checks
- * fields in this order: recycleReplacement, then cardIds, then action === 'PlayFeesh'/'PlayShiny'/
- * 'ResolveTokenSteal', then a bare cardId (routed by current GameState/TokenPhaseStep), else the
- * plain action. Prefer building requests via the `SubmitCommandRequest` factories below rather than
- * this raw shape, so the discriminated union in `gamesApi.ts` catches field mistakes at compile time.
+ * Discriminated union for game command requests. The backend (GameCommandRequest) uses a
+ * polymorphic JSON discriminator `kind` to determine the command type at deserialization time.
+ *
+ * Each variant encodes exactly the fields required for that command; unused fields are omitted
+ * at the type level, preventing malformed combinations at compile time.
  */
-export interface SubmitCommandRequestWire {
-  playerSeat: number;
-  action: GameAction;
-  cardId?: string | null;
-  cardIds?: string[] | null;
-  recycleReplacement?: TokenAction | null;
-  victimSeat?: number | null;
-}
-
-/**
- * The three GameAction values GamesController special-cases by requiring an extra field.
- * All other actions take no payload.
- */
-export type PlainGameAction = Exclude<GameAction, 'PlayFeesh' | 'PlayShiny' | 'ResolveTokenSteal'>;
-
-/**
- * Discriminated union modeling every distinct shape POST /games/{gameId}/commands accepts.
- * `kind: 'action'` covers plain GameAction submissions (RollDie, EndTurn, ...). The remaining
- * variants cover the contextual, GameState/TokenPhaseStep-driven requests the backend routes
- * independently of the `action` field (steal/stash-trash/bandit card picks, double stash, recycle
- * pick) — see review note 2 in the plan doc. Construct these via `gamesApi.ts`'s helpers, which
- * translate each variant into the wire shape above.
- */
-export type SubmitCommandRequest =
-  | { kind: 'action'; playerSeat: number; action: PlainGameAction }
+export type GameCommandRequest =
+  | { kind: 'action'; playerSeat: number; action: GameAction }
   | { kind: 'playFeesh'; playerSeat: number; cardId: string }
   | { kind: 'playShiny'; playerSeat: number; victimSeat: number }
   | { kind: 'resolveTokenSteal'; playerSeat: number; victimSeat: number }
-  | { kind: 'stealCardPick'; playerSeat: number; cardId: string }
-  | { kind: 'stashTrashCardPick'; playerSeat: number; cardId: string }
-  | { kind: 'banditStashCardPick'; playerSeat: number; cardId: string }
-  | { kind: 'doubleStashSubmit'; playerSeat: number; cardIds: string[] }
-  | { kind: 'recyclePick'; playerSeat: number; recycleReplacement: TokenAction };
+  | { kind: 'cardPick'; playerSeat: number; cardId: string }
+  | { kind: 'doubleStash'; playerSeat: number; cardIds: string[] }
+  | { kind: 'recyclePick'; playerSeat: number; replacement: TokenAction };
 
 // ---- Responses ----
 

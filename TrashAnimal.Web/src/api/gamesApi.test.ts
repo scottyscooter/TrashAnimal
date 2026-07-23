@@ -3,7 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { server } from '../test/msw/server';
 import { API_BASE_URL } from './httpClient';
 import { gamesApi } from './gamesApi';
-import type { SubmitCommandRequest } from './types';
+import type { GameCommandRequest } from './types';
 
 describe('gamesApi', () => {
   it('createGame posts playerNames as the request body', async () => {
@@ -37,7 +37,7 @@ describe('gamesApi', () => {
     expect(capturedUrl?.searchParams.get('playerSeat')).toBe('2');
   });
 
-  it('submitCommand sends a plain action as the wire shape', async () => {
+  it('submitCommand sends PlayActionCommand with kind: "action"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -46,11 +46,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'action', playerSeat: 0, action: 'RollDie' });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'RollDie' });
+    const request: GameCommandRequest = { kind: 'action', playerSeat: 0, action: 'RollDie' };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates playFeesh into action + cardId', async () => {
+  it('submitCommand sends PlayFeeshCommand with kind: "playFeesh"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -59,11 +60,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'playFeesh', playerSeat: 1, cardId: 'card-1' });
-    expect(capturedBody).toEqual({ playerSeat: 1, action: 'PlayFeesh', cardId: 'card-1' });
+    const request: GameCommandRequest = { kind: 'playFeesh', playerSeat: 1, cardId: 'card-1' };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates doubleStashSubmit into cardIds without a meaningful action', async () => {
+  it('submitCommand sends DoubleStashCommand with kind: "doubleStash"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -72,15 +74,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', {
-      kind: 'doubleStashSubmit',
-      playerSeat: 0,
-      cardIds: ['card-a', 'card-b'],
-    });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'EndTurn', cardIds: ['card-a', 'card-b'] });
+    const request: GameCommandRequest = { kind: 'doubleStash', playerSeat: 0, cardIds: ['card-a', 'card-b'] };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates playShiny into action + victimSeat', async () => {
+  it('submitCommand sends PlayShinyCommand with kind: "playShiny"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -89,11 +88,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'playShiny', playerSeat: 0, victimSeat: 2 });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'PlayShiny', victimSeat: 2 });
+    const request: GameCommandRequest = { kind: 'playShiny', playerSeat: 0, victimSeat: 2 };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates resolveTokenSteal into action + victimSeat', async () => {
+  it('submitCommand sends ResolveTokenStealCommand with kind: "resolveTokenSteal"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -102,11 +102,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'resolveTokenSteal', playerSeat: 1, victimSeat: 3 });
-    expect(capturedBody).toEqual({ playerSeat: 1, action: 'ResolveTokenSteal', victimSeat: 3 });
+    const request: GameCommandRequest = { kind: 'resolveTokenSteal', playerSeat: 1, victimSeat: 3 };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates stealCardPick into a bare cardId without a meaningful action', async () => {
+  it('submitCommand sends CardPickCommand with kind: "cardPick"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -115,11 +116,12 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'stealCardPick', playerSeat: 0, cardId: 'card-2' });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'EndTurn', cardId: 'card-2' });
+    const request: GameCommandRequest = { kind: 'cardPick', playerSeat: 0, cardId: 'card-2' };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
-  it('submitCommand translates stashTrashCardPick into a bare cardId without a meaningful action', async () => {
+  it('submitCommand sends RecyclePickCommand with kind: "recyclePick"', async () => {
     let capturedBody: unknown;
     server.use(
       http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
@@ -128,38 +130,9 @@ describe('gamesApi', () => {
       }),
     );
 
-    await gamesApi.submitCommand('game-1', { kind: 'stashTrashCardPick', playerSeat: 0, cardId: 'card-3' });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'EndTurn', cardId: 'card-3' });
-  });
-
-  it('submitCommand translates banditStashCardPick into a bare cardId without a meaningful action', async () => {
-    let capturedBody: unknown;
-    server.use(
-      http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
-        capturedBody = await request.json();
-        return HttpResponse.json({ succeeded: true, errorMessage: null, view: null, allowedActions: [] });
-      }),
-    );
-
-    await gamesApi.submitCommand('game-1', { kind: 'banditStashCardPick', playerSeat: 0, cardId: 'card-4' });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'EndTurn', cardId: 'card-4' });
-  });
-
-  it('submitCommand translates recyclePick into recycleReplacement without a meaningful action', async () => {
-    let capturedBody: unknown;
-    server.use(
-      http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
-        capturedBody = await request.json();
-        return HttpResponse.json({ succeeded: true, errorMessage: null, view: null, allowedActions: [] });
-      }),
-    );
-
-    await gamesApi.submitCommand('game-1', {
-      kind: 'recyclePick',
-      playerSeat: 0,
-      recycleReplacement: 'Bandit',
-    });
-    expect(capturedBody).toEqual({ playerSeat: 0, action: 'EndTurn', recycleReplacement: 'Bandit' });
+    const request: GameCommandRequest = { kind: 'recyclePick', playerSeat: 0, replacement: 'Bandit' };
+    await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
   });
 
   it('submitCommand and getResult URL-encode the gameId path segment', async () => {
@@ -185,7 +158,8 @@ describe('gamesApi', () => {
       ),
     );
 
-    const response = await gamesApi.submitCommand('game-1', { kind: 'action', playerSeat: 0, action: 'EndTurn' });
+    const request: GameCommandRequest = { kind: 'action', playerSeat: 0, action: 'EndTurn' };
+    const response = await gamesApi.submitCommand('game-1', request);
     expect(response.succeeded).toBe(false);
     expect(response.errorMessage).toBe('Action is not allowed right now.');
   });
