@@ -4,7 +4,7 @@ namespace TrashAnimal.Api.Contracts.Responses;
 /// Response body for <c>GET /games/{gameId}/view</c>.
 /// </summary>
 /// <remarks>
-/// <b>Hidden-information guarantee:</b> <see cref="GameView.HandCardNames"/> contains only the
+/// <b>Hidden-information guarantee:</b> <see cref="GameView.HandCards"/> contains only the
 /// cards held by the player identified by <c>playerSeat</c>. Opponent hand contents are never
 /// included. This boundary is enforced by the engine's
 /// <c>GameSession.GetViewForPlayer(playerSeat)</c> projection, which reads exclusively from

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script src="./image-slot.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;background:#0b1220;}
+    a{color:#ffd166;}
+    a:hover{color:#ffe4a1;}
+    @keyframes tp-pop{0%{transform:scale(.2);opacity:0;}60%{transform:scale(1.18);opacity:1;}100%{transform:scale(1);opacity:1;}}
+    @keyframes tp-pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.5);opacity:.4;}}
+    @keyframes stink-rise{0%{transform:translateY(0) scaleX(1);opacity:.85;}50%{transform:translateY(-7px) scaleX(1.2);opacity:.4;}100%{transform:translateY(-14px) scaleX(1);opacity:0;}}
+    @keyframes fly-orbit{from{transform:rotate(0deg) translateX(13px) rotate(0deg);}to{transform:rotate(360deg) translateX(13px) rotate(-360deg);}}
+    @keyframes fly-erratic{
+      0%{transform:translate(0,0);}
+      10%{transform:translate(9px,-4px);}
+      22%{transform:translate(4px,-10px);}
+      35%{transform:translate(-7px,-6px);}
+      48%{transform:translate(-11px,2px);}
+      60%{transform:translate(-3px,7px);}
+      70%{transform:translate(6px,10px);}
+      82%{transform:translate(10px,3px);}
+      91%{transform:translate(2px,-3px);}
+      100%{transform:translate(0,0);}
+    }
+  </style>
+</helmet>
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;font-family:'Fredoka',sans-serif;background:#274b6d;user-select:none;">
+  <img src="uploads/assets/images/backgrounds/day_background.webp" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .6s ease;opacity:{{ dayOpacity }};">
+  <img src="uploads/assets/images/backgrounds/night_background.webp" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .6s ease;opacity:{{ nightOpacity }};">
+  <div style="position:absolute;inset:0;background:{{ overlayTint }};transition:background .6s ease;pointer-events:none;"></div>
+
+  <!-- theme toggle -->
+  <div onClick="{{ toggleTheme }}" title="Toggle day/night" style="position:absolute;top:24px;right:24px;width:60px;height:60px;border-radius:50%;background:rgba(10,16,32,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.35);z-index:50;">
+    <div style="width:26px;height:26px;border-radius:50%;background:{{ sunMoonBg }};box-shadow:{{ sunMoonShadow }};transition:all .4s ease;"></div>
+  </div>
+
+  <!-- turn indicator -->
+  <div style="position:absolute;top:24px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:rgba(10,16,32,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:12px 26px;box-shadow:0 6px 16px rgba(0,0,0,.3);z-index:40;">
+    <div style="width:10px;height:10px;border-radius:50%;background:#7CE38B;animation:tp-pulse 1.6s ease-in-out infinite;"></div>
+    <span style="color:#f5efe1;font-weight:600;font-size:20px;letter-spacing:.06em;">{{ turnLabel }}</span>
+    <sc-if value="{{ isSelfTurn }}" hint-placeholder-val="{{ false }}">
+      <dc-import name="TrashIcon" hint-size="34px,38px"></dc-import>
+    </sc-if>
+  </div>
+
+  <!-- opponent rail -->
+  <div style="position:absolute;left:28px;top:110px;width:236px;display:flex;flex-direction:column;gap:16px;z-index:30;">
+    <sc-for list="{{ opponents }}" as="opp" hint-placeholder-count="3">
+      <div onClick="{{ opp.onClick }}" style="background:rgba(10,16,32,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;box-shadow:0 6px 16px rgba(0,0,0,.3);cursor:pointer;transition:background .15s ease,border-color .15s ease;" style-hover="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="width:38px;height:38px;border-radius:50%;background:{{ opp.color }};display:flex;align-items:center;justify-content:center;color:#1a1a1a;font-weight:700;font-size:16px;flex:none;">{{ opp.initial }}</div>
+          <span style="color:#f5efe1;font-weight:600;font-size:16px;flex:1;">{{ opp.name }}</span>
+          <sc-if value="{{ opp.isTurn }}" hint-placeholder-val="{{ false }}">
+            <dc-import name="TrashIcon" style="flex:none;" hint-size="34px,38px"></dc-import>
+          </sc-if>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#f5efe1;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;">{{ opp.handCount }} HAND</span>
+          <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#f5efe1;font-size:11px;font-weight:700;border-radius:999px;padding:3px 9px;">{{ opp.stashTotal }} STASH</span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <sc-for list="{{ opp.tray }}" as="slot" hint-placeholder-count="6">
+            <div style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:{{ slot.bg }};border:{{ slot.border }};opacity:{{ slot.opacity }};overflow:hidden;">
+              <img src="{{ slot.src }}" style="width:100%;height:100%;object-fit:cover;opacity:{{ slot.imgOpacity }};">
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- phase indicator -->
+  <sc-if value="{{ isSelfTurn }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:90px;left:50%;transform:translateX(-50%);z-index:35;">
+      <div style="display:flex;background:rgba(10,16,32,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:999px;box-shadow:0 4px 10px rgba(0,0,0,.3);overflow:hidden;">
+        <div style="width:110px;padding:8px 0;text-align:center;font-weight:700;font-size:12px;letter-spacing:.12em;color:{{ rollingTextColor }};background:{{ rollingBg }};transition:background .25s ease,color .25s ease;">ROLLING</div>
+        <div style="width:1px;background:rgba(255,255,255,.25);"></div>
+        <div style="width:110px;padding:8px 0;text-align:center;font-weight:700;font-size:12px;letter-spacing:.12em;color:{{ resolvingTextColor }};background:{{ resolvingBg }};transition:background .25s ease,color .25s ease;">RESOLVING</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- self token tray (below hand) -->
+  <div style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(10,16,32,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:12px 24px;box-shadow:0 8px 20px rgba(0,0,0,.35);z-index:36;">
+    <div style="color:#cfd8e8;font-size:12px;font-weight:600;letter-spacing:.12em;text-align:center;margin-bottom:8px;">YOUR TOKENS</div>
+    <div style="display:flex;gap:14px;">
+      <sc-for list="{{ selfTraySlots }}" as="slot" hint-placeholder-count="6">
+        <div style="width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:{{ slot.bg }};border:{{ slot.border }};opacity:{{ slot.opacity }};overflow:hidden;animation:{{ slot.anim }};box-shadow:{{ slot.shadow }};">
+          <img src="{{ slot.src }}" style="width:100%;height:100%;object-fit:cover;opacity:{{ slot.imgOpacity }};">
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{ isBusted }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2;">
+        <image-slot id="bustedStamp" shape="rect" fit="contain" src="uploads/busted.png" placeholder="Drop busted stamp" style="width:275px;height:162px;background:transparent;"></image-slot>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- shared deck + discard -->
+  <div style="position:absolute;top:120px;bottom:510px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:64px;z-index:20;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div style="position:relative;width:198px;aspect-ratio:5/7;">
+        <img src="uploads/assets/images/cards/cropped_back.png" style="position: absolute; top: 9px; left: 9px; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,.4)">
+        <img src="uploads/assets/images/cards/cropped_back.png" style="position: absolute; top: 4px; left: 4px; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,.4)">
+        <img src="uploads/assets/images/cards/cropped_back.png" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; box-shadow: 0 6px 14px rgba(0,0,0,.4)">
+        <div style="position:absolute;bottom:-15px;right:-15px;background:#f2b134;color:#2a1a05;font-weight:700;font-size:20px;border-radius:999px;min-width:44px;height:44px;display:flex;align-items:center;justify-content:center;padding:0 10px;border:2px solid rgba(0,0,0,.25);box-shadow:0 4px 8px rgba(0,0,0,.35);">{{ deckCount }}</div>
+      </div>
+      <span style="text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6);color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.08em;">DECK</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div onClick="{{ openDiscard }}" style="position:relative;width:198px;aspect-ratio:5/7;cursor:pointer;transition:transform .18s ease;transform-origin:center;" style-hover="transform:scale(1.16);">
+        <img src="uploads/assets/images/cards/cropped_back.png" style="position:absolute;top:9px;left:9px;width:100%;height:100%;object-fit:cover;border-radius:14px;opacity:.5;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+        <img src="{{ discardTopSrc }}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:14px;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+        <div style="position:absolute;bottom:-15px;right:-15px;background:#e0533d;color:#2a1a05;font-weight:700;font-size:20px;border-radius:999px;min-width:44px;height:44px;display:flex;align-items:center;justify-content:center;padding:0 10px;border:2px solid rgba(0,0,0,.25);box-shadow:0 4px 8px rgba(0,0,0,.35);">{{ discardCount }}</div>
+      </div>
+      <span style="text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6);color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.08em;">DISCARD</span>
+    </div>
+  </div>
+
+  <!-- player stash bottom left -->
+  <div style="position:absolute;left:60px;bottom:64px;display:flex;flex-direction:column;gap:10px;z-index:30;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="text-shadow:0 1px 4px rgba(0,0,0,.85),0 0 2px rgba(0,0,0,.6);color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.08em;">YOUR STASH</span>
+      <span style="background:rgba(8,14,28,.7);border:1px solid rgba(255,255,255,.25);color:#f5efe1;font-size:14px;font-weight:700;border-radius:999px;padding:3px 12px;text-shadow:0 1px 3px rgba(0,0,0,.6);">{{ stashTotalCount }} TOTAL</span>
+    </div>
+    <div style="display:flex;gap:21px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div style="position:relative;width:180px;aspect-ratio:5/7;">
+          <img src="uploads/assets/images/cards/cropped_back.png" style="position:absolute;top:6px;left:6px;width:100%;height:100%;object-fit:cover;border-radius:14px;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+          <img src="uploads/assets/images/cards/cropped_back.png" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;border-radius:14px;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+          <div style="position:absolute;bottom:-15px;right:-15px;background:#f2b134;color:#2a1a05;font-weight:700;font-size:18px;border-radius:999px;min-width:40px;height:40px;display:flex;align-items:center;justify-content:center;padding:0 9px;border:2px solid rgba(0,0,0,.25);">{{ stashFacedownCount }}</div>
+        </div>
+        
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+        <div onClick="{{ openSelfStash }}" style="position:relative;width:180px;aspect-ratio:5/7;cursor:pointer;transition:transform .18s ease;transform-origin:center;" style-hover="transform:scale(1.16);">
+          <img src="uploads/assets/images/cards/cropped_back.png" style="position:absolute;top:6px;left:6px;width:100%;height:100%;object-fit:cover;border-radius:14px;opacity:.5;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+          <div style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:14px;overflow:hidden;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+            <img src="{{ stashTopSrc }}" style="width:100%;height:100%;object-fit:cover;">
+          </div>
+          <div style="position:absolute;bottom:-15px;right:-15px;background:#7CE38B;color:#0d2a12;font-weight:700;font-size:18px;border-radius:999px;min-width:40px;height:40px;display:flex;align-items:center;justify-content:center;padding:0 9px;border:2px solid rgba(0,0,0,.25);">{{ stashFaceupCount }}</div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!-- hand fan -->
+  <div style="position:absolute;bottom:190px;left:50%;transform:translateX(-50%);height:320px;width:1050px;z-index:35;">
+    <sc-for list="{{ handCards }}" as="card" hint-placeholder-count="5">
+      <div onMouseEnter="{{ card.onEnter }}" onMouseLeave="{{ card.onLeave }}" style="position:absolute;bottom:0;left:{{ card.left }}px;width:198px;aspect-ratio:5/7;border-radius:16px;overflow:hidden;box-shadow:0 10px 20px rgba(0,0,0,.45);transform:{{ card.transform }};transform-origin:bottom center;transition:left .25s ease,transform .2s ease;cursor:pointer;z-index:{{ card.z }};">
+        <img src="{{ card.src }}" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- game log -->
+  <div style="position:absolute;right:28px;top:110px;bottom:523px;width:260px;background:rgba(10,16,32,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;box-shadow:0 6px 16px rgba(0,0,0,.3);z-index:30;display:flex;flex-direction:column;">
+    <span style="color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.12em;margin-bottom:10px;flex:none;">GAME LOG</span>
+    <div style="overflow-y:auto;display:flex;flex-direction:column-reverse;gap:10px;padding-right:4px;">
+      <sc-for list="{{ gameLog }}" as="entry" hint-placeholder-count="6">
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <div style="width:8px;height:8px;border-radius:50%;background:{{ entry.color }};flex:none;margin-top:5px;"></div>
+          <div style="display:flex;flex-direction:column;">
+            <span style="color:#e8ecf4;font-size:13px;line-height:1.4;">{{ entry.text }}</span>
+            <span style="color:#7c88a9;font-size:11px;">{{ entry.time }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- opponent details modal -->
+  <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeOpponentModal }}" style="position:absolute;inset:0;background:rgba(5,10,20,.65);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;gap:28px;z-index:100;">
+      <div onClick="{{ prevOpponent }}" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:24px;cursor:pointer;flex:none;">‹</div>
+      <div onClick="{{ stopPropagation }}" style="background:rgba(18,26,46,.95);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:28px 32px;width:520px;box-shadow:0 20px 50px rgba(0,0,0,.5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:{{ modalOpponent.color }};display:flex;align-items:center;justify-content:center;color:#1a1a1a;font-weight:700;font-size:18px;">{{ modalOpponent.initial }}</div>
+            <span style="color:#f5efe1;font-weight:600;font-size:22px;">{{ modalOpponent.name }}</span>
+          </div>
+          <div onClick="{{ closeOpponentModal }}" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:18px;cursor:pointer;">✕</div>
+        </div>
+
+        <div style="display:flex;gap:16px;margin-bottom:22px;">
+          <div style="flex:1;background:rgba(255,255,255,.06);border-radius:12px;padding:14px;text-align:center;">
+            <div style="color:#f2b134;font-size:26px;font-weight:700;">{{ modalOpponent.faceDownCount }}</div>
+            <div style="color:#a9b4c6;font-size:12px;font-weight:600;letter-spacing:.06em;margin-top:4px;">FACE-DOWN STASH</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,.06);border-radius:12px;padding:14px;text-align:center;">
+            <div style="color:#7CE38B;font-size:26px;font-weight:700;">{{ modalOpponent.handCount }}</div>
+            <div style="color:#a9b4c6;font-size:12px;font-weight:600;letter-spacing:.06em;margin-top:4px;">CARDS IN HAND</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <span style="color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.08em;">FACE-UP STASH</span>
+          <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#f5efe1;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;">{{ modalFaceUpTotal }} TOTAL</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <sc-for list="{{ modalFaceUpCards }}" as="card" hint-placeholder-count="2">
+            <div style="position:relative;width:110px;aspect-ratio:5/7;border-radius:10px;overflow:visible;">
+              <div style="width:100%;height:100%;border-radius:10px;overflow:hidden;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+                <img src="{{ card.src }}" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <div style="position:absolute;bottom:-10px;right:-10px;background:#f2b134;color:#2a1a05;font-weight:700;font-size:14px;border-radius:999px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid rgba(0,0,0,.25);box-shadow:0 4px 8px rgba(0,0,0,.35);">{{ card.count }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div onClick="{{ nextOpponent }}" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:24px;cursor:pointer;flex:none;">›</div>
+    </div>
+  </sc-if>
+
+  <!-- self face-up stash modal -->
+  <sc-if value="{{ selfStashOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeSelfStash }}" style="position:absolute;inset:0;background:rgba(5,10,20,.65);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;">
+      <div onClick="{{ stopPropagation }}" style="background:rgba(18,26,46,.95);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:28px 32px;width:520px;box-shadow:0 20px 50px rgba(0,0,0,.5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <span style="color:#f5efe1;font-weight:600;font-size:22px;">Your Face-Up Stash</span>
+          <div onClick="{{ closeSelfStash }}" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:18px;cursor:pointer;">✕</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="color:#cfd8e8;font-size:13px;font-weight:600;letter-spacing:.08em;">FACE-UP STASH</span>
+          <span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#f5efe1;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;">{{ selfFaceUpTotal }} TOTAL</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <sc-for list="{{ selfFaceUpGrouped }}" as="card" hint-placeholder-count="2">
+            <div style="position:relative;width:110px;aspect-ratio:5/7;border-radius:10px;overflow:visible;">
+              <div style="width:100%;height:100%;border-radius:10px;overflow:hidden;box-shadow:0 6px 14px rgba(0,0,0,.4);">
+                <img src="{{ card.src }}" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <div style="position:absolute;bottom:-10px;right:-10px;background:#f2b134;color:#2a1a05;font-weight:700;font-size:14px;border-radius:999px;min-width:28px;height:28px;display:flex;align-items:center;justify-content:center;padding:0 6px;border:2px solid rgba(0,0,0,.25);box-shadow:0 4px 8px rgba(0,0,0,.35);">{{ card.count }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- discard carousel -->
+  <sc-if value="{{ discardOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeDiscard }}" style="position:absolute;inset:0;background:rgba(5,10,20,.7);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:110;">
+      <div onClick="{{ stopPropagation }}" style="display:flex;flex-direction:column;align-items:center;gap:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:420px;">
+          <span style="color:#f5efe1;font-weight:600;font-size:20px;">DISCARD PILE</span>
+          <div onClick="{{ closeDiscard }}" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:18px;cursor:pointer;">✕</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:28px;">
+          <div onClick="{{ discardPrev }}" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:24px;cursor:pointer;flex:none;">‹</div>
+          <div style="display:flex;align-items:center;gap:20px;">
+            <sc-for list="{{ discardTriplet }}" as="card" hint-placeholder-count="3">
+              <div style="width:{{ card.width }}px;aspect-ratio:5/7;border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.55);opacity:{{ card.opacity }};transform:scale({{ card.scale }});transition:all .25s ease;flex:none;">
+                <img src="{{ card.src }}" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+            </sc-for>
+          </div>
+          <div onClick="{{ discardNext }}" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;color:#f5efe1;font-size:24px;cursor:pointer;flex:none;">›</div>
+        </div>
+        <span style="color:#cfd8e8;font-size:14px;font-weight:600;letter-spacing:.06em;">{{ discardPosition }}</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- roll / stop -->
+  <div style="position:absolute;right:80px;bottom:60px;display:flex;flex-direction:column;gap:20px;align-items:center;z-index:40;">
+    <div onClick="{{ handleRoll }}" style="width:120px;height:88px;border-radius:16px;background:linear-gradient(160deg,#ffd873,#f2b134);border:3px solid #a86e12;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 8px 0 #a86e12,0 12px 20px rgba(0,0,0,.4);">
+      <div style="width:34px;height:34px;border-radius:8px;background:#fff8ea;border:2px solid #a86e12;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:4px;box-sizing:border-box;">
+        <sc-for list="{{ dieDots }}" as="dot" hint-placeholder-count="9">
+          <div style="width:5px;height:5px;border-radius:50%;background:{{ dot.on }};justify-self:center;align-self:center;"></div>
+        </sc-for>
+      </div>
+      <span style="color:#3a2306;font-weight:700;font-size:18px;letter-spacing:.06em;">{{ rollLabel }}</span>
+    </div>
+    <div onClick="{{ handleStop }}" style="width:104px;height:104px;clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);background:{{ stopBg }};display:flex;align-items:center;justify-content:center;cursor:{{ stopCursor }};opacity:{{ stopOpacity }};box-shadow:0 8px 18px rgba(0,0,0,.4);">
+      <span style="color:#fff;font-weight:700;font-size:18px;letter-spacing:.08em;">STOP</span>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const TOKENS = [
+  {id:'bandit', src:'uploads/assets/images/tokens/cropped_bandit_token.png'},
+  {id:'doubleStash', src:'uploads/assets/images/tokens/cropped_doubleStash_token.png'},
+  {id:'doubleTrash', src:'uploads/assets/images/tokens/cropped_doubleTrash_token.png'},
+  {id:'recycle', src:'uploads/assets/images/tokens/cropped_recycle_token.png'},
+  {id:'stashTrash', src:'uploads/assets/images/tokens/cropped_stashTrash_token.png'},
+  {id:'steal', src:'uploads/assets/images/tokens/cropped_steal_token.png'},
+];
+
+const HAND_SOURCES = [
+  'uploads/assets/images/cards/nanners.webp',
+  'uploads/assets/images/cards/feesh.webp',
+  'uploads/assets/images/cards/blammo.webp',
+  'uploads/assets/images/cards/kitteh.webp',
+  'uploads/assets/images/cards/doggo.webp',
+];
+
+function emptySlot() { return {filled:false, used:false, tokenId:null}; }
+const BLANK_IMG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+function buildOpponentTray(pattern) {
+  // pattern: array like ['filled','filled','used','empty','empty','empty']
+  return pattern.map((p, i) => {
+    if (p === 'empty') return emptySlot();
+    if (p === 'used') return {filled:true, used:true, tokenId: TOKENS[i % TOKENS.length].id};
+    return {filled:true, used:false, tokenId: TOKENS[i % TOKENS.length].id};
+  });
+}
+
+class Component extends DCLogic {
+  state = {
+    theme: 'day',
+    selfTray: [
+      {filled:true, used:false, tokenId:'bandit'},
+      {filled:true, used:false, tokenId:'recycle'},
+      emptySlot(), emptySlot(), emptySlot(), emptySlot(),
+    ],
+    hoveredHandIndex: null,
+    selectedOpponent: null,
+    discardOpen: false,
+    discardIndex: 0,
+    selfStashOpen: false,
+    currentTurn: 0,
+  };
+
+  setHandHover = (i) => this.setState({ hoveredHandIndex: i });
+  clearHandHover = () => this.setState({ hoveredHandIndex: null });
+  openOpponentModal = (i) => this.setState({ selectedOpponent: i });
+  closeOpponentModal = () => this.setState({ selectedOpponent: null });
+  prevOpponent = (e) => { e.stopPropagation(); this.setState(s => ({ selectedOpponent: (s.selectedOpponent - 1 + this.opponents.length) % this.opponents.length })); };
+  nextOpponent = (e) => { e.stopPropagation(); this.setState(s => ({ selectedOpponent: (s.selectedOpponent + 1) % this.opponents.length })); };
+
+  discardPile = [
+    'uploads/assets/images/cards/mmmPie.webp',
+    'uploads/assets/images/cards/nanners.webp',
+    'uploads/assets/images/cards/shiny.webp',
+    'uploads/assets/images/cards/doggo.webp',
+    'uploads/assets/images/cards/kitteh.webp',
+    'uploads/assets/images/cards/feesh.webp',
+    'uploads/assets/images/cards/blammo.webp',
+    'uploads/assets/images/cards/yumYum.webp',
+    'uploads/assets/images/cards/nanners.webp',
+    'uploads/assets/images/cards/shiny.webp',
+    'uploads/assets/images/cards/doggo.webp',
+    'uploads/assets/images/cards/feesh.webp',
+  ];
+
+  openDiscard = () => this.setState({ discardOpen: true, discardIndex: 0 });
+  closeDiscard = () => this.setState({ discardOpen: false });
+  discardPrev = () => this.setState(s => ({ discardIndex: (s.discardIndex - 1 + this.discardPile.length) % this.discardPile.length }));
+  discardNext = () => this.setState(s => ({ discardIndex: (s.discardIndex + 1) % this.discardPile.length }));
+
+  selfFaceUpCards = [
+    'uploads/assets/images/cards/nanners.webp',
+    'uploads/assets/images/cards/nanners.webp',
+    'uploads/assets/images/cards/feesh.webp',
+    'uploads/assets/images/cards/shiny.webp',
+  ];
+
+  openSelfStash = () => this.setState({ selfStashOpen: true });
+  closeSelfStash = () => this.setState({ selfStashOpen: false });
+
+  gameLog = [
+    {color:'#7CE38B', text:'You rolled Bandit and Recycle.', time:'Turn 4'},
+    {color:'#f2b6c6', text:'Bandit BJ stashed 2 Nanners.', time:'Turn 4'},
+    {color:'#a9c9f2', text:'Lil Scamp busted — tray reset.', time:'Turn 3'},
+    {color:'#9fd8a3', text:'Rita Raccoon stopped and banked 5 cards.', time:'Turn 3'},
+    {color:'#7CE38B', text:'You played Doggo to block a steal.', time:'Turn 2'},
+    {color:'#f2b6c6', text:'Bandit BJ rolled Steal on you.', time:'Turn 2'},
+    {color:'#a9c9f2', text:'Lil Scamp rolled Double Stash.', time:'Turn 2'},
+    {color:'#9fd8a3', text:'Rita Raccoon drew a Blammo!', time:'Turn 2'},
+    {color:'#7CE38B', text:'You stashed 3 Feesh.', time:'Turn 1'},
+    {color:'#f2b6c6', text:'Bandit BJ played Kitteh.', time:'Turn 1'},
+    {color:'#a9c9f2', text:'Lil Scamp rolled Bandit and Recycle.', time:'Turn 1'},
+    {color:'#9fd8a3', text:'Rita Raccoon stashed 1 Nanners.', time:'Turn 1'},
+    {color:'#7CE38B', text:'You rolled Steal on Bandit BJ.', time:'Turn 1'},
+    {color:'#f2b6c6', text:'Bandit BJ busted — tray reset.', time:'Turn 1'},
+    {color:'#a9c9f2', text:'Lil Scamp played YumYum.', time:'Round Start'},
+    {color:'#9fd8a3', text:'Rita Raccoon dealt starting hand.', time:'Round Start'},
+    {color:'#7CE38B', text:'You dealt starting hand.', time:'Round Start'},
+    {color:'#f2b6c6', text:'Bandit BJ dealt starting hand.', time:'Round Start'},
+    {color:'#a9c9f2', text:'Lil Scamp dealt starting hand.', time:'Round Start'},
+    {color:'#9fd8a3', text:'Game started — Trash Pandas!', time:'Setup'},
+  ];
+
+  opponents = [
+    {name:'Rita Raccoon', initial:'R', color:'#9fd8a3', tray: buildOpponentTray(['filled','filled','filled','empty','empty','empty']),
+      faceUpCards:['uploads/assets/images/cards/blammo.webp','uploads/assets/images/cards/doggo.webp','uploads/assets/images/cards/feesh.webp','uploads/assets/images/cards/kitteh.webp','uploads/assets/images/cards/mmmPie.webp','uploads/assets/images/cards/nanners.webp','uploads/assets/images/cards/shiny.webp','uploads/assets/images/cards/yumYum.webp'], faceDownCount:4, handCount:3},
+    {name:'Bandit BJ', initial:'B', color:'#f2b6c6', tray: buildOpponentTray(['used','used','filled','empty','empty','empty']),
+      faceUpCards:[], faceDownCount:7, handCount:2},
+    {name:'Lil Scamp', initial:'L', color:'#a9c9f2', tray: buildOpponentTray(['filled','filled','filled','filled','filled','filled']),
+      faceUpCards:['uploads/assets/images/cards/yumYum.webp','uploads/assets/images/cards/mmmPie.webp','uploads/assets/images/cards/kitteh.webp'], faceDownCount:2, handCount:5},
+  ];
+
+  toggleTheme = () => {
+    this.setState(s => ({ theme: s.theme === 'day' ? 'night' : 'day' }));
+  };
+
+  handleRoll = () => {
+    const tray = this.state.selfTray;
+    const allFilled = tray.every(s => s.filled);
+    if (allFilled) {
+      this.setState({ selfTray: [emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot(), emptySlot()] });
+      return;
+    }
+    const idx = tray.findIndex(s => !s.filled);
+    if (idx === -1) return;
+    const token = TOKENS[Math.floor(Math.random() * TOKENS.length)];
+    const next = tray.slice();
+    next[idx] = { filled: true, used: false, tokenId: token.id };
+    this.setState({ selfTray: next });
+  };
+
+  handleStop = () => {
+    const tray = this.state.selfTray;
+    if (!tray.some(s => s.filled && !s.used)) return;
+    this.setState(s => ({
+      selfTray: tray.map(slot => slot.filled ? { ...slot, used: true } : slot),
+      currentTurn: (s.currentTurn + 1) % (this.opponents.length + 1),
+    }));
+  };
+
+  renderSlot(slot, size, dim) {
+    if (!slot.filled) {
+      return { bg:'transparent', border:'2px dashed rgba(255,255,255,.4)', opacity:1, src:BLANK_IMG, imgOpacity:0, anim:'none', shadow:'none' };
+    }
+    const token = TOKENS.find(t => t.id === slot.tokenId);
+    const src = token ? token.src : BLANK_IMG;
+    if (slot.used || dim) {
+      return { bg:'#3a4150', border:'2px solid rgba(255,255,255,.15)', opacity:0.4, src, imgOpacity:1, anim:'none', shadow:'none' };
+    }
+    return { bg:'#1e2536', border:'2px solid #f2b134', opacity:1, src, imgOpacity:1, anim:'tp-pop .4s ease', shadow:'0 4px 10px rgba(0,0,0,.4)' };
+  }
+
+  renderVals() {
+    const isDay = this.state.theme === 'day';
+    const tray = this.state.selfTray;
+    const allFilled = tray.every(s => s.filled);
+    const hasUnusedFilled = tray.some(s => s.filled && !s.used);
+    const filledIds = tray.filter(s => s.filled && !s.used).map(s => s.tokenId);
+    const isBusted = filledIds.length !== new Set(filledIds).size;
+
+    const hoveredIdx = this.state.hoveredHandIndex;
+    const anyHovered = hoveredIdx !== null;
+    const gap = anyHovered ? 177 : 90;
+    const handCards = HAND_SOURCES.map((src, i) => {
+      const n = HAND_SOURCES.length;
+      const mid = (n - 1) / 2;
+      const offset = i - mid;
+      const isActive = hoveredIdx === i;
+      const rot = anyHovered ? offset * 8 : offset * 4;
+      const lift = Math.abs(offset) * (anyHovered ? 21 : 8);
+      const scale = isActive ? 1.16 : 1;
+      const extraLift = isActive ? -34 : 0;
+      return {
+        src,
+        left: 426 + offset * gap,
+        transform: `rotate(${rot}deg) translateY(${lift + extraLift}px) scale(${scale})`,
+        z: isActive ? 100 : i,
+        onEnter: () => this.setHandHover(i),
+        onLeave: this.clearHandHover,
+      };
+    });
+
+    const dieDots = [1,0,1,0,1,0,1,0,1].map(on => ({ on: on ? '#3a2306' : 'transparent' }));
+
+    return {
+      dayOpacity: isDay ? 1 : 0,
+      nightOpacity: isDay ? 0 : 1,
+      overlayTint: isDay ? 'rgba(10,20,40,0.08)' : 'rgba(5,10,30,0.4)',
+      sunMoonBg: isDay ? 'radial-gradient(circle,#ffe27a,#f2b134)' : '#e8eef7',
+      sunMoonShadow: isDay ? '0 0 14px 4px rgba(255,210,90,.7)' : 'inset 8px -4px 0 3px #0a1020',
+      toggleTheme: this.toggleTheme,
+      opponents: this.opponents.map((o, i) => ({
+        ...o,
+        tray: o.tray.map(s => this.renderSlot(s, 26)),
+        stashTotal: o.faceDownCount + o.faceUpCards.length,
+        onClick: () => this.openOpponentModal(i),
+        isTurn: this.state.currentTurn === i + 1,
+      })),
+      isSelfTurn: this.state.currentTurn === 0,
+      turnLabel: this.state.currentTurn === 0 ? 'YOUR TURN' : `${this.opponents[this.state.currentTurn - 1].name.toUpperCase()}'S TURN`,
+      modalOpen: this.state.selectedOpponent !== null,
+      closeOpponentModal: this.closeOpponentModal,
+      modalOpponent: this.state.selectedOpponent !== null ? this.opponents[this.state.selectedOpponent] : null,
+      modalFaceUpCards: this.state.selectedOpponent !== null ? (() => {
+        const counts = new Map();
+        this.opponents[this.state.selectedOpponent].faceUpCards.forEach(src => counts.set(src, (counts.get(src) || 0) + 1));
+        return Array.from(counts, ([src, count]) => ({ src, count })).sort((a, b) => b.count - a.count);
+      })() : [],
+      modalFaceUpTotal: this.state.selectedOpponent !== null ? this.opponents[this.state.selectedOpponent].faceUpCards.length : 0,
+      prevOpponent: this.prevOpponent,
+      nextOpponent: this.nextOpponent,
+      stopPropagation: (e) => e.stopPropagation(),
+      selfTraySlots: tray.map(s => this.renderSlot(s, 64, isBusted)),
+      deckCount: 34,
+      discardCount: this.discardPile.length,
+      discardTopSrc: this.discardPile[0],
+      discardOpen: this.state.discardOpen,
+      openDiscard: this.openDiscard,
+      closeDiscard: this.closeDiscard,
+      discardPrev: this.discardPrev,
+      discardNext: this.discardNext,
+      discardCurrentSrc: this.discardPile[this.state.discardIndex],
+      discardPosition: `${this.state.discardIndex + 1} / ${this.discardPile.length}`,
+      selfStashOpen: this.state.selfStashOpen,
+      openSelfStash: this.openSelfStash,
+      closeSelfStash: this.closeSelfStash,
+      selfFaceUpTotal: this.selfFaceUpCards.length,
+      selfFaceUpGrouped: (() => {
+        const counts = new Map();
+        this.selfFaceUpCards.forEach(src => counts.set(src, (counts.get(src) || 0) + 1));
+        return Array.from(counts, ([src, count]) => ({ src, count })).sort((a, b) => b.count - a.count);
+      })(),
+      discardTriplet: [-1, 0, 1].map(offset => {
+        const len = this.discardPile.length;
+        const idx = (this.state.discardIndex + offset + len) % len;
+        return {
+          src: this.discardPile[idx],
+          width: offset === 0 ? 260 : 170,
+          opacity: offset === 0 ? 1 : 0.55,
+          scale: offset === 0 ? 1 : 0.9,
+        };
+      }),
+      stashFacedownCount: 6,
+      stashFaceupCount: 3,
+      stashTotalCount: 9,
+      stashTopSrc: 'uploads/assets/images/cards/nanners.webp',
+      handCards,
+      gameLog: this.gameLog,
+      handleRoll: this.handleRoll,
+      handleStop: this.handleStop,
+      phaseLabel: hasUnusedFilled ? 'RESOLVING PHASE' : 'ROLLING PHASE',
+      phaseColor: hasUnusedFilled ? '#f2b134' : '#7CE38B',
+      isBusted: isBusted,
+      rollingBg: !hasUnusedFilled ? '#7CE38B' : 'transparent',
+      rollingTextColor: !hasUnusedFilled ? '#0d2a12' : '#cfd8e8',
+      resolvingBg: hasUnusedFilled ? '#f2b134' : 'transparent',
+      resolvingTextColor: hasUnusedFilled ? '#3a2306' : '#cfd8e8',
+      rollLabel: allFilled ? 'NEW TURN' : 'ROLL',
+      dieDots,
+      stopBg: hasUnusedFilled ? '#e0533d' : '#5a6270',
+      stopOpacity: hasUnusedFilled ? 1 : 0.5,
+      stopCursor: hasUnusedFilled ? 'pointer' : 'default',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

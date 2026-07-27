@@ -304,13 +304,38 @@ public sealed partial class GameSession
         var responderIndex = GetCurrentYumYumResponderIndex();
         var responderName = responderIndex is null ? null : _players[responderIndex.Value].Name;
 
-        var hand = _players[playerIndex].Hand.Select(e => e.Card.Name).ToList();
+        var hand = _players[playerIndex].Hand
+            .Select(e => new HandCardView(e.Card.Id, e.Card.Name))
+            .ToList();
 
         var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
 
         var tokenPhase = _tokenPhaseCoordinator.IsActive
             ? _tokenPhaseCoordinator.BuildView(playerIndex)
             : null;
+
+        var opponents = _players
+            .Where(p => p.Index != playerIndex)
+            .Select(p => new OpponentSummaryView(
+                p.Index,
+                p.Name,
+                p.Hand.Count,
+                p.StashPile.Count(e => !e.IsFaceUp),
+                p.StashPile.Where(e => e.IsFaceUp)
+                    .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
+                    .ToList()))
+            .ToList();
+
+        var discardPile = DiscardPile
+            .Select(c => new DiscardCardView(c.Id, c.Name))
+            .ToList();
+
+        var ownStashPile = _players[playerIndex].StashPile;
+        var ownStash = new OwnStashView(
+            ownStashPile.Count(e => !e.IsFaceUp),
+            ownStashPile.Where(e => e.IsFaceUp)
+                .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
+                .ToList());
 
         return new GameView(
             State,
@@ -323,7 +348,11 @@ public sealed partial class GameSession
             responderIndex,
             responderName,
             stealPhase,
-            tokenPhase);
+            tokenPhase,
+            opponents,
+            _drawPile.GetDeckCount(),
+            discardPile,
+            ownStash);
     }
 
     public void EndTurn()

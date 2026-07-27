@@ -16,15 +16,16 @@ function LobbyPage() {
   const navigate = useNavigate()
   const lobbyQuery = useLobby(lobbyId ?? '')
   useLobbySignalR(lobbyId ?? '')
-  const { identity } = useClientIdentity(lobbyId)
+  const { identity, setGameId } = useClientIdentity(lobbyId)
 
   const lobby = lobbyQuery.data
 
   useEffect(() => {
     if (lobby?.isStarted && lobby.gameId) {
+      setGameId(lobby.gameId)
       navigate(`/games/${lobby.gameId}`)
     }
-  }, [lobby?.isStarted, lobby?.gameId, navigate])
+  }, [lobby?.isStarted, lobby?.gameId, navigate, setGameId])
 
   if (!lobbyId) {
     return null

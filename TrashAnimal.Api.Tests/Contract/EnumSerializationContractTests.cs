@@ -88,7 +88,7 @@ public sealed class EnumSerializationContractTests : IClassFixture<TrashApiTestF
     }
 
     [Fact]
-    public async Task CreateGame_Response_HandCardNames_AreStrings()
+    public async Task CreateGame_Response_HandCards_NamesAreStrings()
     {
         var response = await _rawHttp.PostAsJsonAsync(
             "/games",
@@ -98,12 +98,12 @@ public sealed class EnumSerializationContractTests : IClassFixture<TrashApiTestF
         var rawJson = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(rawJson);
 
-        var handCards = doc.RootElement.GetProperty("view").GetProperty("handCardNames");
+        var handCards = doc.RootElement.GetProperty("view").GetProperty("handCards");
         Assert.Equal(JsonValueKind.Array, handCards.ValueKind);
 
         foreach (var card in handCards.EnumerateArray())
         {
-            Assert.Equal(JsonValueKind.String, card.ValueKind);
+            Assert.Equal(JsonValueKind.String, card.GetProperty("name").ValueKind);
         }
     }
 

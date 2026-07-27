@@ -24,7 +24,7 @@ public sealed class CliHumanController : IPlayerController
             if (view.StealPhase is { } sp)
                 Console.WriteLine($"Steal: {sp.StealingPlayerName} -> {sp.VictimName}'s {sp.InitialStealTargetZone}");
             Cli.PrintTokens(view.PhaseOneTokens);
-            Console.WriteLine($"Hand: {(view.HandCardNames.Count == 0 ? "(empty)" : string.Join(", ", view.HandCardNames))}");
+            Console.WriteLine($"Hand: {(view.HandCards.Count == 0 ? "(empty)" : string.Join(", ", view.HandCards.Select(c => c.Name)))}");
             Console.WriteLine();
 
             for (var i = 0; i < allowedActions.Count; i++)

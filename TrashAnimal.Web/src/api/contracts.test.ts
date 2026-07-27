@@ -288,10 +288,11 @@ describe('API Contract Tests', () => {
       const response = await fetch(`${API_BASE_URL}/games/${gameId}/view?playerSeat=0`);
       const body = await response.json();
 
-      const cardNames = body.view.handCardNames || [];
-      expect(Array.isArray(cardNames)).toBe(true);
+      const handCards = body.view.handCards || [];
+      expect(Array.isArray(handCards)).toBe(true);
 
-      cardNames.forEach((cardName: unknown) => {
+      handCards.forEach((card: unknown) => {
+        const cardName = (card as { name: unknown }).name;
         expect(typeof cardName).toBe('string');
         expect(isNaN(Number(cardName as string))).toBe(true);
         expect(CARD_NAME_VALUES).toContain(cardName);
@@ -335,8 +336,8 @@ describe('API Contract Tests', () => {
       expect(view).toHaveProperty('currentPlayerIndex');
       expect(view).not.toHaveProperty('CurrentPlayerIndex');
 
-      expect(view).toHaveProperty('handCardNames');
-      expect(view).not.toHaveProperty('HandCardNames');
+      expect(view).toHaveProperty('handCards');
+      expect(view).not.toHaveProperty('HandCards');
     });
   });
 
@@ -430,14 +431,25 @@ function assertGameViewStructure(view: unknown): void {
   expect(v).toHaveProperty('phaseOneTokens');
   expect(Array.isArray(v.phaseOneTokens)).toBe(true);
 
-  expect(v).toHaveProperty('handCardNames');
-  expect(Array.isArray(v.handCardNames)).toBe(true);
+  expect(v).toHaveProperty('handCards');
+  expect(Array.isArray(v.handCards)).toBe(true);
 
   // Nullable fields (must exist)
   expect(v).toHaveProperty('yumYumResponderIndex');
   expect(v).toHaveProperty('yumYumResponderName');
   expect(v).toHaveProperty('stealPhase');
   expect(v).toHaveProperty('tokenPhase');
+
+  expect(v).toHaveProperty('opponents');
+  expect(Array.isArray(v.opponents)).toBe(true);
+
+  expect(v).toHaveProperty('deckCount');
+  expect(typeof v.deckCount).toBe('number');
+
+  expect(v).toHaveProperty('discardPile');
+  expect(Array.isArray(v.discardPile)).toBe(true);
+
+  expect(v).toHaveProperty('ownStash');
 }
 
 /**

@@ -5,9 +5,13 @@ export interface ClientIdentity {
   lobbyId: string;
   seatIndex: number;
   clientToken: string;
+  /** Set once the lobby starts and produces a real game, so `useGameClientIdentity` can resolve
+   * the same identity by `gameId` after the player navigates to `/games/:gameId` (a route that
+   * only has `gameId`, not `lobbyId`, available). */
+  gameId?: string;
 }
 
-const STORAGE_KEY = 'trashanimal:identity';
+export const IDENTITY_STORAGE_KEY = 'trashanimal:identity';
 
 /**
  * A single stored identity slot, scoped by lobbyId match on read — stale identity from a
@@ -17,7 +21,7 @@ const STORAGE_KEY = 'trashanimal:identity';
  * captured this hook's closure.
  */
 export function useClientIdentity(lobbyId?: string) {
-  const [stored, setStored] = useLocalStorage<ClientIdentity | null>(STORAGE_KEY, null);
+  const [stored, setStored] = useLocalStorage<ClientIdentity | null>(IDENTITY_STORAGE_KEY, null);
 
   const identity = stored && lobbyId !== undefined && stored.lobbyId === lobbyId ? stored : null;
 
@@ -28,7 +32,17 @@ export function useClientIdentity(lobbyId?: string) {
     [setStored],
   );
 
+  /** Merges `gameId` onto whatever identity is currently stored (a no-op if nothing is stored). */
+  const setGameId = useCallback(
+    (gameId: string) => {
+      if (stored) {
+        setStored({ ...stored, gameId });
+      }
+    },
+    [stored, setStored],
+  );
+
   const clearIdentity = useCallback(() => setStored(null), [setStored]);
 
-  return { identity, setIdentity, clearIdentity };
+  return { identity, setIdentity, setGameId, clearIdentity };
 }
