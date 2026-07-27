@@ -142,3 +142,156 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ---- Game board design tokens ----
+   Prefixed --gb- to avoid colliding with the site-wide --accent (a different color/purpose).
+   Values transcribed from .claude/docs/plans/design_handoff_main_game_view/README.md. */
+:root {
+  --gb-font: 'Fredoka', var(--sans);
+
+  --gb-bg: #0b1220;
+  --gb-canvas-fallback: #274b6d;
+  --gb-glass-bg: rgba(10, 16, 32, 0.55);
+  --gb-glass-bg-hover: rgba(255, 255, 255, 0.12);
+  --gb-glass-border: rgba(255, 255, 255, 0.15);
+  --gb-glass-border-hover: rgba(255, 255, 255, 0.35);
+  --gb-border-soft: rgba(255, 255, 255, 0.18);
+
+  --gb-text-primary: #f5efe1;
+  --gb-text-label: #cfd8e8;
+  --gb-text-log: #e8ecf4;
+  --gb-text-muted: #a9b4c6;
+  --gb-text-timestamp: #7c88a9;
+  --gb-text-on-avatar: #1a1a1a;
+
+  --gb-green: #7ce38b;
+  --gb-green-text: #0d2a12;
+  --gb-gold: #f2b134;
+  --gb-gold-gradient: #ffd873;
+  --gb-gold-text: #3a2306;
+  --gb-gold-text-dark: #2a1a05;
+  --gb-red: #e0533d;
+
+  --gb-opponent-colors: #9fd8a3, #f2b6c6, #a9c9f2;
+  --gb-stink-green: #9def7f;
+  --gb-bag-dark: #2f333b;
+  --gb-slot-used-bg: #3a4150;
+  --gb-stop-inactive-bg: #5a6270;
+
+  --gb-glass-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  --gb-modal-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.gb-glass {
+  background: var(--gb-glass-bg);
+  border: 1px solid var(--gb-glass-border);
+  box-shadow: var(--gb-glass-shadow);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.gb-glass-hover:hover {
+  background: var(--gb-glass-bg-hover);
+  border-color: var(--gb-glass-border-hover);
+}
+
+/* GameBoardPage needs a full-bleed, viewport-sized layout, but the base #root rule above caps
+   every page at width:1126px. Rather than fight that id selector's specificity, GameBoardPage's
+   top-level element uses position:fixed — fixed positioning is relative to the viewport (the
+   initial containing block), not the nearest ancestor, as long as no ancestor establishes a new
+   containing block (a transform/filter/perspective/contain, none of which #root or body use),
+   so it escapes #root's width cap without needing to touch #root's own rule at all. */
+.gb-root {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  text-align: initial;
+  font-family: var(--gb-font);
+}
+
+/* ---- Game board keyframes ---- */
+@keyframes gb-tp-pop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes gb-tp-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0.4;
+  }
+}
+
+@keyframes gb-stink-rise {
+  0% {
+    transform: translateY(0) scaleX(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-7px) scaleX(1.2);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-14px) scaleX(1);
+    opacity: 0;
+  }
+}
+
+@keyframes gb-fly-orbit {
+  from {
+    transform: rotate(0deg) translateX(13px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(13px) rotate(-360deg);
+  }
+}
+
+@keyframes gb-fly-erratic {
+  0% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(6px, -4px);
+  }
+  30% {
+    transform: translate(-3px, 5px);
+  }
+  45% {
+    transform: translate(5px, 3px);
+  }
+  60% {
+    transform: translate(-6px, -3px);
+  }
+  75% {
+    transform: translate(2px, -6px);
+  }
+  90% {
+    transform: translate(-4px, 2px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.gb-token-pop {
+  animation: gb-tp-pop 0.4s ease;
+}
+
+.gb-turn-dot {
+  animation: gb-tp-pulse 1.6s ease-in-out infinite alternate;
+}
