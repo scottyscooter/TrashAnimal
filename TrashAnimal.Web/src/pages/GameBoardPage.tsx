@@ -1,17 +1,237 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { useGameClientIdentity } from '../hooks/useGameClientIdentity'
+import { useGameView } from '../hooks/useGameView'
+import { useGameSignalR } from '../hooks/useGameSignalR'
+import { useSubmitCommand } from '../hooks/useSubmitCommand'
+import { useToast } from '../components/Toast/useToast'
+import type { GameAction, TokenAction } from '../api/types'
+import DayNightBackground from '../components/gameboard/DayNightBackground'
+import GameBoardThemeToggle from '../components/gameboard/GameBoardThemeToggle'
+import TurnIndicator from '../components/gameboard/TurnIndicator'
+import PhaseToggle from '../components/gameboard/PhaseToggle'
+import OpponentRail from '../components/gameboard/OpponentRail'
+import DeckDiscardPiles from '../components/gameboard/DeckDiscardPiles'
+import PlayerStash from '../components/gameboard/PlayerStash'
+import PlayerHand from '../components/gameboard/PlayerHand'
+import TokenTray from '../components/gameboard/TokenTray'
+import RollStopControls from '../components/gameboard/RollStopControls'
+import YumYumPrompt from '../components/gameboard/YumYumPrompt'
+import StealPrompt from '../components/gameboard/StealPrompt'
+import VictimPicker from '../components/gameboard/VictimPicker'
+import FeeshCardPicker from '../components/gameboard/FeeshCardPicker'
+import TokenPhasePanel from '../components/gameboard/TokenPhasePanel'
+import BanditResponseModal from '../components/gameboard/BanditResponseModal'
+import BanditWaitingModal from '../components/gameboard/BanditWaitingModal'
+import GlassPanel from '../components/gameboard/GlassPanel'
+
+type VictimPickerMode = 'shiny' | 'steal' | null
 
 function GameBoardPage() {
-  const navigate = useNavigate()
   const { gameId } = useParams()
+  const { identity } = useGameClientIdentity(gameId)
+  const { showToast } = useToast()
+
+  const [victimPickerMode, setVictimPickerMode] = useState<VictimPickerMode>(null)
+  const [feeshPickerOpen, setFeeshPickerOpen] = useState(false)
+
+  const gameViewQuery = useGameView(gameId ?? '', identity?.seatIndex ?? -1)
+  useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
+  const submitCommand = useSubmitCommand(gameId ?? '', identity?.seatIndex ?? -1)
+
+  if (!gameId) {
+    return null
+  }
+
+  if (!identity) {
+    return (
+      <section className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
+        <h1>Game Board</h1>
+        <p role="alert">Could not find your seat for this game. Try re-joining from the lobby.</p>
+      </section>
+    )
+  }
+
+  if (gameViewQuery.isLoading) {
+    return (
+      <section className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
+        <h1>Game Board</h1>
+        <p>Loading game…</p>
+      </section>
+    )
+  }
+
+  if (gameViewQuery.isError || !gameViewQuery.data) {
+    return (
+      <section className="mx-auto flex max-w-md flex-col gap-6 px-4 py-12">
+        <h1>Game Board</h1>
+        <p role="alert">This game could not be found.</p>
+      </section>
+    )
+  }
+
+  const { view: gameView, allowedActions } = gameViewQuery.data
+  const localSeatIndex = identity.seatIndex
+  const isLocalPlayerTurn = gameView.currentPlayerIndex === localSeatIndex
+  const isPending = submitCommand.isPending
+
+  function dispatch(request: Parameters<typeof submitCommand.mutate>[0]) {
+    submitCommand.mutate(request, {
+      onSuccess: (response) => {
+        if (!response.succeeded) {
+          showToast(response.errorMessage ?? 'That action was rejected.')
+        }
+      },
+    })
+  }
+
+  function handleAction(action: GameAction) {
+    dispatch({ kind: 'action', playerSeat: localSeatIndex, action })
+  }
+
+  function handleCardPick(cardId: string) {
+    dispatch({ kind: 'cardPick', playerSeat: localSeatIndex, cardId })
+  }
+
+  function handleDoubleStashSubmit(cardIds: string[]) {
+    dispatch({ kind: 'doubleStash', playerSeat: localSeatIndex, cardIds })
+  }
+
+  function handleRecyclePick(replacement: TokenAction) {
+    dispatch({ kind: 'recyclePick', playerSeat: localSeatIndex, replacement })
+  }
+
+  function handleFeeshPick(cardId: string) {
+    dispatch({ kind: 'playFeesh', playerSeat: localSeatIndex, cardId })
+    setFeeshPickerOpen(false)
+  }
+
+  function handleVictimPick(victimSeat: number) {
+    if (victimPickerMode === 'shiny') {
+      dispatch({ kind: 'playShiny', playerSeat: localSeatIndex, victimSeat })
+    } else if (victimPickerMode === 'steal') {
+      dispatch({ kind: 'resolveTokenSteal', playerSeat: localSeatIndex, victimSeat })
+    }
+    setVictimPickerMode(null)
+  }
+
+  const isLocalYumYumResponder =
+    gameView.state === 'AwaitingYumYum' && gameView.yumYumResponderIndex === localSeatIndex
+
+  const isAwaitingBanditResponse = gameView.tokenPhase?.step === 'BanditAwaitOpponentResponse'
+  const isLocalBanditResponder =
+    isAwaitingBanditResponse && gameView.tokenPhase!.banditCurrentResponderIndex === localSeatIndex
 
   return (
-    <section>
-      <h1>Game Board</h1>
-      <p>Playing game {gameId}</p>
-      <button type="button" onClick={() => navigate(`/games/${gameId}/result`)}>
-        End game
-      </button>
-    </section>
+    <div className="gb-root">
+      <DayNightBackground />
+      <GameBoardThemeToggle />
+      <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} />
+      {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
+
+      <OpponentRail gameView={gameView} />
+      <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
+      <PlayerStash ownStash={gameView.ownStash} />
+      <PlayerHand
+        handCards={gameView.handCards}
+        allowedActions={allowedActions}
+        onFeeshClick={() => setFeeshPickerOpen(true)}
+      />
+
+      <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2">
+        <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3">
+          <span className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+            YOUR TOKENS
+          </span>
+          {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
+              player is CURRENTLY active, not "my own tokens" — every viewer's own tray must stay
+              empty unless it's actually their turn, or everyone sees the active player's rolls
+              duplicated into their own panel. The active player's tray is what OpponentTile shows
+              to everyone else. */}
+          <TokenTray
+            phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
+            tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
+            isBusted={isLocalPlayerTurn && gameView.isBusted}
+          />
+        </GlassPanel>
+      </div>
+
+      {isLocalPlayerTurn && !gameView.tokenPhase && !gameView.stealPhase && !isLocalYumYumResponder && (
+        <RollStopControls allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
+      )}
+
+      {isLocalPlayerTurn && allowedActions.includes('PlayShiny') && (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => setVictimPickerMode('shiny')}
+          className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
+        >
+          Play Shiny
+        </button>
+      )}
+
+      {isLocalYumYumResponder && (
+        <YumYumPrompt allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
+      )}
+
+      {gameView.stealPhase && (
+        <StealPrompt
+          state={gameView.state}
+          stealPhase={gameView.stealPhase}
+          localSeatIndex={localSeatIndex}
+          allowedActions={allowedActions}
+          onAction={handleAction}
+          onCardPick={handleCardPick}
+          isPending={isPending}
+        />
+      )}
+
+      {isLocalPlayerTurn && gameView.tokenPhase && !isAwaitingBanditResponse && (
+        <TokenPhasePanel
+          tokenPhase={gameView.tokenPhase}
+          allowedActions={allowedActions}
+          isPending={isPending}
+          onAction={handleAction}
+          onCardPick={handleCardPick}
+          onDoubleStashSubmit={handleDoubleStashSubmit}
+          onRecyclePick={handleRecyclePick}
+          onStartSteal={() => setVictimPickerMode('steal')}
+        />
+      )}
+
+      {isLocalPlayerTurn && isAwaitingBanditResponse && <BanditWaitingModal />}
+
+      {isLocalBanditResponder && (
+        <BanditResponseModal
+          revealedCardName={gameView.tokenPhase!.banditRevealedCardName!}
+          stashableCards={gameView.tokenPhase!.stashableHandCardsForCurrentPrompt}
+          onStash={handleCardPick}
+          onPass={() => handleAction('TokenBanditMatchPass')}
+          isPending={isPending}
+        />
+      )}
+
+      {victimPickerMode && (
+        <VictimPicker
+          title={victimPickerMode === 'shiny' ? 'Play Shiny — steal from a stash' : 'Steal from a hand'}
+          opponents={gameView.opponents}
+          onPick={handleVictimPick}
+          onClose={() => setVictimPickerMode(null)}
+          isPending={isPending}
+        />
+      )}
+
+      {feeshPickerOpen && (
+        <FeeshCardPicker
+          discardPile={gameView.discardPile}
+          onPick={handleFeeshPick}
+          onClose={() => setFeeshPickerOpen(false)}
+          isPending={isPending}
+        />
+      )}
+    </div>
   )
 }
 

@@ -4,6 +4,7 @@ import { connectToGameHub, type HubSubscription } from '../api/signalRClient';
 import { gamesApi } from '../api/gamesApi';
 import { queryKeys } from '../api/queryKeys';
 import type { PlayerViewResponse } from '../api/types';
+import { useToast } from '../components/Toast/useToast';
 
 /**
  * Subscribes to GameHub for the lifetime of the calling component. GameHub is push-only — every
@@ -14,6 +15,7 @@ import type { PlayerViewResponse } from '../api/types';
  */
 export function useGameSignalR(gameId: string, playerSeat: number) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +35,7 @@ export function useGameSignalR(gameId: string, playerSeat: number) {
       },
       onConnectionError: (error) => {
         console.error(`GameHub connection error for game ${gameId}:`, error);
+        showToast('Lost connection to the game. Trying to reconnect…');
       },
     })
       .then((sub) => {
@@ -50,5 +53,5 @@ export function useGameSignalR(gameId: string, playerSeat: number) {
       cancelled = true;
       void subscription?.stop();
     };
-  }, [gameId, playerSeat, queryClient]);
+  }, [gameId, playerSeat, queryClient, showToast]);
 }

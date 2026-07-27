@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { queryKeys } from '../api/queryKeys';
+import ToastProvider from '../components/Toast/ToastProvider';
 
 // Statically importing these mocks (rather than vi.mock's factory closing over outer consts) would
 // hit hoisting order issues, so — same pattern as api/signalRClient.test.ts — declare the mocks
@@ -21,7 +22,11 @@ const { useGameSignalR } = await import('./useGameSignalR');
 
 function createWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    );
   };
 }
 

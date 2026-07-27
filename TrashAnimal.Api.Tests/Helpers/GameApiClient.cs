@@ -69,4 +69,20 @@ public sealed class GameApiClient
 
     public Task<(HttpStatusCode Status, GameCommandResponse? Body)> EndTurnAsync(Guid gameId, int playerSeat) =>
         SubmitCommandAsync(gameId, new PlayActionCommand(playerSeat, GameAction.EndTurn));
+
+    public Task<(HttpStatusCode Status, GameCommandResponse? Body)> CardPickAsync(
+        Guid gameId, int playerSeat, Guid cardId) =>
+        SubmitCommandAsync(gameId, new CardPickCommand(playerSeat, cardId));
+
+    public Task<(HttpStatusCode Status, GameCommandResponse? Body)> DoubleStashAsync(
+        Guid gameId, int playerSeat, IReadOnlyList<Guid> cardIds) =>
+        SubmitCommandAsync(gameId, new DoubleStashCommand(playerSeat, cardIds));
+
+    public Task<(HttpStatusCode Status, GameCommandResponse? Body)> RecyclePickAsync(
+        Guid gameId, int playerSeat, TokenAction replacement) =>
+        SubmitCommandAsync(gameId, new RecyclePickCommand(playerSeat, replacement));
+
+    public Task<(HttpStatusCode Status, GameCommandResponse? Body)> ResolveTokenStealAsync(
+        Guid gameId, int playerSeat, int victimSeat) =>
+        SubmitCommandAsync(gameId, new ResolveTokenStealCommand(playerSeat, victimSeat));
 }

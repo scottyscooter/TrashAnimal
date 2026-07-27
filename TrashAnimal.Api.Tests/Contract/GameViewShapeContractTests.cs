@@ -12,7 +12,7 @@ namespace TrashAnimal.Api.Tests.Contract;
 ///
 /// Shape tests ensure no fields were silently dropped or renamed during serialisation, which
 /// would break the frontend without a compile error. Hidden-info tests verify the invariant
-/// stated in <see cref="PlayerViewResponse"/>: <c>HandCardNames</c> contains only the requesting
+/// stated in <see cref="PlayerViewResponse"/>: <c>HandCards</c> contains only the requesting
 /// player's own cards.
 /// </summary>
 public sealed class GameViewShapeContractTests : IClassFixture<TrashApiTestFactory>
@@ -51,11 +51,15 @@ public sealed class GameViewShapeContractTests : IClassFixture<TrashApiTestFacto
         Assert.True(view.TryGetProperty("isBusted", out _), "Missing: isBusted");
         Assert.True(view.TryGetProperty("forcedRollRemaining", out _), "Missing: forcedRollRemaining");
         Assert.True(view.TryGetProperty("phaseOneTokens", out _), "Missing: phaseOneTokens");
-        Assert.True(view.TryGetProperty("handCardNames", out _), "Missing: handCardNames");
+        Assert.True(view.TryGetProperty("handCards", out _), "Missing: handCards");
         Assert.True(view.TryGetProperty("yumYumResponderIndex", out _), "Missing: yumYumResponderIndex");
         Assert.True(view.TryGetProperty("yumYumResponderName", out _), "Missing: yumYumResponderName");
         Assert.True(view.TryGetProperty("stealPhase", out _), "Missing: stealPhase");
         Assert.True(view.TryGetProperty("tokenPhase", out _), "Missing: tokenPhase");
+        Assert.True(view.TryGetProperty("opponents", out _), "Missing: opponents");
+        Assert.True(view.TryGetProperty("deckCount", out _), "Missing: deckCount");
+        Assert.True(view.TryGetProperty("discardPile", out _), "Missing: discardPile");
+        Assert.True(view.TryGetProperty("ownStash", out _), "Missing: ownStash");
     }
 
     [Fact]
@@ -91,8 +95,8 @@ public sealed class GameViewShapeContractTests : IClassFixture<TrashApiTestFacto
         var (_, aliceView) = await _apiClient.GetViewAsync(gameId, playerSeat: 0);
         var (_, bobView) = await _apiClient.GetViewAsync(gameId, playerSeat: 1);
 
-        Assert.Equal(3, aliceView!.View.HandCardNames.Count);
-        Assert.Equal(4, bobView!.View.HandCardNames.Count);
+        Assert.Equal(3, aliceView!.View.HandCards.Count);
+        Assert.Equal(4, bobView!.View.HandCards.Count);
     }
 
     [Fact]
@@ -109,7 +113,7 @@ public sealed class GameViewShapeContractTests : IClassFixture<TrashApiTestFacto
         Assert.Equal(creationView.State, viewResponse!.View.State);
         Assert.Equal(creationView.CurrentPlayerIndex, viewResponse.View.CurrentPlayerIndex);
         Assert.Equal(creationView.CurrentPlayerName, viewResponse.View.CurrentPlayerName);
-        Assert.Equal(creationView.HandCardNames.Count, viewResponse.View.HandCardNames.Count);
+        Assert.Equal(creationView.HandCards.Count, viewResponse.View.HandCards.Count);
     }
 
     [Fact]
@@ -124,11 +128,30 @@ public sealed class GameViewShapeContractTests : IClassFixture<TrashApiTestFacto
         // Alice's and Bob's starting hand sizes differ (3 vs 4 per StartingHandCounts).
         // If any player could see the opponent's hand, the counts would be equal (both 7)
         // or cross-contaminated. Verify neither player sees the other's card count.
-        Assert.NotEqual(aliceView!.View.HandCardNames.Count, bobView!.View.HandCardNames.Count);
+        Assert.NotEqual(aliceView!.View.HandCards.Count, bobView!.View.HandCards.Count);
 
         // Combined hands must not appear in either individual view.
-        var combined = aliceView.View.HandCardNames.Count + bobView.View.HandCardNames.Count;
-        Assert.True(aliceView.View.HandCardNames.Count < combined);
-        Assert.True(bobView.View.HandCardNames.Count < combined);
+        var combined = aliceView.View.HandCards.Count + bobView.View.HandCards.Count;
+        Assert.True(aliceView.View.HandCards.Count < combined);
+        Assert.True(bobView.View.HandCards.Count < combined);
+    }
+
+    [Fact]
+    public async Task OpponentSummary_FaceUpStash_NeverIncludesFaceDownOrHandCards()
+    {
+        // With StartingHandCounts [3, 4]: Alice (seat 0) gets 3 cards, Bob (seat 1) gets 4, neither
+        // stashes anything before this assertion runs. This locks down the shape/invariant of the
+        // opponents projection: face-up stash cards are public, but hand contents and face-down
+        // stash counts must never leak card identities.
+        var (_, created) = await _apiClient.CreateGameAsync(["Alice", "Bob"]);
+        var gameId = created!.GameId;
+
+        var (_, aliceView) = await _apiClient.GetViewAsync(gameId, playerSeat: 0);
+
+        var bobSummary = Assert.Single(aliceView!.View.Opponents, o => o.SeatIndex == 1);
+        Assert.Equal("Bob", bobSummary.Name);
+        Assert.Equal(4, bobSummary.HandCount);
+        Assert.Empty(bobSummary.StashFaceUpCards);
+        Assert.Equal(0, bobSummary.StashFaceDownCount);
     }
 }

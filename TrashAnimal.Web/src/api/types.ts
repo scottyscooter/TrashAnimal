@@ -103,6 +103,29 @@ export interface StashableHandCard {
   name: CardName;
 }
 
+export interface HandCardView {
+  cardId: string;
+  name: CardName;
+}
+
+export interface DiscardCardView {
+  cardId: string;
+  name: CardName;
+}
+
+export interface OpponentSummaryView {
+  seatIndex: number;
+  name: string;
+  handCount: number;
+  stashFaceDownCount: number;
+  stashFaceUpCards: StashableHandCard[];
+}
+
+export interface OwnStashView {
+  faceDownCount: number;
+  faceUpCards: StashableHandCard[];
+}
+
 export interface TokenPhaseView {
   step: TokenPhaseStep;
   remainingTokens: TokenAction[];
@@ -120,11 +143,15 @@ export interface GameView {
   isBusted: boolean;
   forcedRollRemaining: boolean;
   phaseOneTokens: TokenAction[];
-  handCardNames: CardName[];
+  handCards: HandCardView[];
   yumYumResponderIndex: number | null;
   yumYumResponderName: string | null;
   stealPhase: StealPhaseView | null;
   tokenPhase: TokenPhaseView | null;
+  opponents: OpponentSummaryView[];
+  deckCount: number;
+  discardPile: DiscardCardView[];
+  ownStash: OwnStashView;
 }
 
 export interface GameEndScoreLine {
