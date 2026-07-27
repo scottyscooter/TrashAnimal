@@ -3,7 +3,7 @@ import type { CardName, TokenAction } from '../../api/types';
 import dayBackground from '../../assets/images/backgrounds/day_background.webp';
 import nightBackground from '../../assets/images/backgrounds/night_background.webp';
 
-import cardBack from '../../assets/images/cards/back.webp';
+import cardBack from '../../assets/images/cards/back.png';
 import blammoCard from '../../assets/images/cards/blammo.webp';
 import doggoCard from '../../assets/images/cards/doggo.webp';
 import feeshCard from '../../assets/images/cards/feesh.webp';
