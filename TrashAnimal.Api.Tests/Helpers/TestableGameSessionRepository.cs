@@ -3,9 +3,12 @@ using TrashAnimal.Api.Sessions;
 namespace TrashAnimal.Api.Tests.Helpers;
 
 /// <summary>
-/// An <see cref="IGameSessionRepository"/> that delegates to an in-memory store and adds a
-/// <see cref="RegisterSession"/> helper so integration tests can pre-populate specific sessions
-/// (with controlled draw piles, sequenced dice, or pre-built game state) before making HTTP calls.
+/// A real, fully-functional <see cref="IGameSessionRepository"/> that delegates to an in-memory
+/// store and adds a <see cref="RegisterSession"/> helper so integration tests can pre-populate
+/// specific sessions (built with mocked <see cref="Die"/>/<see cref="IDrawPile"/> leaf
+/// dependencies via <see cref="DieMockFactory"/>/<see cref="DrawPileMockFactory"/>, or pre-built
+/// game state) before making HTTP calls. This class itself is not a mock — the repository
+/// contract is exercised for real; only the session's own collaborators are mocked.
 /// </summary>
 public sealed class TestableGameSessionRepository : IGameSessionRepository
 {

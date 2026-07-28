@@ -128,11 +128,12 @@ This keeps `GameSession` stable and card rules testable in isolation. See [Trash
 
 ## Testing Notes
 
-- Domain tests in `TrashAnimal.Tests/` use xUnit and inject mock/controllable collaborators (e.g., `SequencedDie` for deterministic rolls).
+- Both `TrashAnimal.Tests/` and `TrashAnimal.Api.Tests/` use **Moq** for narrow, leaf-level collaborators: `Mock<Die>` (via `DieMockFactory.CreateSequenced(...)`) for deterministic roll sequences, and `Mock<IDrawPile>` (via `DrawPileMockFactory.CreateWithCards(...)`/`.CreateEmpty()`) for deterministic deck size/composition. `Die.Roll()` is `virtual` and `IDrawPile` is an interface, so both are directly mockable — this replaced hand-written fake subclasses/implementations (formerly `SequencedDie`, `CountingDrawPile`) that duplicated real-looking behavior instead of using a mocking library.
+- `TrashAnimal.Tests/TestSupport/DieMockFactory.cs` and `TrashAnimal.Tests/TestSupport/DrawPileMockFactory.cs` are the domain-test factories; `TrashAnimal.Api.Tests/Helpers/DieMockFactory.cs` and `TrashAnimal.Api.Tests/Helpers/DrawPileMockFactory.cs` are the API-test equivalents (kept as separate small files per project rather than a shared package, since `TrashAnimal.Tests` has no reference to `TrashAnimal.Api.Tests` or vice versa).
 - API tests in `TrashAnimal.Api.Tests/` use `WebApplicationFactory<Program>` for integration testing; `GameApiClient` wraps HTTP calls.
 - Contract tests verify enum serialization, response shape, and API surface contracts.
-- Tests should not mock the repository; use real in-memory state for integration testing (as per project feedback: mocks can diverge from prod behavior).
-- Test helper locations: `TrashAnimal.Api.Tests/Contract/` (API contract tests), `TrashAnimal.Api.Tests/Helpers/` (`GameApiClient`, `CountingDrawPile`, `SequencedDie`).
+- **The `IGameSessionRepository` itself is intentionally *not* mocked in integration tests.** `TestableGameSessionRepository` (`TrashAnimal.Api.Tests/Helpers/`) remains a real repository — it delegates to the real `InMemoryGameSessionRepository` and adds a `RegisterSession` helper for pre-seeding sessions — swapped into DI by `TrashApiTestFactory` so integration tests still exercise the real HTTP/DI/controller pipeline end-to-end. Only the *leaf* dependencies a pre-seeded `GameSession` needs (`Die`, `IDrawPile`) are Moq mocks; the repository contract, routing, and serialization stay real. If a scenario doesn't need the HTTP pipeline at all, prefer a narrower unit test against `GameSession`/`GameApplicationService` directly (with `Mock<IGameSessionRepository>` if a repository seam is genuinely needed there) over mocking the repository inside a `WebApplicationFactory`-based test.
+- Test helper locations: `TrashAnimal.Api.Tests/Contract/` (API contract tests), `TrashAnimal.Api.Tests/Helpers/` (`GameApiClient`, `DieMockFactory`, `DrawPileMockFactory`, `TestableGameSessionRepository`, `TrashApiTestFactory`).
 
 ## Configuration
 

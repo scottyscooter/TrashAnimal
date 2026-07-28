@@ -1,24 +1,14 @@
-using TrashAnimal;
+﻿using TrashAnimal;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
 
 /// <summary>
-/// Covers <c>scenarios.txt</c> lines 1–32: voluntary stop, empty/non-empty discard, Feesh/Shiny availability, and stash steal chains.
+/// Covers <c>scenarios.txt</c> lines 1-32: voluntary stop, empty/non-empty discard, Feesh/Shiny availability, and stash steal chains.
 /// </summary>
 public sealed class GameSessionVoluntaryStopScenariosTests
 {
-    private sealed class SequencedDie : Die
-    {
-        private readonly Queue<TokenAction> _sequence;
-
-        public SequencedDie(params TokenAction[] sequence) : base(Random.Shared) =>
-            _sequence = new Queue<TokenAction>(sequence);
-
-        public override TokenAction Roll() =>
-            _sequence.Count > 0 ? _sequence.Dequeue() : TokenAction.StashTrash;
-    }
-
     private static (Player p0, Player p1, GameSession session) CreateTwoPlayerSession(
         Func<int, IReadOnlyList<Card>, Card?>? onFeeshCardSelection,
         Func<int, IReadOnlyList<int>, int>? chooseShinyVictim)
@@ -66,7 +56,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Add(new Card(CardName.Blammo));
         p0.Hand.Add(new Card(CardName.Shiny));
 
-        var die = new SequencedDie(TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
         Assert.Equal(GameState.RollPhase, session.State);
@@ -94,7 +84,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Add(new Card(CardName.Feesh));
         p0.Hand.Add(shinyInHand);
 
-        var die = new SequencedDie(TokenAction.Recycle);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Recycle).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
@@ -125,7 +115,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Clear();
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.DoubleTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleTrash).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
@@ -152,7 +142,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Add(new Card(CardName.Blammo));
         p0.Hand.Add(new Card(CardName.Shiny));
 
-        var die = new SequencedDie(TokenAction.Steal);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Steal).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
@@ -178,7 +168,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Clear();
         p0.Hand.Add(shinyInHand);
 
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
@@ -209,7 +199,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         p0.Hand.Add(feeshInHand);
         p0.Hand.Add(shinyInHand);
 
-        var die = new SequencedDie(TokenAction.DoubleStash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleStash).Object;
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 

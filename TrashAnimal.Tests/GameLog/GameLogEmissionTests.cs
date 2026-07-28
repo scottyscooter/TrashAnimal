@@ -1,5 +1,6 @@
 using TrashAnimal;
 using TrashAnimal.GameLog;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests.GameLog;
@@ -12,41 +13,6 @@ namespace TrashAnimal.Tests.GameLog;
 /// </summary>
 public sealed class GameLogEmissionTests
 {
-    private sealed class SequencedDie : Die
-    {
-        private readonly Queue<TokenAction> _sequence;
-
-        public SequencedDie(params TokenAction[] sequence) : base(Random.Shared) =>
-            _sequence = new Queue<TokenAction>(sequence);
-
-        public override TokenAction Roll() =>
-            _sequence.Count > 0 ? _sequence.Dequeue() : TokenAction.StashTrash;
-    }
-
-    private sealed class CountingDrawPile : IDrawPile
-    {
-        private readonly List<Card> _stock;
-
-        public CountingDrawPile(int count, CardName name = CardName.Nanners) =>
-            _stock = Enumerable.Range(0, count).Select(_ => new Card(name)).ToList();
-
-        public int GetDeckCount() => _stock.Count;
-
-        public IEnumerable<Card> DealCards(int count)
-        {
-            if (count <= 0)
-                yield break;
-
-            var n = Math.Min(count, _stock.Count);
-            for (var i = 0; i < n; i++)
-            {
-                var card = _stock[0];
-                _stock.RemoveAt(0);
-                yield return card;
-            }
-        }
-    }
-
     // --- Die rolls (RollDie) ---
 
     [Fact]
@@ -55,7 +21,7 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err), err);
 
@@ -71,7 +37,7 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err), err);
@@ -151,7 +117,7 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
@@ -181,7 +147,7 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.DoubleStash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleStash).Object;
         var cardA = new Card(CardName.MmmPie);
         var cardB = new Card(CardName.Nanners);
         p0.Hand.Add(cardA);
@@ -207,7 +173,7 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
@@ -230,9 +196,9 @@ public sealed class GameLogEmissionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         p0.AddToStash(new Card(CardName.Blammo), faceUp: true);
-        var pile = new CountingDrawPile(1);
+        var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
@@ -330,7 +296,7 @@ public sealed class GameLogEmissionTests
         session.ChooseShinyStealVictim = (_, candidates) => candidates[0];
         p1.AddToStash(new Card(CardName.Nanners), faceUp: true);
         p0.Hand.Add(new Card(CardName.Shiny));
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
@@ -356,7 +322,7 @@ public sealed class GameLogEmissionTests
         session.OnFeeshCardSelection = (_, discard) => discard.First(c => c.Name == CardName.MmmPie);
         session.DiscardPile.Add(target);
         p0.Hand.Add(new Card(CardName.Feesh));
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
@@ -378,7 +344,7 @@ public sealed class GameLogEmissionTests
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         p0.Hand.Add(new Card(CardName.MmmPie));
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));

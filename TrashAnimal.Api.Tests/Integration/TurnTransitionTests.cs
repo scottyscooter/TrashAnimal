@@ -7,8 +7,9 @@ namespace TrashAnimal.Api.Tests.Integration;
 
 /// <summary>
 /// Verifies that a complete roll-phase → token-phase → end-turn cycle advances the active
-/// player correctly through the HTTP API. Uses an injected session with a <see cref="SequencedDie"/>
-/// that always rolls <see cref="TokenAction.StashTrash"/> so the token-phase path is deterministic.
+/// player correctly through the HTTP API. Uses an injected session with a mocked <see cref="Die"/>
+/// (see <see cref="DieMockFactory"/>) that always rolls <see cref="TokenAction.StashTrash"/> so the
+/// token-phase path is deterministic.
 /// </summary>
 public sealed class TurnTransitionTests : IClassFixture<TrashApiTestFactory>
 {
@@ -42,8 +43,8 @@ public sealed class TurnTransitionTests : IClassFixture<TrashApiTestFactory>
         var gameId = Guid.NewGuid();
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var die = new SequencedDie(TokenAction.StashTrash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         // Roll phase: player 0 rolls once then stops.

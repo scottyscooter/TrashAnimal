@@ -1,4 +1,5 @@
-using TrashAnimal;
+﻿using TrashAnimal;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
@@ -8,17 +9,6 @@ namespace TrashAnimal.Tests;
 /// </summary>
 public sealed class GameSessionBustNannersFeeshTests
 {
-    private sealed class SequencedDie : Die
-    {
-        private readonly Queue<TokenAction> _sequence;
-
-        public SequencedDie(params TokenAction[] sequence) : base(Random.Shared) =>
-            _sequence = new Queue<TokenAction>(sequence);
-
-        public override TokenAction Roll() =>
-            _sequence.Count > 0 ? _sequence.Dequeue() : TokenAction.StashTrash;
-    }
-
     private static (Player p0, Player p1, Deck deck, GameSession session) CreateSession(
         Func<int, IReadOnlyList<Card>, Card?>? onFeeshCardSelection)
     {
@@ -50,7 +40,7 @@ public sealed class GameSessionBustNannersFeeshTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         BustWithTwoIdenticalRolls(session, die);
 
         var bustActions = session.GetAllowedActionsForPlayer(0);
@@ -81,7 +71,7 @@ public sealed class GameSessionBustNannersFeeshTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.Recycle, TokenAction.Recycle);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Recycle, TokenAction.Recycle).Object;
         BustWithTwoIdenticalRolls(session, die);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
@@ -109,7 +99,7 @@ public sealed class GameSessionBustNannersFeeshTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.Steal, TokenAction.Steal);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Steal, TokenAction.Steal).Object;
         BustWithTwoIdenticalRolls(session, die);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
@@ -134,7 +124,7 @@ public sealed class GameSessionBustNannersFeeshTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.DoubleTrash, TokenAction.DoubleTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleTrash, TokenAction.DoubleTrash).Object;
         BustWithTwoIdenticalRolls(session, die);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
@@ -179,7 +169,7 @@ public sealed class GameSessionBustNannersFeeshTests
         p0.Hand.Add(new Card(CardName.Nanners));
         p0.Hand.Add(new Card(CardName.Feesh));
 
-        var die = new SequencedDie(TokenAction.StashTrash, TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash, TokenAction.StashTrash).Object;
         BustWithTwoIdenticalRolls(session, die);
 
         Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));

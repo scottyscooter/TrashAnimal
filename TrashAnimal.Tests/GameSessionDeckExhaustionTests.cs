@@ -1,56 +1,20 @@
 using TrashAnimal;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
 
 public sealed class GameSessionDeckExhaustionTests
 {
-    private sealed class SequencedDie : Die
-    {
-        private readonly Queue<TokenAction> _sequence;
-
-        public SequencedDie(params TokenAction[] sequence) : base(Random.Shared) =>
-            _sequence = new Queue<TokenAction>(sequence);
-
-        public override TokenAction Roll() =>
-            _sequence.Count > 0 ? _sequence.Dequeue() : TokenAction.StashTrash;
-    }
-
-    private sealed class CountingDrawPile : IDrawPile
-    {
-        private readonly List<Card> _stock;
-
-        public CountingDrawPile(int count, CardName name = CardName.Nanners)
-        {
-            _stock = Enumerable.Range(0, count).Select(_ => new Card(name)).ToList();
-        }
-
-        public int GetDeckCount() => _stock.Count;
-
-        public IEnumerable<Card> DealCards(int count)
-        {
-            if (count <= 0)
-                yield break;
-
-            var n = Math.Min(count, _stock.Count);
-            for (var i = 0; i < n; i++)
-            {
-                var card = _stock[0];
-                _stock.RemoveAt(0);
-                yield return card;
-            }
-        }
-    }
-
     [Fact]
     public void Last_card_on_bust_abandon_ends_game_discards_hands_does_not_advance_turn()
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var pile = new CountingDrawPile(1);
+        var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
 
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.PhaseOne.IsBusted);
@@ -71,10 +35,10 @@ public sealed class GameSessionDeckExhaustionTests
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var pile = new CountingDrawPile(2);
-        var session = new GameSession(new[] { p0, p1 }, pile);
+        var pileMock = DrawPileMockFactory.CreateWithCards(2);
+        var session = new GameSession(new[] { p0, p1 }, pileMock.Object);
 
-        var die = new SequencedDie(TokenAction.DoubleTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleTrash).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
         Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
@@ -84,7 +48,7 @@ public sealed class GameSessionDeckExhaustionTests
 
         Assert.True(session.ApplyAction(0, GameAction.ResolveTokenDoubleTrash, die, out _));
         Assert.Equal(GameState.TurnEnd, session.State);
-        Assert.Equal(0, pile.GetDeckCount());
+        Assert.Equal(0, pileMock.Object.GetDeckCount());
 
         session.EndTurn();
 
@@ -98,9 +62,9 @@ public sealed class GameSessionDeckExhaustionTests
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var pile = new CountingDrawPile(1);
+        var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _));
@@ -115,7 +79,7 @@ public sealed class GameSessionDeckExhaustionTests
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var session = new GameSession(new[] { p0, p1 }, new CountingDrawPile(10));
+        var session = new GameSession(new[] { p0, p1 }, DrawPileMockFactory.CreateWithCards(10).Object);
         Assert.Throws<InvalidOperationException>(() => session.GetGameEndScoreSummary());
     }
 
@@ -125,9 +89,9 @@ public sealed class GameSessionDeckExhaustionTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         p0.AddToStash(new Card(CardName.Blammo), faceUp: true);
-        var pile = new CountingDrawPile(1);
+        var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _));

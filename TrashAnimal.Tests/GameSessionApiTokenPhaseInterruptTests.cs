@@ -1,3 +1,4 @@
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
@@ -14,12 +15,6 @@ namespace TrashAnimal.Tests;
 /// </summary>
 public sealed class GameSessionApiTokenPhaseInterruptTests
 {
-    private sealed class SequencedDie(params TokenAction[] sequence) : Die(Random.Shared)
-    {
-        private readonly Queue<TokenAction> _rolls = new(sequence);
-        public override TokenAction Roll() => _rolls.Count > 0 ? _rolls.Dequeue() : TokenAction.StashTrash;
-    }
-
     /// <summary>
     /// Creates a two-player session driven to TokenPhase with NO delegate selectors — the API mode
     /// baseline. Both hands are cleared so tests seed exactly the cards they need.
@@ -29,7 +24,7 @@ public sealed class GameSessionApiTokenPhaseInterruptTests
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
         var session = new GameSession(new[] { p0, p1 }, new Deck());
-        var die = new SequencedDie(TokenAction.StashTrash);
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
         session.ApplyAction(0, GameAction.RollDie, die, out _);
         session.ApplyAction(0, GameAction.StopRolling, die, out _);

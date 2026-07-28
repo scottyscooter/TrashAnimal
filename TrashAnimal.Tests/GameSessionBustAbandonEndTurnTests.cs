@@ -1,28 +1,11 @@
 using TrashAnimal;
+using TrashAnimal.Tests.TestSupport;
 using Xunit;
 
 namespace TrashAnimal.Tests;
 
 public sealed class GameSessionBustAbandonEndTurnTests
 {
-    private sealed class SequencedDie : Die
-    {
-        private readonly Queue<TokenAction> _sequence;
-
-        public SequencedDie(params TokenAction[] sequence) : base(Random.Shared) =>
-            _sequence = new Queue<TokenAction>(sequence);
-
-        public override TokenAction Roll() =>
-            _sequence.Count > 0 ? _sequence.Dequeue() : TokenAction.StashTrash;
-    }
-
-    private sealed class EmptyDrawPile : IDrawPile
-    {
-        public int GetDeckCount() => 0;
-
-        public IEnumerable<Card> DealCards(int count) => Array.Empty<Card>();
-    }
-
     [Fact]
     public void AbandonBust_draws_one_advances_to_next_player_roll_phase_skips_token_phase()
     {
@@ -31,7 +14,7 @@ public sealed class GameSessionBustAbandonEndTurnTests
         var deck = new Deck();
         var session = new GameSession(new[] { p0, p1 }, deck);
 
-        var die = new SequencedDie(TokenAction.Bandit, TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.PhaseOne.IsBusted);
@@ -50,9 +33,9 @@ public sealed class GameSessionBustAbandonEndTurnTests
     {
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var session = new GameSession(new[] { p0, p1 }, new EmptyDrawPile());
+        var session = new GameSession(new[] { p0, p1 }, DrawPileMockFactory.CreateEmpty().Object);
 
-        var die = new SequencedDie(TokenAction.Recycle, TokenAction.Recycle);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Recycle, TokenAction.Recycle).Object;
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
         Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
 
