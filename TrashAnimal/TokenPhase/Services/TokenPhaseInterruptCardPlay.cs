@@ -1,3 +1,4 @@
+using TrashAnimal.GameLog;
 using TrashAnimal.Helpers;
 
 namespace TrashAnimal.TokenPhase;
@@ -37,6 +38,7 @@ internal sealed class TokenPhaseInterruptCardPlay
         }
 
         _session.DiscardPile.Add(pie);
+        _session.RecordLogEvent(RollPhaseLogEventFactory.ForBustRecoveryCardPlayed(_session.CurrentPlayerIndex, _session.TurnNumber, CardName.MmmPie));
 
         state.ResolveTokenTwice = true;
         return true;
@@ -45,20 +47,14 @@ internal sealed class TokenPhaseInterruptCardPlay
     public bool TryPlayShinyTokenPhase(TokenPhaseState state, out string? error)
     {
         error = null;
-        var shinyEntry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Shiny);
+        var shinyEntry = FindEligibleShinyEntry(state);
         if (shinyEntry is null)
-        {
-            error = "No Shiny in hand.";
-            return false;
-        }
-
-        if (!_eligibility.CanPlayCardForActionDuringTokenPhase(shinyEntry, state.TokenResolutionStartLocked))
         {
             error = "Shiny cannot be played right now.";
             return false;
         }
-        
-        var candidates = Opponents.GetAllWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).ToList();
+
+        var candidates = GetShinyCandidates();
         if (candidates.Count == 0)
         {
             error = "No opponent has a card in their stash to steal.";
@@ -78,36 +74,40 @@ internal sealed class TokenPhaseInterruptCardPlay
             return false;
         }
 
-        if (_session.Players[victimIndex].StashPile.Count == 0)
+        return ApplyShinySteal(victimIndex, out error);
+    }
+
+    public bool TryPlayShinyTokenPhaseWithVictimChoice(TokenPhaseState state, int victimIndex, out string? error)
+    {
+        error = null;
+        var shinyEntry = FindEligibleShinyEntry(state);
+        if (shinyEntry is null)
         {
-            error = "Selected victim has no cards in stash.";
+            error = "Shiny cannot be played right now.";
             return false;
         }
 
-        if (!_session.CurrentPlayer.TryRemoveCard(CardName.Shiny, out var shinyCard))
+        var candidates = GetShinyCandidates();
+        if (candidates.Count == 0)
         {
-            error = "No Shiny in hand.";
+            error = "No opponent has a card in their stash to steal.";
             return false;
         }
 
-        _session.DiscardPile.Add(shinyCard);
-        _session.Steal.BeginStashStealFromShiny(_session.CurrentPlayerIndex, victimIndex);
-        _session.ArmStealResumeState(GameState.TokenPhase);
-        _session.SetGameState(GameState.AwaitingStealResponse);
-        return true;
+        if (!candidates.Contains(victimIndex))
+        {
+            error = "Shiny victim selection is invalid.";
+            return false;
+        }
+
+        return ApplyShinySteal(victimIndex, out error);
     }
 
     public bool TryPlayFeeshTokenPhase(TokenPhaseState state, out string? error)
     {
         error = null;
-        var feeshEntry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Feesh);
+        var feeshEntry = FindEligibleFeeshEntry(state);
         if (feeshEntry is null)
-        {
-            error = "No Feesh in hand.";
-            return false;
-        }
-
-        if (!_eligibility.CanPlayCardForActionDuringTokenPhase(feeshEntry, state.TokenResolutionStartLocked))
         {
             error = "Feesh cannot be played right now.";
             return false;
@@ -138,25 +138,32 @@ internal sealed class TokenPhaseInterruptCardPlay
             return false;
         }
 
-        if (!_session.CurrentPlayer.TryRemoveCard(CardName.Feesh, out var playedCard))
+        return ApplyFeeshRetrieve(pickedFromDiscard.Id, out error);
+    }
+
+    public bool TryPlayFeeshTokenPhaseWithCardChoice(TokenPhaseState state, Guid discardCardId, out string? error)
+    {
+        error = null;
+        var feeshEntry = FindEligibleFeeshEntry(state);
+        if (feeshEntry is null)
         {
-            error = "No Feesh in hand.";
+            error = "Feesh cannot be played right now.";
             return false;
         }
 
-        _session.DiscardPile.Add(playedCard);
-
-        var discardIndex = _session.DiscardPile.FindIndex(c => c.Id == pickedFromDiscard.Id);
-        if (discardIndex < 0)
+        if (_session.DiscardPile.Count == 0)
         {
-            error = "Could not find selected card in discard pile.";
+            error = "No cards in discard pile to retrieve with Feesh.";
             return false;
         }
 
-        var cardFromDiscard = _session.DiscardPile[discardIndex];
-        _session.DiscardPile.RemoveAt(discardIndex);
-        _session.CurrentPlayer.AddCards(new[] { cardFromDiscard }, markReceivedOnOwnerCurrentTurn: true);
-        return true;
+        if (!_session.DiscardPile.Any(c => c.Id == discardCardId))
+        {
+            error = "Selected card is not in the discard pile.";
+            return false;
+        }
+
+        return ApplyFeeshRetrieve(discardCardId, out error);
     }
 
     public bool CanPlayMmmPie(TokenPhaseState state)
@@ -167,19 +174,80 @@ internal sealed class TokenPhaseInterruptCardPlay
 
     public bool CanPlayShinyTokenPhase(TokenPhaseState state)
     {
-        var entry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Shiny);
-        return entry is not null
-               && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
-               && Opponents.GetAllWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).Any()
-               && _session.ChooseShinyStealVictim is not null;
+        return FindEligibleShinyEntry(state) is not null && GetShinyCandidates().Count > 0;
     }
 
     public bool CanPlayFeeshTokenPhase(TokenPhaseState state)
     {
+        return FindEligibleFeeshEntry(state) is not null && _session.DiscardPile.Count > 0;
+    }
+
+    private HandEntry? FindEligibleShinyEntry(TokenPhaseState state)
+    {
+        var entry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Shiny);
+        return entry is not null && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
+            ? entry
+            : null;
+    }
+
+    private HandEntry? FindEligibleFeeshEntry(TokenPhaseState state)
+    {
         var entry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.Feesh);
-        return entry is not null
-               && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
-               && _session.DiscardPile.Count > 0
-               && _session.OnFeeshCardSelection is not null;
+        return entry is not null && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
+            ? entry
+            : null;
+    }
+
+    private List<int> GetShinyCandidates()
+    {
+        return Opponents.GetAllWithNonEmptyStash(_session.Players, _session.CurrentPlayerIndex).ToList();
+    }
+
+    private bool ApplyShinySteal(int victimIndex, out string? error)
+    {
+        error = null;
+        if (_session.Players[victimIndex].StashPile.Count == 0)
+        {
+            error = "Selected victim has no cards in stash.";
+            return false;
+        }
+
+        if (!_session.CurrentPlayer.TryRemoveCard(CardName.Shiny, out var shinyCard))
+        {
+            error = "No Shiny in hand.";
+            return false;
+        }
+
+        _session.DiscardPile.Add(shinyCard);
+        _session.Steal.BeginStashStealFromShiny(_session.CurrentPlayerIndex, victimIndex);
+        _session.ArmStealResumeState(GameState.TokenPhase);
+        _session.SetGameState(GameState.AwaitingStealResponse);
+        _session.RecordLogEvent(RollPhaseLogEventFactory.ForShinyStealBegun(_session.CurrentPlayerIndex, _session.TurnNumber, victimIndex));
+        return true;
+    }
+
+    private bool ApplyFeeshRetrieve(Guid discardCardId, out string? error)
+    {
+        error = null;
+        if (!_session.CurrentPlayer.TryRemoveCard(CardName.Feesh, out var playedCard))
+        {
+            error = "No Feesh in hand.";
+            return false;
+        }
+
+        _session.DiscardPile.Add(playedCard);
+
+        var discardIndex = _session.DiscardPile.FindIndex(c => c.Id == discardCardId);
+        if (discardIndex < 0)
+        {
+            error = "Could not find selected card in discard pile.";
+            return false;
+        }
+
+        var cardFromDiscard = _session.DiscardPile[discardIndex];
+        _session.DiscardPile.RemoveAt(discardIndex);
+        _session.CurrentPlayer.AddCards(new[] { cardFromDiscard }, markReceivedOnOwnerCurrentTurn: true);
+        _session.RecordLogEvent(RollPhaseLogEventFactory.ForFeeshRetrieved(_session.CurrentPlayerIndex, _session.TurnNumber, cardFromDiscard.Id, cardFromDiscard.Name));
+        return true;
     }
 }

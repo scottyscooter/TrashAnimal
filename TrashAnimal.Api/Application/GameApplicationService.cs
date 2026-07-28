@@ -162,7 +162,22 @@ public sealed class GameApplicationService
     {
         _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Feesh to retrieve card {CardId}.", gameId, playerSeat, cardId);
 
-        var succeeded = entry.Session.TryPlayFeeshWithCardChoice(playerSeat, cardId, out var error);
+        bool succeeded;
+        string? error;
+        switch (entry.Session.State)
+        {
+            case GameState.RollPhase:
+                succeeded = entry.Session.TryPlayFeeshWithCardChoice(playerSeat, cardId, out error);
+                break;
+            case GameState.TokenPhase:
+                succeeded = entry.Session.TryPlayFeeshTokenPhaseWithCardChoice(playerSeat, cardId, out error);
+                break;
+            default:
+                succeeded = false;
+                error = "Feesh can only be played during RollPhase or as a TokenPhase interrupt.";
+                break;
+        }
+
         return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
     }
 
@@ -174,7 +189,22 @@ public sealed class GameApplicationService
     {
         _logger.LogInformation("Game {GameId}: player {PlayerSeat} playing Shiny to steal from player {VictimSeat}.", gameId, playerSeat, victimSeat);
 
-        var succeeded = entry.Session.TryPlayShinyWithVictimChoice(playerSeat, victimSeat, out var error);
+        bool succeeded;
+        string? error;
+        switch (entry.Session.State)
+        {
+            case GameState.RollPhase:
+                succeeded = entry.Session.TryPlayShinyWithVictimChoice(playerSeat, victimSeat, out error);
+                break;
+            case GameState.TokenPhase:
+                succeeded = entry.Session.TryPlayShinyTokenPhaseWithVictimChoice(playerSeat, victimSeat, out error);
+                break;
+            default:
+                succeeded = false;
+                error = "Shiny can only be played during RollPhase or as a TokenPhase interrupt.";
+                break;
+        }
+
         return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
     }
 

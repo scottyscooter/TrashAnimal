@@ -1,3 +1,5 @@
+using TrashAnimal.GameLog;
+
 namespace TrashAnimal.TokenPhase;
 
 internal sealed class TokenPhaseBanditHandler
@@ -86,10 +88,21 @@ internal sealed class TokenPhaseBanditHandler
         }
 
         opponent.AddToStash(card, faceUp: true);
+        _session.RecordLogEvent(new CardStashedEvent(
+            0, _session.TurnNumber, opponentIndex, new[] { card.Id }, new[] { card.Name }, WasFaceUp: true));
 
         var drawn = _session.DrawPile.DealCards(1).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
         _session.RegisterDrawOutcome(drawn);
+        if (drawn.Count > 0)
+        {
+            _session.RecordLogEvent(new CardDrawnPrivatelyEvent(
+                0,
+                _session.TurnNumber,
+                _session.CurrentPlayerIndex,
+                drawn.Select(c => c.Id).ToList(),
+                drawn.Select(c => c.Name).ToList()));
+        }
 
         AdvanceBanditWindow(state);
         return true;
@@ -109,6 +122,7 @@ internal sealed class TokenPhaseBanditHandler
         state.BanditRevealedName = card.Name;
         _session.CurrentPlayer.AddCards(new[] { card }, markReceivedOnOwnerCurrentTurn: true);
         _session.RegisterDrawOutcome(drawn);
+        _session.RecordLogEvent(new CardDrawnFaceUpEvent(0, _session.TurnNumber, _session.CurrentPlayerIndex, card.Name));
 
         var order = new List<int>();
         foreach (var idx in _session.EnumerateOpponentIndicesClockwise())

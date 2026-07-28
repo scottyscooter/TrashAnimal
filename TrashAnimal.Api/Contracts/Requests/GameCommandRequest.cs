@@ -26,12 +26,14 @@ public sealed record PlayActionCommand(int PlayerSeat, GameAction Action)
 
 /// <summary>
 /// Play the Feesh card to retrieve a specific card from the discard pile.
+/// Valid during RollPhase or as a TokenPhase interrupt; the phase is inferred from current session state.
 /// </summary>
 public sealed record PlayFeeshCommand(int PlayerSeat, Guid CardId)
     : GameCommandRequest(PlayerSeat);
 
 /// <summary>
 /// Play the Shiny card to steal from a specific opponent.
+/// Valid during RollPhase or as a TokenPhase interrupt; the phase is inferred from current session state.
 /// </summary>
 public sealed record PlayShinyCommand(int PlayerSeat, int VictimSeat)
     : GameCommandRequest(PlayerSeat);

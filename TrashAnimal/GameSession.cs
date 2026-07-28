@@ -1,3 +1,4 @@
+using TrashAnimal.GameLog;
 using TrashAnimal.RollPhase;
 using TrashAnimal.TokenPhase;
 
@@ -11,6 +12,7 @@ public sealed partial class GameSession
     private readonly List<Player> _players;
     private readonly YumYumWindow _yumYumWindow = new();
     private readonly TokenPhaseCoordinator _tokenPhaseCoordinator;
+    private readonly IGameLogRecorder _logRecorder = new GameLogRecorder();
     private bool _canRoll;
     private bool _hasStoppedRolling;
 
@@ -69,10 +71,12 @@ public sealed partial class GameSession
     {
         _tokenPhaseCoordinator.Clear();
         State = GameState.TurnEnd;
+        RecordLogEvent(new TurnResolvedEvent(0, TurnNumber, CurrentPlayerIndex));
     }
 
     public void BeginTurn()
     {
+        TurnNumber++;
         ResetStealResumeStateToRollPhase();
         ClearStealChain();
         CurrentPlayer.Hand.ClearNewlyAddedFlags();
@@ -184,7 +188,8 @@ public sealed partial class GameSession
         switch (action)
         {
             case GameAction.RollDie:
-                RollDie(die);
+                var rollResult = RollDie(die);
+                RecordLogEvent(new DieRolledEvent(0, TurnNumber, playerIndex, rollResult.Rolled, rollResult.Status == RollStatus.Busted));
                 return true;
 
             case GameAction.StopRolling:
@@ -277,6 +282,8 @@ public sealed partial class GameSession
             return false;
         }
 
+        RecordLogEvent(new PlayerBustedEvent(0, TurnNumber, CurrentPlayerIndex));
+
         var drawn = _drawPile.DealCards(1).ToList();
         CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
         RegisterDrawOutcome(drawn);
@@ -337,6 +344,8 @@ public sealed partial class GameSession
                 .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
                 .ToList());
 
+        var log = GameLogProjector.BuildForViewer(_logRecorder.Events, playerIndex, _players);
+
         return new GameView(
             State,
             CurrentPlayerIndex,
@@ -352,13 +361,16 @@ public sealed partial class GameSession
             opponents,
             _drawPile.GetDeckCount(),
             discardPile,
-            ownStash);
+            ownStash,
+            log);
     }
 
     public void EndTurn()
     {
         if (State != GameState.TurnEnd)
             throw new InvalidOperationException("Turn cannot end until TokenPhase has completed.");
+
+        RecordLogEvent(new TurnEndedEvent(0, TurnNumber, CurrentPlayerIndex));
 
         if (_endGamePendingAfterCurrentTurn)
         {
@@ -396,6 +408,7 @@ public sealed partial class GameSession
         {
             _tokenPhaseCoordinator.Clear();
             State = GameState.TurnEnd;
+            RecordLogEvent(new TurnResolvedEvent(0, TurnNumber, playerIndex));
             return;
         }
 

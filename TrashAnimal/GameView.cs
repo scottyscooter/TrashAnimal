@@ -1,3 +1,5 @@
+using TrashAnimal.GameLog;
+
 namespace TrashAnimal;
 
 public sealed record GameView(
@@ -15,7 +17,8 @@ public sealed record GameView(
     IReadOnlyList<OpponentSummaryView> Opponents,
     int DeckCount,
     IReadOnlyList<DiscardCardView> DiscardPile,
-    OwnStashView OwnStash);
+    OwnStashView OwnStash,
+    IReadOnlyList<GameLogEntryView> Log);
 
 /// <summary>One card in the viewing player's own hand.</summary>
 public sealed record HandCardView(Guid CardId, CardName Name);

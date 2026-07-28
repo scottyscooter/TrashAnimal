@@ -37,6 +37,16 @@ Extensibility points for player decisions: `OnFeeshCardSelection`, `ChooseShinyS
 ### Views / DTOs
 `GameView` (top-level per-player snapshot from `GetViewForPlayer` — hides other players' hand contents), `TokenPhaseView` (nested TokenPhase UI state), `GameEndScoreLine` (one scoreboard row).
 
+## Domain Events
+
+`TrashAnimal/GameLog/` holds the game-log feature's event model: `GameLogEvent` (a closed record hierarchy — `CardStashedEvent`, `StealCompletedEvent`, `TurnResolvedEvent`, etc.), `IGameLogRecorder`/`GameLogRecorder` (internal, owned 1:1 by `GameSession` like `_steal`/`_tokenPhaseCoordinator`), and `GameLogProjector` (internal — per-viewer redaction into `GameLogEntryView`, exposed on `GameView.Log`). This is a Domain Events + Projection design (not full Event Sourcing — `GameSession`'s mutable fields remain the actual source of truth; the event list is a parallel, append-only record kept alongside that state).
+
+**Standing rule: one event = one fact, true at one instant.** Do not merge facts that become true at different points in time into a single event just because they're part of the same player action or turn. For example, a voluntary stop is modeled as three separate events — `TurnStoppedRollingEvent` (fires immediately on the stop request), `YumYumForcedRerollEvent` (if an opponent blocks it), `TurnResolvedEvent` (once TokenPhase finishes) — rather than one event trying to carry an early-and-incomplete or late-and-lossy summary.
+
+This doesn't ban composite events outright — a single event covering multiple genuinely simultaneous sub-facts (one atomic outcome of one command, never independently meaningful to a consumer) is still fine. When it's not clearly simultaneous, prefer several small linked events (sharing a correlation/causation identifier, if one is ever introduced) over one coarse event, since coarse events block future consumers that only care about one sub-fact.
+
+Apply this rule to any future domain event added to this project, not just `GameLogEvent`.
+
 ## Interfaces / DI Seams
 
 - **`IDrawPile`** — `GetDeckCount()`, `DealCards(count)`. Implemented by `Deck`; injected via `GameSession` constructor, enabling a scripted/fake deck in tests.

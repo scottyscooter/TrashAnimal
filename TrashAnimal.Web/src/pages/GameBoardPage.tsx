@@ -24,6 +24,7 @@ import TokenPhasePanel from '../components/gameboard/TokenPhasePanel'
 import BanditResponseModal from '../components/gameboard/BanditResponseModal'
 import BanditWaitingModal from '../components/gameboard/BanditWaitingModal'
 import GlassPanel from '../components/gameboard/GlassPanel'
+import GameLogPanel from '../components/gameboard/GameLogPanel'
 
 type VictimPickerMode = 'shiny' | 'steal' | null
 
@@ -71,6 +72,7 @@ function GameBoardPage() {
   }
 
   const { view: gameView, allowedActions } = gameViewQuery.data
+  const gameLog = gameView.log
   const localSeatIndex = identity.seatIndex
   const isLocalPlayerTurn = gameView.currentPlayerIndex === localSeatIndex
   const isPending = submitCommand.isPending
@@ -130,6 +132,9 @@ function GameBoardPage() {
       {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
       <OpponentRail gameView={gameView} />
+      <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px]">
+        <GameLogPanel entries={gameLog} />
+      </div>
       <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
       <PlayerStash ownStash={gameView.ownStash} />
       <PlayerHand
