@@ -50,6 +50,7 @@ const BASE_VIEW: GameView = {
   deckCount: 30,
   discardPile: [],
   ownStash: { faceDownCount: 0, faceUpCards: [] },
+  log: [],
 };
 
 function mockView(view: GameView, allowedActions: PlayerViewResponse['allowedActions']) {

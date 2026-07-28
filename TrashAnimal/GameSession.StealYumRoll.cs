@@ -1,3 +1,4 @@
+using TrashAnimal.GameLog;
 using TrashAnimal.RollPhase;
 
 namespace TrashAnimal;
@@ -44,7 +45,39 @@ public sealed partial class GameSession
             return false;
         }
 
-        return handler.TryExecute(CreateRollPhasePlayContext(), playerIndex, out error);
+        var handCardIdsBefore = action == GameAction.PlayFeesh
+            ? _players[playerIndex].Hand.Select(e => e.Card.Id).ToHashSet()
+            : null;
+
+        if (!handler.TryExecute(CreateRollPhasePlayContext(), playerIndex, out error))
+            return false;
+
+        RecordLogEvent(BuildRollPhaseHandlerLogEvent(action, playerIndex, handCardIdsBefore));
+        return true;
+    }
+
+    private GameLogEvent BuildRollPhaseHandlerLogEvent(GameAction action, int playerIndex, HashSet<Guid>? handCardIdsBefore)
+    {
+        switch (action)
+        {
+            case GameAction.PlayFeesh:
+                var retrieved = _players[playerIndex].Hand.FirstOrDefault(e => !handCardIdsBefore!.Contains(e.Card.Id));
+                var card = retrieved?.Card;
+                return RollPhaseLogEventFactory.ForFeeshRetrieved(
+                    playerIndex, TurnNumber, card?.Id ?? Guid.Empty, card?.Name ?? CardName.Feesh);
+
+            case GameAction.PlayShiny:
+                return RollPhaseLogEventFactory.ForShinyStealBegun(playerIndex, TurnNumber, _steal.VictimIndex!.Value);
+
+            case GameAction.PlayNanners:
+                return RollPhaseLogEventFactory.ForBustRecoveryCardPlayed(playerIndex, TurnNumber, CardName.Nanners);
+
+            case GameAction.PlayBlammo:
+                return RollPhaseLogEventFactory.ForBustRecoveryCardPlayed(playerIndex, TurnNumber, CardName.Blammo);
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported RollPhase handler action for game log emission.");
+        }
     }
 
     public bool TryStealPass(int victimIndex, out string? error)
@@ -63,6 +96,7 @@ public sealed partial class GameSession
     {
         EnsureState(GameState.AwaitingStealResponse);
         var wasStealToken = _tokenPhaseCoordinator.IsActive && _tokenPhaseCoordinator.ActiveTokenIsSteal;
+        var thiefIndex = _steal.ThiefIndex;
         if (!_steal.TryPlayDoggo(
                 victimIndex,
                 _players,
@@ -78,6 +112,8 @@ public sealed partial class GameSession
 
         if (aftermath == StealAttemptAftermath.Completed)
         {
+            RecordLogEvent(new StealBlockedEvent(0, TurnNumber, victimIndex, thiefIndex!.Value, CardName.Doggo));
+
             State = StealResumeState;
             ResetStealResumeStateToRollPhase();
             if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
@@ -90,15 +126,25 @@ public sealed partial class GameSession
     public bool TryStealPlayKitteh(int victimIndex, out string? error)
     {
         EnsureState(GameState.AwaitingStealResponse);
-        return _steal.TryPlayKitteh(victimIndex, _players, DiscardPile, out error);
+        if (!_steal.TryPlayKitteh(victimIndex, _players, DiscardPile, out error))
+            return false;
+
+        RecordLogEvent(new StealRoleSwappedEvent(0, TurnNumber, victimIndex, _steal.VictimIndex!.Value));
+        return true;
     }
 
     public bool TryCompleteStealWithCard(int thiefIndex, Guid cardId, out string? error)
     {
         EnsureState(GameState.AwaitingStealCardPick);
         var wasStealToken = _tokenPhaseCoordinator.IsActive && _tokenPhaseCoordinator.ActiveTokenIsSteal;
+        var victimIndex = _steal.VictimIndex!.Value;
+        var zone = _steal.InitialStealTargetZone!.Value;
+        var stolenCardName = FindCardName(victimIndex, zone, cardId);
+
         if (!_steal.TryCompletePick(thiefIndex, cardId, _players, CurrentPlayerIndex, out error))
             return false;
+
+        RecordLogEvent(new StealCompletedEvent(0, TurnNumber, thiefIndex, victimIndex, zone, cardId, stolenCardName));
 
         State = StealResumeState;
         ResetStealResumeStateToRollPhase();
@@ -108,16 +154,30 @@ public sealed partial class GameSession
         return true;
     }
 
+    private CardName FindCardName(int victimIndex, StealTargetZone zone, Guid cardId)
+    {
+        var victim = _players[victimIndex];
+        CardName? entry = zone == StealTargetZone.Stash
+            ? victim.StashPile.FirstOrDefault(e => e.Card.Id == cardId)?.Card.Name
+            : victim.Hand.FirstOrDefault(e => e.Card.Id == cardId)?.Card.Name;
+        return entry ?? throw new InvalidOperationException("Card to be stolen was not found in the victim's zone.");
+    }
+
     public bool TryYumYumRespond(int opponentPlayerIndex, bool playYumYum, out string? error)
     {
         EnsureState(GameState.AwaitingYumYum);
+        var rollerIndex = CurrentPlayerIndex;
         return _yumYumWindow.TryRespond(
             opponentPlayerIndex,
             playYumYum,
             _players,
             DiscardPile,
             PhaseOne,
-            onYumYumPlayedAllowRollsAgain: () => _hasStoppedRolling = false,
+            onYumYumPlayedAllowRollsAgain: () =>
+            {
+                _hasStoppedRolling = false;
+                RecordLogEvent(new YumYumForcedRerollEvent(0, TurnNumber, rollerIndex, opponentPlayerIndex));
+            },
             onWindowClosedReturnToRollPhase: () => State = GameState.RollPhase,
             out error);
     }
@@ -163,6 +223,7 @@ public sealed partial class GameSession
 
         _yumYumWindow.Open(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
         State = GameState.AwaitingYumYum;
+        RecordLogEvent(new TurnStoppedRollingEvent(0, TurnNumber, CurrentPlayerIndex));
         return true;
     }
 }

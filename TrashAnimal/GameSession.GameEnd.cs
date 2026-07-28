@@ -1,3 +1,5 @@
+using TrashAnimal.GameLog;
+
 namespace TrashAnimal;
 
 public sealed partial class GameSession
@@ -51,5 +53,7 @@ public sealed partial class GameSession
         _steal.Clear();
         _endGamePendingAfterCurrentTurn = false;
         State = GameState.GameEnded;
+
+        RecordLogEvent(new GameEndedEvent(0, TurnNumber, CurrentPlayerIndex, _cachedGameEndResult.WinningPlayerIndex));
     }
 }

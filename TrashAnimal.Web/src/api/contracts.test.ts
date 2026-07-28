@@ -450,6 +450,32 @@ function assertGameViewStructure(view: unknown): void {
   expect(Array.isArray(v.discardPile)).toBe(true);
 
   expect(v).toHaveProperty('ownStash');
+
+  expect(v).toHaveProperty('log');
+  expect(Array.isArray(v.log)).toBe(true);
+  (v.log as unknown[]).forEach((entry) => assertGameLogEntryStructure(entry));
+}
+
+/**
+ * Helper: Validate GameLogEntryView structure
+ */
+function assertGameLogEntryStructure(entry: unknown): void {
+  expect(entry).toBeTruthy();
+  expect(typeof entry).toBe('object');
+
+  const e = entry as Record<string, unknown>;
+
+  expect(e).toHaveProperty('sequenceNumber');
+  expect(typeof e.sequenceNumber).toBe('number');
+
+  expect(e).toHaveProperty('turnNumber');
+  expect(typeof e.turnNumber).toBe('number');
+
+  expect(e).toHaveProperty('actingPlayerSeat');
+  expect(typeof e.actingPlayerSeat).toBe('number');
+
+  expect(e).toHaveProperty('message');
+  expect(typeof e.message).toBe('string');
 }
 
 /**

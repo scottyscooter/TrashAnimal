@@ -96,6 +96,28 @@ internal sealed class TokenPhaseCoordinator
         return _tokenResolver.TryStashTrashPickCard(playerIndex, cardId, _state, out error);
     }
 
+    public bool TryPlayShinyWithVictimChoice(int victimIndex, out string? error)
+    {
+        error = null;
+        if (_state is null)
+        {
+            error = "Token phase is not active.";
+            return false;
+        }
+        return _interruptCards.TryPlayShinyTokenPhaseWithVictimChoice(_state, victimIndex, out error);
+    }
+
+    public bool TryPlayFeeshWithCardChoice(Guid discardCardId, out string? error)
+    {
+        error = null;
+        if (_state is null)
+        {
+            error = "Token phase is not active.";
+            return false;
+        }
+        return _interruptCards.TryPlayFeeshTokenPhaseWithCardChoice(_state, discardCardId, out error);
+    }
+
     public bool TryDoubleStashSubmit(int playerIndex, IReadOnlyList<Guid> cardIds, out string? error)
     {
         error = null;

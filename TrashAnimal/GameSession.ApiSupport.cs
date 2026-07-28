@@ -1,3 +1,4 @@
+using TrashAnimal.GameLog;
 using TrashAnimal.Helpers;
 
 namespace TrashAnimal;
@@ -56,6 +57,7 @@ public sealed partial class GameSession
         var cardFromDiscard = DiscardPile[discardIndex];
         DiscardPile.RemoveAt(discardIndex);
         CurrentPlayer.AddCards(new[] { cardFromDiscard }, markReceivedOnOwnerCurrentTurn: true);
+        RecordLogEvent(RollPhaseLogEventFactory.ForFeeshRetrieved(playerIndex, TurnNumber, cardFromDiscard.Id, cardFromDiscard.Name));
         return true;
     }
 
@@ -107,7 +109,52 @@ public sealed partial class GameSession
         _steal.BeginStashStealFromShiny(CurrentPlayerIndex, victimIndex);
         ArmStealResumeState(GameState.RollPhase);
         State = GameState.AwaitingStealResponse;
+        RecordLogEvent(RollPhaseLogEventFactory.ForShinyStealBegun(playerIndex, TurnNumber, victimIndex));
         return true;
+    }
+
+    /// <summary>
+    /// Play a Shiny card as a TokenPhase interrupt, stealing from a specific victim's stash.
+    /// This method bypasses the ChooseShinyStealVictim delegate for API use.
+    /// </summary>
+    public bool TryPlayShinyTokenPhaseWithVictimChoice(int playerIndex, int victimIndex, out string? error)
+    {
+        error = null;
+        if (State != GameState.TokenPhase)
+        {
+            error = "Shiny can only be played as a TokenPhase interrupt while in TokenPhase.";
+            return false;
+        }
+
+        if (playerIndex != CurrentPlayerIndex)
+        {
+            error = "Only the current player can act during TokenPhase.";
+            return false;
+        }
+
+        return _tokenPhaseCoordinator.TryPlayShinyWithVictimChoice(victimIndex, out error);
+    }
+
+    /// <summary>
+    /// Play a Feesh card as a TokenPhase interrupt, retrieving a specific card from the discard pile.
+    /// This method bypasses the OnFeeshCardSelection delegate for API use.
+    /// </summary>
+    public bool TryPlayFeeshTokenPhaseWithCardChoice(int playerIndex, Guid discardCardId, out string? error)
+    {
+        error = null;
+        if (State != GameState.TokenPhase)
+        {
+            error = "Feesh can only be played as a TokenPhase interrupt while in TokenPhase.";
+            return false;
+        }
+
+        if (playerIndex != CurrentPlayerIndex)
+        {
+            error = "Only the current player can act during TokenPhase.";
+            return false;
+        }
+
+        return _tokenPhaseCoordinator.TryPlayFeeshWithCardChoice(discardCardId, out error);
     }
 
     /// <summary>
@@ -151,6 +198,7 @@ public sealed partial class GameSession
         _steal.Begin(CurrentPlayerIndex, victimIndex, StealTargetZone.Hand);
         ArmStealResumeState(GameState.TokenPhase);
         State = GameState.AwaitingStealResponse;
+        RecordLogEvent(RollPhaseLogEventFactory.ForTokenStealBegun(playerIndex, TurnNumber, victimIndex));
         return true;
     }
 }

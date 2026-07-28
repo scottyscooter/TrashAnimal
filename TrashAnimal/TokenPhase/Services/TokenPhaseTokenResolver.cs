@@ -1,3 +1,4 @@
+using TrashAnimal.GameLog;
 using TrashAnimal.Helpers;
 
 namespace TrashAnimal.TokenPhase;
@@ -42,6 +43,8 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
 
         if (!state.TokenResolutionStartLocked)
             state.TokenResolutionStartLocked = true;
+
+        RecordTokenResolutionStarted(token);
 
         if (token == TokenAction.Steal)
         {
@@ -102,6 +105,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         var drawn = _session.DrawPile.DealCards(1).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
         _session.RegisterDrawOutcome(drawn);
+        RecordCardsDrawnPrivately(drawn);
         return FinishCurrentTokenPassOrRepeat(state, out error);
     }
 
@@ -146,6 +150,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         }
 
         _session.CurrentPlayer.AddToStash(card, faceUp: false);
+        RecordCardsStashed(new[] { card }, wasFaceUp: false);
         return FinishCurrentTokenPassOrRepeat(state, out error);
     }
 
@@ -177,6 +182,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
             return false;
         }
 
+        var stashedCards = new List<Card>();
         foreach (var id in cardIds)
         {
             if (!_session.CurrentPlayer.TryRemoveFromHandByCardId(id, out var card) || card is null)
@@ -192,7 +198,11 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
             }
 
             _session.CurrentPlayer.AddToStash(card, faceUp: false);
+            stashedCards.Add(card);
         }
+
+        if (stashedCards.Count > 0)
+            RecordCardsStashed(stashedCards, wasFaceUp: false);
 
         return FinishCurrentTokenPassOrRepeat(state, out error);
     }
@@ -240,6 +250,37 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         var drawn = _session.DrawPile.DealCards(2).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
         _session.RegisterDrawOutcome(drawn);
+        RecordCardsDrawnPrivately(drawn);
+    }
+
+    private void RecordTokenResolutionStarted(TokenAction token) =>
+        _session.RecordLogEvent(new TokenResolutionStartedEvent(0, _session.TurnNumber, _session.CurrentPlayerIndex, token));
+
+    private void RecordCardsDrawnPrivately(IReadOnlyList<Card> drawn)
+    {
+        if (drawn.Count == 0)
+            return;
+
+        _session.RecordLogEvent(new CardDrawnPrivatelyEvent(
+            0,
+            _session.TurnNumber,
+            _session.CurrentPlayerIndex,
+            drawn.Select(c => c.Id).ToList(),
+            drawn.Select(c => c.Name).ToList()));
+    }
+
+    private void RecordCardsStashed(IReadOnlyList<Card> stashed, bool wasFaceUp)
+    {
+        if (stashed.Count == 0)
+            return;
+
+        _session.RecordLogEvent(new CardStashedEvent(
+            0,
+            _session.TurnNumber,
+            _session.CurrentPlayerIndex,
+            stashed.Select(c => c.Id).ToList(),
+            stashed.Select(c => c.Name).ToList(),
+            wasFaceUp));
     }
 
     private bool StartHandSteal(out string? error)
@@ -274,8 +315,9 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         _session.Steal.Begin(_session.CurrentPlayerIndex, victimIndex, StealTargetZone.Hand);
         _session.ArmStealResumeState(GameState.TokenPhase);
         _session.SetGameState(GameState.AwaitingStealResponse);
+        _session.RecordLogEvent(RollPhaseLogEventFactory.ForTokenStealBegun(_session.CurrentPlayerIndex, _session.TurnNumber, victimIndex));
         return true;
-    }    
+    }
 
     private bool FinishCurrentTokenPassOrRepeat(TokenPhaseState state, out string? error)
     {
@@ -301,6 +343,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
     {
         error = null;
         state.ResetBanditWindow();
+        RecordTokenResolutionStarted(token);
 
         switch (token)
         {

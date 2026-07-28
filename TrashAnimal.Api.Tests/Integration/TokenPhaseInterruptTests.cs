@@ -97,4 +97,64 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         Assert.Equal(HttpStatusCode.UnprocessableEntity, status);
         Assert.False(body!.Succeeded);
     }
+
+    [Fact]
+    public async Task PlayShinyCommand_DuringTokenPhase_BeginsStashSteal()
+    {
+        var (gameId, session, p0, p1) = ArrangeSessionInTokenPhase();
+
+        p0.AddCards([new Card(CardName.Shiny)]);
+        p1.AddToStash(new Card(CardName.Feesh), faceUp: false);
+
+        var (status, body) = await _client.SubmitCommandAsync(gameId,
+            new PlayShinyCommand(PlayerSeat: 0, VictimSeat: 1));
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.True(body!.Succeeded);
+        Assert.Equal(GameState.AwaitingStealResponse, session.State);
+        Assert.DoesNotContain(session.Players[0].Hand, e => e.Card.Name == CardName.Shiny);
+        Assert.Contains(session.DiscardPile, c => c.Name == CardName.Shiny);
+    }
+
+    [Fact]
+    public async Task PlayFeeshCommand_DuringTokenPhase_MovesCardFromDiscardToHand()
+    {
+        var (gameId, session, p0, _) = ArrangeSessionInTokenPhase();
+
+        p0.AddCards([new Card(CardName.Feesh)]);
+        var targetCard = new Card(CardName.Kitteh);
+        session.DiscardPile.Add(targetCard);
+
+        var (status, body) = await _client.SubmitCommandAsync(gameId,
+            new PlayFeeshCommand(PlayerSeat: 0, CardId: targetCard.Id));
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.True(body!.Succeeded);
+        Assert.Equal(GameState.TokenPhase, session.State);
+        Assert.Contains(session.Players[0].Hand, e => e.Card.Id == targetCard.Id);
+        Assert.DoesNotContain(session.DiscardPile, c => c.Id == targetCard.Id);
+        Assert.Contains(session.DiscardPile, c => c.Name == CardName.Feesh);
+    }
+
+    /// <summary>
+    /// Drives a fresh two-player session to <see cref="GameState.TokenPhase"/> and registers it,
+    /// returning the players so a test can seed specific hand/stash/discard content before acting.
+    /// </summary>
+    private (Guid GameId, GameSession Session, Player P0, Player P1) ArrangeSessionInTokenPhase()
+    {
+        var gameId = Guid.NewGuid();
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var die = new SequencedDie(TokenAction.StashTrash);
+        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+
+        session.ApplyAction(0, GameAction.RollDie, die, out _);
+        session.ApplyAction(0, GameAction.StopRolling, die, out _);
+        session.ApplyAction(1, GameAction.YumYumPass, die, out _);
+        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _);
+
+        Assert.Equal(GameState.TokenPhase, session.State);
+        _factory.SessionRepository.RegisterSession(gameId, session, die);
+        return (gameId, session, p0, p1);
+    }
 }

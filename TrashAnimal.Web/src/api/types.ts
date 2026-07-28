@@ -136,6 +136,13 @@ export interface TokenPhaseView {
   recycleReplacementOptions: TokenAction[];
 }
 
+export interface GameLogEntryView {
+  sequenceNumber: number;
+  turnNumber: number;
+  actingPlayerSeat: number;
+  message: string;
+}
+
 export interface GameView {
   state: GameState;
   currentPlayerIndex: number;
@@ -152,6 +159,7 @@ export interface GameView {
   deckCount: number;
   discardPile: DiscardCardView[];
   ownStash: OwnStashView;
+  log: GameLogEntryView[];
 }
 
 export interface GameEndScoreLine {
