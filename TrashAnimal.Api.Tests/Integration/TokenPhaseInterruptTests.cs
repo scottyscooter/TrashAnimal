@@ -145,8 +145,8 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var gameId = Guid.NewGuid();
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var die = new SequencedDie(TokenAction.StashTrash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
 
         session.ApplyAction(0, GameAction.RollDie, die, out _);
         session.ApplyAction(0, GameAction.StopRolling, die, out _);

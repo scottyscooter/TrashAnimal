@@ -9,7 +9,7 @@ namespace TrashAnimal.Api.Tests.Integration;
 /// Drives full turns through the HTTP API (<c>POST /games/{id}/commands</c>) and asserts
 /// <c>GET /games/{id}/view?playerSeat=X</c> shows correctly-redacted, differently-worded log lines
 /// per seat for the same underlying events, and that the log accumulates across multiple commands.
-/// Uses <see cref="TestableGameSessionRepository"/> + <see cref="SequencedDie"/>/<see cref="CountingDrawPile"/>
+/// Uses <see cref="TestableGameSessionRepository"/> + mocked <see cref="Die"/>/<see cref="IDrawPile"/>
 /// (no repository mocking, per project convention).
 /// </summary>
 public sealed class GameLogIntegrationTests : IClassFixture<TrashApiTestFactory>
@@ -33,8 +33,8 @@ public sealed class GameLogIntegrationTests : IClassFixture<TrashApiTestFactory>
         p1.AddToStash(stashedCard, faceUp: false);
         p0.Hand.Clear();
         p0.Hand.Add(new Card(CardName.Shiny));
-        var die = new SequencedDie(TokenAction.StashTrash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         var (shinyStatus, shinyBody) = await _client.SubmitCommandAsync(
@@ -72,8 +72,8 @@ public sealed class GameLogIntegrationTests : IClassFixture<TrashApiTestFactory>
         var gameId = Guid.NewGuid();
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var die = new SequencedDie(TokenAction.StashTrash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         var (_, afterCreate) = await _client.GetViewAsync(gameId, playerSeat: 0);

@@ -31,8 +31,8 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         var p1 = new Player(1, "Bob");
         var stashCard = new Card(CardName.MmmPie);
         p0.AddCards([stashCard]);
-        var die = new SequencedDie(TokenAction.StashTrash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
@@ -60,8 +60,8 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         var keepCard = new Card(CardName.MmmPie);
         var stashCard = new Card(CardName.Feesh);
         p0.AddCards([keepCard, stashCard]);
-        var die = new SequencedDie(TokenAction.DoubleStash);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.DoubleStash).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
@@ -88,9 +88,9 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         var p1 = new Player(1, "Bob");
         var matchingCard = new Card(CardName.MmmPie);
         p1.AddCards([matchingCard]);
-        var die = new SequencedDie(TokenAction.Bandit);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit).Object;
         // Every deck draw is MmmPie, so Bandit's auto-reveal deterministically matches p1's hand card.
-        var session = new GameSession([p0, p1], new CountingDrawPile(50, CardName.MmmPie));
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50, CardName.MmmPie).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
@@ -117,8 +117,8 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         var gameId = Guid.NewGuid();
         var p0 = new Player(0, "Alice");
         var p1 = new Player(1, "Bob");
-        var die = new SequencedDie(TokenAction.Recycle);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.Recycle).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
@@ -151,8 +151,8 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         var p1 = new Player(1, "Bob");
         var victimCard = new Card(CardName.MmmPie);
         p1.AddCards([victimCard]);
-        var die = new SequencedDie(TokenAction.Steal);
-        var session = new GameSession([p0, p1], new CountingDrawPile(50));
+        var die = DieMockFactory.CreateSequenced(TokenAction.Steal).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
 
         await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
