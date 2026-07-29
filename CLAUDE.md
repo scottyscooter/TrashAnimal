@@ -97,6 +97,10 @@ dotnet user-secrets remove "KeyName" --project TrashAnimal.Api
 
 Secrets are loaded only in the `Development` environment. Production will use Azure Key Vault or equivalent.
 
+## Plan Documents
+
+All new plan documents (implementation plans, design plans, bug-fix plans) must be created under `.claude/docs/plans/` — not `.cursor/plans/` (that folder is Cursor-IDE-generated, not the maintained plan location) and not any other ad hoc location. When starting a planning session, check `.claude/docs/plans/` first for an existing plan before creating a new one.
+
 ## Code Patterns & Standards
 
 These standards apply solution-wide and are enforced via cursor rules (`.cursor/rules/`):
