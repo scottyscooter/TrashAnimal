@@ -4,6 +4,11 @@ namespace TrashAnimal.RollPhase;
 
 public sealed class ShinyPlayHandler : IGameplayHandler
 {
+    /// <summary>Shared with <see cref="TrashAnimal.TokenPhase.Services.TokenPhaseInterruptCardPlay"/> (same
+    /// underlying rule, TokenPhase variant) and with <c>GameSession.Views.cs</c>'s per-hand-card playability
+    /// projection, so the wording stays in one place instead of drifting across call sites.</summary>
+    public const string TargetUnavailableReason = "No opponent has a card in their stash to steal.";
+
     public GameAction Action => GameAction.PlayShiny;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
@@ -19,7 +24,7 @@ public sealed class ShinyPlayHandler : IGameplayHandler
 
         if (!Opponents.GetAllWithNonEmptyStash((IReadOnlyList<Player>)context.Players, context.CurrentPlayerIndex).Any())
         {
-            error = "No opponent has a card in their stash to steal.";
+            error = TargetUnavailableReason;
             return false;
         }
 

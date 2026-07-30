@@ -110,6 +110,8 @@ export interface StashableHandCard {
 export interface HandCardView {
   cardId: string;
   name: CardName;
+  playableAs: GameAction | null;
+  unplayableReason: string | null;
 }
 
 export interface DiscardCardView {

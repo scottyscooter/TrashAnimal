@@ -318,6 +318,22 @@ describe('API Contract Tests', () => {
       });
     });
 
+    it('HandCardView.playableAs, when present, is a valid GameAction string', async () => {
+      const response = await fetch(`${API_BASE_URL}/games/${gameId}/view?playerSeat=0`);
+      const body = await response.json();
+
+      const handCards = body.view.handCards || [];
+      expect(Array.isArray(handCards)).toBe(true);
+
+      handCards.forEach((card: unknown) => {
+        const playableAs = (card as { playableAs: unknown }).playableAs;
+        if (playableAs !== null) {
+          expect(typeof playableAs).toBe('string');
+          expect(GAME_ACTION_VALUES).toContain(playableAs);
+        }
+      });
+    });
+
     it('TokenAction values are strings (not numeric enums)', async () => {
       const response = await fetch(`${API_BASE_URL}/games/${gameId}/view?playerSeat=0`);
       const body = await response.json();
@@ -378,6 +394,29 @@ describe('API Contract Tests', () => {
 
       expect(view).toHaveProperty('yumYumResponderName');
       expect(view.yumYumResponderName === null || typeof view.yumYumResponderName === 'string').toBe(true);
+    });
+
+    it('handles nullable playableAs/unplayableReason fields on each HandCardView', async () => {
+      const response = await fetch(`${API_BASE_URL}/games/${gameId}/view?playerSeat=0`);
+      const body = await response.json();
+      const handCards = body.view.handCards || [];
+
+      expect(Array.isArray(handCards)).toBe(true);
+      handCards.forEach((card: unknown) => {
+        const c = card as Record<string, unknown>;
+
+        expect(c).toHaveProperty('playableAs');
+        expect(c.playableAs === null || typeof c.playableAs === 'string').toBe(true);
+
+        expect(c).toHaveProperty('unplayableReason');
+        expect(c.unplayableReason === null || typeof c.unplayableReason === 'string').toBe(true);
+
+        // Exactly one of the pair is populated (never both null, never both set) — see
+        // HandCardView's doc comment for the ranked-reason contract.
+        const hasPlayableAs = c.playableAs !== null;
+        const hasUnplayableReason = c.unplayableReason !== null;
+        expect(hasPlayableAs && hasUnplayableReason).toBe(false);
+      });
     });
   });
 
