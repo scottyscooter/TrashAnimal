@@ -157,7 +157,10 @@ function TokenPhasePanel({
           <button
             type="button"
             disabled={isPending}
-            onClick={() => onDoubleStashSubmit(doubleStashSelection)}
+            onClick={() => {
+              onDoubleStashSubmit(doubleStashSelection);
+              setDoubleStashSelection([]);
+            }}
             className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
             style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
           >
