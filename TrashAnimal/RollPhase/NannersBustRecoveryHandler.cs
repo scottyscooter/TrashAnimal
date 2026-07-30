@@ -2,6 +2,13 @@ namespace TrashAnimal.RollPhase;
 
 public sealed class NannersBustRecoveryHandler : IGameplayHandler
 {
+    /// <summary>Also reused by <c>GameSession.Views.cs</c> for <see cref="GameAction.PlayBlammo"/>'s
+    /// per-hand-card playability projection: Blammo's own handler has no dedicated "not busted" error text
+    /// (its <see cref="IGameplayHandler.TryExecute"/> doesn't re-check the bust condition, relying entirely
+    /// on the allowed-action gate), but the underlying rule — bust-recovery cards are only usable while
+    /// busted — is identical, so this is the closest existing copy rather than inventing new wording.</summary>
+    public const string NotBustedReason = "Not busted.";
+
     public GameAction Action => GameAction.PlayNanners;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
@@ -22,7 +29,7 @@ public sealed class NannersBustRecoveryHandler : IGameplayHandler
 
         if (!context.PhaseOne.IsBusted)
         {
-            error = "Not busted.";
+            error = NotBustedReason;
             return false;
         }
 

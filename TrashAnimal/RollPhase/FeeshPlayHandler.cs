@@ -2,6 +2,11 @@ namespace TrashAnimal.RollPhase;
 
 public sealed class FeeshPlayHandler : IGameplayHandler
 {
+    /// <summary>Shared with <see cref="TrashAnimal.TokenPhase.Services.TokenPhaseInterruptCardPlay"/> (same
+    /// underlying rule, TokenPhase variant) and with <c>GameSession.Views.cs</c>'s per-hand-card playability
+    /// projection, so the wording stays in one place instead of drifting across call sites.</summary>
+    public const string NoDiscardCardsReason = "No cards in discard pile to retrieve with Feesh.";
+
     public GameAction Action => GameAction.PlayFeesh;
 
     public bool IsActionable(in RollPhaseOfferSnapshot snapshot) =>
@@ -16,7 +21,7 @@ public sealed class FeeshPlayHandler : IGameplayHandler
 
         if (context.DiscardPile.Count == 0)
         {
-            error = "No cards in discard pile to retrieve with Feesh.";
+            error = NoDiscardCardsReason;
             return false;
         }
 

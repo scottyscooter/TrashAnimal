@@ -26,8 +26,8 @@ const DEFAULT_GAME_VIEW: PlayerViewResponse = {
     forcedRollRemaining: false,
     phaseOneTokens: [],
     handCards: [
-      { cardId: 'aaaaaaaa-0000-0000-0000-000000000001', name: 'Shiny' },
-      { cardId: 'aaaaaaaa-0000-0000-0000-000000000002', name: 'Feesh' },
+      { cardId: 'aaaaaaaa-0000-0000-0000-000000000001', name: 'Shiny', playableAs: null, unplayableReason: null },
+      { cardId: 'aaaaaaaa-0000-0000-0000-000000000002', name: 'Feesh', playableAs: null, unplayableReason: null },
     ],
     yumYumResponderIndex: null,
     yumYumResponderName: null,
