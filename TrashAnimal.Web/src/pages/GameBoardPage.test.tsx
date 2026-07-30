@@ -33,7 +33,9 @@ const BASE_VIEW: GameView = {
   isBusted: false,
   forcedRollRemaining: false,
   phaseOneTokens: [],
-  handCards: [{ cardId: 'aaaaaaaa-0000-0000-0000-000000000001', name: 'Shiny' }],
+  handCards: [
+    { cardId: 'aaaaaaaa-0000-0000-0000-000000000001', name: 'Shiny', playableAs: 'PlayShiny', unplayableReason: null },
+  ],
   yumYumResponderIndex: null,
   yumYumResponderName: null,
   stealPhase: null,

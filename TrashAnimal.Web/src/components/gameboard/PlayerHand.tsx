@@ -1,20 +1,25 @@
 import { useState } from 'react';
-import type { GameAction, HandCardView } from '../../api/types';
+import type { HandCardView } from '../../api/types';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
 import InfoBadge from '../InfoBadge';
 
 interface PlayerHandProps {
   handCards: HandCardView[];
-  allowedActions: GameAction[];
-  onFeeshClick: () => void;
-  shinyDisabledExplanation: string | null;
+  /** Called with the card's own `playableAs` action when a playable card is activated (click or
+   * Enter/Space). Never called for a card whose `playableAs` is null — the caller does not need to
+   * re-check playability. Routing the action to the right handler (e.g. opening the Feesh discard
+   * picker vs. the Shiny victim picker vs. dispatching a plain token-phase action) is the caller's
+   * job, same as every other action-dispatch entry point in GameBoardPage. */
+  onCardActivate: (card: HandCardView) => void;
 }
 
 /** Fanned hand per the design: hover-spreads the whole fan, and the specifically-hovered card
- * additionally scales up and lifts to the front. */
-function PlayerHand({ handCards, allowedActions, onFeeshClick, shinyDisabledExplanation }: PlayerHandProps) {
+ * additionally scales up and lifts to the front.
+ *
+ * Playability is per-card (`card.playableAs`/`card.unplayableReason`, driven by the backend's
+ * ranked-reason contract on `HandCardView`) rather than one flag for the whole fan. */
+function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const canPlayFeesh = allowedActions.includes('PlayFeesh');
 
   const count = handCards.length;
   const centerOffset = (count - 1) / 2;
@@ -35,32 +40,39 @@ function PlayerHand({ handCards, allowedActions, onFeeshClick, shinyDisabledExpl
         const hoverLift = isHovered ? 34 : 0;
         const translateY = dropFromCenter - hoverLift;
         const scale = isHovered ? 1.16 : 1;
-        const isShiny = card.name === 'Shiny';
+        const isPlayable = card.playableAs !== null;
         const cardImage = (
           <div
             className="h-full w-full overflow-hidden rounded-[14px]"
-            style={isShiny && shinyDisabledExplanation ? { opacity: 0.5 } : undefined}
+            style={isPlayable ? undefined : { opacity: 0.55, filter: 'grayscale(0.6)' }}
           >
             <img src={CARD_IMAGE_BY_NAME[card.name]} alt={card.name} className="h-full w-full object-cover" />
           </div>
         );
 
+        function activate() {
+          if (isPlayable) {
+            onCardActivate(card);
+          }
+        }
+
         return (
           // A native <button disabled> suppresses hover/mouseenter in most browsers, not just
-          // click — since Feesh is only playable in narrow circumstances, that made the whole fan
-          // hover effect dead almost all the time. Hover must stay live regardless of click-ability.
+          // click — since most cards are only playable in narrow circumstances, that made the
+          // whole fan's hover effect dead almost all the time. Hover must stay live for every
+          // card regardless of that card's own playability.
           <div
             key={card.cardId}
             role="button"
-            tabIndex={canPlayFeesh ? 0 : -1}
-            aria-disabled={!canPlayFeesh}
+            tabIndex={isPlayable ? 0 : -1}
+            aria-disabled={!isPlayable}
             onMouseEnter={() => setHoveredIndex(index)}
             onMouseLeave={() => setHoveredIndex((current) => (current === index ? null : current))}
-            onClick={() => canPlayFeesh && onFeeshClick()}
+            onClick={activate}
             onKeyDown={(event) => {
-              if (canPlayFeesh && (event.key === 'Enter' || event.key === ' ')) {
+              if (isPlayable && (event.key === 'Enter' || event.key === ' ')) {
                 event.preventDefault();
-                onFeeshClick();
+                activate();
               }
             }}
             className="absolute bottom-0 left-1/2 h-[277px] w-[198px] shadow-lg transition-[left,transform] duration-200 ease-out"
@@ -69,12 +81,14 @@ function PlayerHand({ handCards, allowedActions, onFeeshClick, shinyDisabledExpl
               transform: `translateX(-50%) translateY(${translateY}px) rotate(${rotation}deg) scale(${scale})`,
               zIndex: isHovered ? 100 : index,
               // Always pointer on hover, same convention as OpponentTile — hover is the "this is
-              // interactive" affordance regardless of whether Feesh happens to be playable right now.
-              cursor: 'pointer',
+              // interactive" affordance regardless of whether this particular card happens to be
+              // playable right now.
+              cursor: isPlayable ? 'pointer' : 'not-allowed',
             }}
-            title={canPlayFeesh ? `Play Feesh to retrieve a card (uses ${card.name})` : card.name}
           >
-            {isShiny ? <InfoBadge info={shinyDisabledExplanation}>{cardImage}</InfoBadge> : cardImage}
+            {/* InfoBadge is the sole explanation surface for an unplayable card — no `title=`
+             * tooltip alongside it, to avoid the two drifting out of sync. */}
+            <InfoBadge info={card.unplayableReason}>{cardImage}</InfoBadge>
           </div>
         );
       })}

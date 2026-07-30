@@ -5,7 +5,7 @@ import { useGameView } from '../hooks/useGameView'
 import { useGameSignalR } from '../hooks/useGameSignalR'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
 import { useToast } from '../components/Toast/useToast'
-import type { GameAction, TokenAction } from '../api/types'
+import type { GameAction, HandCardView, TokenAction } from '../api/types'
 import DayNightBackground from '../components/gameboard/DayNightBackground'
 import GameBoardThemeToggle from '../components/gameboard/GameBoardThemeToggle'
 import TurnIndicator from '../components/gameboard/TurnIndicator'
@@ -110,6 +110,30 @@ function GameBoardPage() {
     setFeeshPickerOpen(false)
   }
 
+  // Routes a hand card's own PlayableAs verdict (per HandCardView's ranked-reason contract) to the
+  // right handler — some actions need a follow-up picker (Feesh's discard choice, Shiny's victim
+  // choice), others are plain single-shot actions. Only ever called with a non-null playableAs;
+  // PlayerHand does not invoke this for unplayable cards.
+  function handleHandCardActivate(card: HandCardView) {
+    const action = card.playableAs
+    if (!action) {
+      return
+    }
+
+    switch (action) {
+      case 'PlayFeesh':
+      case 'PlayFeeshTokenPhase':
+        setFeeshPickerOpen(true)
+        break
+      case 'PlayShiny':
+      case 'PlayShinyTokenPhase':
+        setVictimPickerMode('shiny')
+        break
+      default:
+        handleAction(action)
+    }
+  }
+
   function handleVictimPick(victimSeat: number) {
     if (victimPickerMode === 'shiny') {
       dispatch({ kind: 'playShiny', playerSeat: localSeatIndex, victimSeat })
@@ -135,13 +159,6 @@ function GameBoardPage() {
   const isLocalBanditResponder =
     isAwaitingBanditResponse && gameView.tokenPhase!.banditCurrentResponderIndex === localSeatIndex
 
-  const shinyDisabledExplanation =
-    isLocalPlayerTurn &&
-    !allowedActions.includes('PlayShiny') &&
-    gameView.opponents.every((o) => o.stashFaceDownCount === 0 && o.stashFaceUpCards.length === 0)
-      ? 'No opponent has anything in their stash to steal.'
-      : null
-
   return (
     <div className="gb-root">
       <DayNightBackground />
@@ -155,12 +172,7 @@ function GameBoardPage() {
       </div>
       <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
       <PlayerStash ownStash={gameView.ownStash} />
-      <PlayerHand
-        handCards={gameView.handCards}
-        allowedActions={allowedActions}
-        onFeeshClick={() => setFeeshPickerOpen(true)}
-        shinyDisabledExplanation={shinyDisabledExplanation}
-      />
+      <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
 
       <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2">
         <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3">
