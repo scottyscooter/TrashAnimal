@@ -8,12 +8,21 @@ public sealed class StealAttempt
     private int? _thiefIndex;
     private int? _victimIndex;
     private StealTargetZone? _initialZone;
+    private IReadOnlyList<Guid>? _thiefPickOrder;
 
     public bool IsActive => _thiefIndex.HasValue;
 
     public int? ThiefIndex => _thiefIndex;
     public int? VictimIndex => _victimIndex;
     public StealTargetZone? InitialStealTargetZone => _initialZone;
+
+    /// <summary>
+    /// The steal-pick slot order shown to the thief, cached the first time the pick prompt is
+    /// materialized for this attempt so repeated <see cref="BuildPhaseView"/> calls (e.g. from
+    /// unrelated players' moves triggering a client re-fetch) don't visibly reshuffle the slots
+    /// mid-decision. Cleared when the attempt ends.
+    /// </summary>
+    public IReadOnlyList<Guid>? ThiefPickOrder => _thiefPickOrder;
 
     public void Begin(int thiefIndex, int victimIndex, StealTargetZone zone)
     {
@@ -30,6 +39,7 @@ public sealed class StealAttempt
         _thiefIndex = null;
         _victimIndex = null;
         _initialZone = null;
+        _thiefPickOrder = null;
     }
 
     public IReadOnlyList<GameAction> GetAllowedResponseActions(Player victim)
@@ -42,7 +52,8 @@ public sealed class StealAttempt
         return actions;
     }
 
-    public StealPhaseView? BuildPhaseView(GameState sessionState, int viewPlayerIndex, IReadOnlyList<Player> players)
+    public StealPhaseView? BuildPhaseView(
+        GameState sessionState, int viewPlayerIndex, IReadOnlyList<Player> players, Random shuffle)
     {
         if (_thiefIndex is null || _victimIndex is null || _initialZone is null)
             return null;
@@ -52,7 +63,10 @@ public sealed class StealAttempt
         var zone = _initialZone.Value;
         IReadOnlyList<StealPickSlot>? pickSlots = null;
         if (sessionState == GameState.AwaitingStealCardPick && viewPlayerIndex == thiefIdx)
-            pickSlots = StealPickSlotBuilder.BuildForThief(zone, players[vicIdx]);
+        {
+            pickSlots = StealPickSlotBuilder.BuildForThief(zone, players[vicIdx], shuffle, _thiefPickOrder);
+            _thiefPickOrder ??= pickSlots.Select(s => s.CardId).ToList();
+        }
 
         return new StealPhaseView(
             thiefIdx,

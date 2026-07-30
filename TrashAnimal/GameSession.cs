@@ -20,7 +20,16 @@ public sealed partial class GameSession
     private GameState _stealResumeState = GameState.RollPhase;
     private Guid? _bustRecoveryCardDiscardedId;
 
-    public GameSession(IReadOnlyList<Player> players, IDrawPile drawPile)
+    /// <summary>
+    /// Backs randomized-but-stable view projections (currently: steal-pick slot ordering in
+    /// <see cref="StealPickSlotBuilder"/>). Kept as a companion RNG alongside <see cref="Die"/>
+    /// (which is supplied per-action rather than stored) rather than a general injected seam,
+    /// since shuffling is presently needed in exactly one projection — see the scoping note on
+    /// <see cref="StealPickSlotBuilder"/>.
+    /// </summary>
+    private readonly Random _shuffleRandom;
+
+    public GameSession(IReadOnlyList<Player> players, IDrawPile drawPile, Random? shuffleRandom = null)
     {
         if (players.Count is < 2 or > 4)
             throw new ArgumentException("Player count must be between 2 and 4.", nameof(players));
@@ -28,6 +37,7 @@ public sealed partial class GameSession
         _drawPile = drawPile ?? throw new ArgumentNullException(nameof(drawPile));
         _players = new List<Player>(players);
         _tokenPhaseCoordinator = new TokenPhaseCoordinator(this);
+        _shuffleRandom = shuffleRandom ?? Random.Shared;
         CurrentPlayerIndex = 0;
         BeginTurn();
     }

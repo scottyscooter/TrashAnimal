@@ -85,6 +85,9 @@ export const GAME_ACTION_VALUES = [
 ] as const;
 export type GameAction = typeof GAME_ACTION_VALUES[number];
 
+// Backend constant mirrored for frontend single source of truth (matches StealPickSlot.UnrevealedLabel in C#)
+export const STEAL_PICK_SLOT_UNREVEALED_LABEL = 'Unrevealed Card';
+
 export interface StealPickSlot {
   cardId: string;
   thiefFacingLabel: string;
