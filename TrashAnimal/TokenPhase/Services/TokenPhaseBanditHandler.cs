@@ -131,6 +131,12 @@ internal sealed class TokenPhaseBanditHandler
         state.BanditOpponentOrder = order;
         state.BanditOpponentIndexInOrder = 0;
         state.Step = TokenPhaseStep.BanditAwaitOpponentResponse;
+
+        var initialResponder = GetCurrentResponderIndex(state);
+        if (initialResponder.HasValue)
+            _session.RecordLogEvent(new BanditResponseWindowAdvancedEvent(
+                0, _session.TurnNumber, _session.CurrentPlayerIndex, initialResponder.Value, card.Name));
+
         return true;
     }
 
@@ -141,6 +147,11 @@ internal sealed class TokenPhaseBanditHandler
         state.BanditOpponentIndexInOrder++;
         if (state.BanditOpponentIndexInOrder >= state.BanditOpponentOrder.Count)
             return FinishBanditToken(state, out error, out resolvedWithNoEffectToken);
+
+        var nextResponder = GetCurrentResponderIndex(state);
+        if (nextResponder.HasValue && state.BanditRevealedName.HasValue)
+            _session.RecordLogEvent(new BanditResponseWindowAdvancedEvent(
+                0, _session.TurnNumber, _session.CurrentPlayerIndex, nextResponder.Value, state.BanditRevealedName.Value));
 
         return true;
     }

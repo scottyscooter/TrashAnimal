@@ -294,7 +294,8 @@ public sealed partial class GameSession
         if (State != GameState.TurnEnd)
             throw new InvalidOperationException("Turn cannot end until TokenPhase has completed.");
 
-        RecordLogEvent(new TurnEndedEvent(0, TurnNumber, CurrentPlayerIndex));
+        var endingPlayerIndex = CurrentPlayerIndex;
+        RecordLogEvent(new TurnEndedEvent(0, TurnNumber, endingPlayerIndex));
 
         if (_endGamePendingAfterCurrentTurn)
         {
@@ -304,6 +305,7 @@ public sealed partial class GameSession
 
         CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Players.Count;
         BeginTurn();
+        RecordLogEvent(new TurnBeganEvent(0, TurnNumber, endingPlayerIndex, CurrentPlayerIndex));
     }
 
     public int? GetCurrentYumYumResponderIndex() => _yumYumWindow.GetCurrentResponderPlayerIndex();

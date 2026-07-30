@@ -3,8 +3,14 @@ namespace TrashAnimal.GameLog;
 /// <summary>One rendered, per-viewer game log line. A single pre-rendered string per entry (not a
 /// structured template+args) — see <see cref="GameLogProjector"/> for how <see cref="Message"/> is
 /// redacted per viewer. <see cref="ActingPlayerSeat"/> is included so the frontend can color-code the
-/// entry by its actor without parsing the seat out of <see cref="Message"/>.</summary>
-public sealed record GameLogEntryView(int SequenceNumber, int TurnNumber, int ActingPlayerSeat, string Message);
+/// entry by its actor without parsing the seat out of <see cref="Message"/>. <see cref="AffectedPlayerSeat"/>
+/// is the single non-actor seat this entry is specifically about (e.g. the thief on a Doggo block, the
+/// new victim on a Kitteh swap), or <c>null</c> when the entry has no single targeted non-actor party —
+/// either because it's self-only (the actor is the only affected party) or a broadcast to everyone
+/// (e.g. <see cref="GameEndedEvent"/>). See the A0 discovery checklist
+/// (<c>.claude/docs/plans/debug-notes-a0-affected-player-cases.md</c>) for why this is a single nullable
+/// seat rather than a list — every discovered case has exactly one targeted non-actor seat.</summary>
+public sealed record GameLogEntryView(int SequenceNumber, int TurnNumber, int ActingPlayerSeat, string Message, int? AffectedPlayerSeat);
 
 /// <summary>
 /// Projects the raw <see cref="GameLogEvent"/> stream into a per-viewer <see cref="GameLogEntryView"/> list,
@@ -22,11 +28,28 @@ internal static class GameLogProjector
         foreach (var evt in events)
         {
             var message = BuildMessage(evt, viewerIndex, players);
-            entries.Add(new GameLogEntryView(evt.SequenceNumber, evt.TurnNumber, evt.ActingPlayerSeat, message));
+            var affectedSeat = ComputeAffectedPlayerSeat(evt);
+            entries.Add(new GameLogEntryView(evt.SequenceNumber, evt.TurnNumber, evt.ActingPlayerSeat, message, affectedSeat));
         }
 
         return entries;
     }
+
+    /// <summary>The single non-actor seat this event is specifically about, or <c>null</c> when there
+    /// isn't one (self-only events, and <see cref="GameEndedEvent"/> which is a broadcast — see
+    /// <see cref="GameLogEntryView.AffectedPlayerSeat"/>).</summary>
+    private static int? ComputeAffectedPlayerSeat(GameLogEvent evt) => evt switch
+    {
+        StealAttemptedEvent e => e.TargetSeat,
+        StealBlockedEvent e => e.ThiefSeat,
+        StealRoleSwappedEvent e => e.NewVictimSeat,
+        StealCompletedEvent e => e.VictimSeat,
+        YumYumForcedRerollEvent e => e.ActingPlayerSeat,
+        YumYumResponseWindowAdvancedEvent e => e.ResponderSeat,
+        BanditResponseWindowAdvancedEvent e => e.ResponderSeat,
+        TurnBeganEvent e => e.NewCurrentPlayerSeat,
+        _ => null
+    };
 
     private static string BuildMessage(GameLogEvent evt, int viewerIndex, IReadOnlyList<Player> players) => evt switch
     {
@@ -47,6 +70,9 @@ internal static class GameLogProjector
         TurnEndedEvent e => BuildTurnEndedMessage(e, viewerIndex, players),
         GameEndedEvent e => BuildGameEndedMessage(e, viewerIndex, players),
         TokenResolvedWithNoEffectEvent e => BuildTokenResolvedWithNoEffectMessage(e, viewerIndex, players),
+        YumYumResponseWindowAdvancedEvent e => BuildYumYumResponseWindowAdvancedMessage(e, viewerIndex, players),
+        BanditResponseWindowAdvancedEvent e => BuildBanditResponseWindowAdvancedMessage(e, viewerIndex, players),
+        TurnBeganEvent e => BuildTurnBeganMessage(e, viewerIndex, players),
         _ => throw new NotSupportedException($"Unhandled GameLogEvent type: {evt.GetType().Name}")
     };
 
@@ -148,10 +174,43 @@ internal static class GameLogProjector
 
     private static string BuildGameEndedMessage(GameEndedEvent e, int viewerIndex, IReadOnlyList<Player> players)
     {
-        if (e.WinningPlayerSeat == viewerIndex)
-            return "You won the game!";
+        var exhaustingActor = Actor(e.ActingPlayerSeat, viewerIndex, players);
+        var deckExhaustedClause = e.ActingPlayerSeat == viewerIndex
+            ? $"{exhaustingActor}r turn emptied the deck"
+            : $"{exhaustingActor}'s turn emptied the deck";
 
-        return $"{players[e.WinningPlayerSeat].Name} won the game!";
+        var winClause = e.WinningPlayerSeat == viewerIndex
+            ? "You win!"
+            : $"{players[e.WinningPlayerSeat].Name} wins!";
+
+        return $"{deckExhaustedClause} — the game has ended! {winClause}";
+    }
+
+    private static string BuildYumYumResponseWindowAdvancedMessage(YumYumResponseWindowAdvancedEvent e, int viewerIndex, IReadOnlyList<Player> players)
+    {
+        var roller = Actor(e.ActingPlayerSeat, viewerIndex, players);
+        if (e.ResponderSeat == viewerIndex)
+            return $"{roller} stopped rolling — your move: play Yum Yum or pass.";
+
+        var responder = players[e.ResponderSeat].Name;
+        return $"{roller} stopped rolling — waiting on {responder}.";
+    }
+
+    private static string BuildBanditResponseWindowAdvancedMessage(BanditResponseWindowAdvancedEvent e, int viewerIndex, IReadOnlyList<Player> players)
+    {
+        var actor = Actor(e.ActingPlayerSeat, viewerIndex, players);
+        if (e.ResponderSeat == viewerIndex)
+            return $"{actor} played Bandit and revealed {e.RevealedCard} — do you have a match?";
+
+        var responder = players[e.ResponderSeat].Name;
+        return $"{actor} played Bandit and revealed {e.RevealedCard} — waiting on {responder}.";
+    }
+
+    private static string BuildTurnBeganMessage(TurnBeganEvent e, int viewerIndex, IReadOnlyList<Player> players)
+    {
+        return e.NewCurrentPlayerSeat == viewerIndex
+            ? "It's your turn!"
+            : $"It's {players[e.NewCurrentPlayerSeat].Name}'s turn.";
     }
 
     private static string BuildTokenResolvedWithNoEffectMessage(TokenResolvedWithNoEffectEvent e, int viewerIndex, IReadOnlyList<Player> players)

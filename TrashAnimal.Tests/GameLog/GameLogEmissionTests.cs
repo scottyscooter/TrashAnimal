@@ -361,4 +361,213 @@ public sealed class GameLogEmissionTests
         Assert.Null(played.TargetSeat);
         Assert.True(played.SequenceNumber > beforeCount);
     }
+
+    // --- AffectedPlayerSeat projection (A1) ---
+
+    private static IReadOnlyList<Player> ThreePlayers() =>
+        new[] { new Player(0, "Alice"), new Player(1, "Bob"), new Player(2, "Carol") };
+
+    [Fact]
+    public void StealBlockedEvent_ProjectsAffectedPlayerSeat_AsThief()
+    {
+        var (p0, p1, session) = CreateShinyStealSession();
+        p1.AddToStash(new Card(CardName.Blammo), faceUp: true);
+        p1.Hand.Add(new Card(CardName.Doggo));
+        p0.Hand.Clear();
+        p0.Hand.Add(new Card(CardName.Shiny));
+        var die = new Die();
+
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err, out _), err);
+
+        var blocked = Assert.Single(session.LogEvents.OfType<StealBlockedEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)blocked }, viewerIndex: 0, session.Players);
+        Assert.Equal(0, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void StealRoleSwappedEvent_ProjectsAffectedPlayerSeat_AsNewVictim()
+    {
+        var (p0, p1, session) = CreateShinyStealSession();
+        p1.AddToStash(new Card(CardName.Nanners), faceUp: true);
+        p1.Hand.Add(new Card(CardName.Kitteh));
+        p0.Hand.Clear();
+        p0.Hand.Add(new Card(CardName.Shiny));
+        var die = new Die();
+
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayKitteh, die, out var err, out _), err);
+
+        var swapped = Assert.Single(session.LogEvents.OfType<StealRoleSwappedEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)swapped }, viewerIndex: 1, session.Players);
+        Assert.Equal(0, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void StealAttemptedEvent_ProjectsAffectedPlayerSeat_AsTarget()
+    {
+        var (p0, p1, session) = CreateShinyStealSession();
+        p1.AddToStash(new Card(CardName.Nanners), faceUp: true);
+        p0.Hand.Clear();
+        p0.Hand.Add(new Card(CardName.Shiny));
+        var die = new Die();
+
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err, out _), err);
+
+        var attempted = Assert.Single(session.LogEvents.OfType<StealAttemptedEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)attempted }, viewerIndex: 0, session.Players);
+        Assert.Equal(1, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void StealCompletedEvent_ProjectsAffectedPlayerSeat_AsVictim()
+    {
+        var (p0, p1, session) = CreateShinyStealSession();
+        var stashed = new Card(CardName.MmmPie);
+        p1.AddToStash(stashed, faceUp: false);
+        p0.Hand.Clear();
+        p0.Hand.Add(new Card(CardName.Shiny));
+        var die = new Die();
+
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _, out _));
+        Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err, out _), err);
+
+        var completed = Assert.Single(session.LogEvents.OfType<StealCompletedEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)completed }, viewerIndex: 0, session.Players);
+        Assert.Equal(1, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void YumYumForcedRerollEvent_ProjectsAffectedPlayerSeat_AsRoller()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        p1.Hand.Add(new Card(CardName.Yumyum));
+        var session = new GameSession(new[] { p0, p1 }, new Deck());
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPlay, die, out var err, out _), err);
+
+        var forcedReroll = Assert.Single(session.LogEvents.OfType<YumYumForcedRerollEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)forcedReroll }, viewerIndex: 0, session.Players);
+        Assert.Equal(0, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void YumYumResponseWindowAdvancedEvent_EmittedOnOpen_AndProjectsAffectedPlayerSeat_AsResponder()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var session = new GameSession(new[] { p0, p1 }, new Deck());
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out var err, out _), err);
+
+        var advanced = Assert.Single(session.LogEvents.OfType<YumYumResponseWindowAdvancedEvent>());
+        Assert.Equal(0, advanced.ActingPlayerSeat);
+        Assert.Equal(1, advanced.ResponderSeat);
+
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)advanced }, viewerIndex: 1, session.Players);
+        Assert.Equal(1, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void YumYumResponseWindowAdvancedEvent_EmittedOnPassAdvance_WithThreePlayers()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var p2 = new Player(2, "Carol");
+        var session = new GameSession(new[] { p0, p1, p2 }, new Deck());
+        var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out var err, out _), err);
+
+        var advances = session.LogEvents.OfType<YumYumResponseWindowAdvancedEvent>().ToList();
+        Assert.Equal(2, advances.Count);
+        Assert.Equal(1, advances[0].ResponderSeat);
+        Assert.Equal(2, advances[1].ResponderSeat);
+        Assert.Equal(0, advances[1].ActingPlayerSeat);
+    }
+
+    [Fact]
+    public void BanditResponseWindowAdvancedEvent_EmittedOnReveal_AndProjectsAffectedPlayerSeat_AsResponder()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var pile = DrawPileMockFactory.CreateWithCards(5).Object;
+        var session = new GameSession(new[] { p0, p1 }, pile);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenBandit, die, out var err, out _), err);
+
+        var advanced = Assert.Single(session.LogEvents.OfType<BanditResponseWindowAdvancedEvent>());
+        Assert.Equal(0, advanced.ActingPlayerSeat);
+        Assert.Equal(1, advanced.ResponderSeat);
+
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)advanced }, viewerIndex: 1, session.Players);
+        Assert.Equal(1, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void TurnBeganEvent_EmittedOnEndTurn_AndProjectsAffectedPlayerSeat_AsNewCurrentPlayer()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var session = new GameSession(new[] { p0, p1 }, new Deck());
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.PhaseOne.IsBusted);
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out var err, out _), err);
+
+        var began = Assert.Single(session.LogEvents.OfType<TurnBeganEvent>());
+        Assert.Equal(0, began.ActingPlayerSeat);
+        Assert.Equal(1, began.NewCurrentPlayerSeat);
+
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)began }, viewerIndex: 1, session.Players);
+        Assert.Equal(1, view.Single().AffectedPlayerSeat);
+    }
+
+    [Fact]
+    public void GameEndedEvent_ProjectsNullAffectedPlayerSeat_BroadcastCase()
+    {
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        p0.AddToStash(new Card(CardName.Blammo), faceUp: true);
+        var pile = DrawPileMockFactory.CreateWithCards(1).Object;
+        var session = new GameSession(new[] { p0, p1 }, pile);
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
+
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _, out _));
+
+        var ended = Assert.Single(session.LogEvents.OfType<GameEndedEvent>());
+        var view = GameLogProjector.BuildForViewer(new[] { (GameLogEvent)ended }, viewerIndex: 1, session.Players);
+        Assert.Null(view.Single().AffectedPlayerSeat);
+        Assert.Contains("Alice", view.Single().Message);
+        Assert.Contains("wins", view.Single().Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TokenResolvedWithNoEffectEvent_ProjectsNullAffectedPlayerSeat_SelfOnlyCase()
+    {
+        var evt = new TokenResolvedWithNoEffectEvent(1, 1, ActingPlayerSeat: 0, TokenAction.Bandit);
+        var players = ThreePlayers();
+
+        var view = GameLogProjector.BuildForViewer(new GameLogEvent[] { evt }, viewerIndex: 1, players);
+
+        Assert.Null(view.Single().AffectedPlayerSeat);
+    }
 }
