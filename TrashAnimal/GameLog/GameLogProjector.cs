@@ -134,7 +134,10 @@ internal static class GameLogProjector
         }
 
         if (viewerIndex == e.VictimSeat)
-            return $"{actor} stole a card from you.";
+            // Naming the card here doesn't leak anything: the victim already knew this card's
+            // identity before it was stolen — it was in their own hand/stash. Hidden-information
+            // rules bar *other* players from learning it, not the owner who just lost it.
+            return $"{actor} stole {e.CardName} from you.";
 
         var victimName = players[e.VictimSeat].Name;
         return $"{actor} stole a card from {victimName}.";

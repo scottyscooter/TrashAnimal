@@ -66,7 +66,7 @@ public sealed class GameLogProjectorRedactionTests
     }
 
     [Fact]
-    public void StealCompletedEvent_RevealsCardIdentity_OnlyToThief()
+    public void StealCompletedEvent_RevealsCardIdentity_ToThiefAndVictim_ButNotThirdParties()
     {
         var cardId = Guid.NewGuid();
         var events = new GameLogEvent[]
@@ -78,8 +78,10 @@ public sealed class GameLogProjectorRedactionTests
         var victimView = GameLogProjector.BuildForViewer(events, viewerIndex: 1, Players);
         var thirdPartyView = GameLogProjector.BuildForViewer(events, viewerIndex: 2, Players);
 
+        // The victim already knew this card's identity before it was stolen (it was their own
+        // hand/stash card) — naming it to them isn't a leak, only third parties must stay blind to it.
         Assert.Contains("MmmPie", thiefView.Single().Message);
-        Assert.DoesNotContain("MmmPie", victimView.Single().Message);
+        Assert.Contains("MmmPie", victimView.Single().Message);
         Assert.DoesNotContain("MmmPie", thirdPartyView.Single().Message);
 
         // Victim and third party get different framing (victim: "from you"; third party: named).

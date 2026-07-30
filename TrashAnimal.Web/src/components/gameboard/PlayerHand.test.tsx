@@ -29,12 +29,18 @@ describe('PlayerHand', () => {
     expect(screen.queryByRole('button', { name: /more information/i })).not.toBeInTheDocument();
   });
 
-  it('shows no badge for the out-of-turn case (playableAs and unplayableReason both null), and renders grayed-out', () => {
+  it('shows no badge and renders at full opacity for the out-of-turn case (playableAs and unplayableReason both null), but is still non-interactive', () => {
     const handCards = buildHand({ playableAs: null, unplayableReason: null });
     render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
 
     expect(screen.queryByRole('button', { name: /more information/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /shiny/i })).toHaveAttribute('aria-disabled', 'true');
+    const card = screen.getByRole('button', { name: /shiny/i });
+    expect(card).toHaveAttribute('aria-disabled', 'true');
+    expect(card).toHaveAttribute('tabindex', '-1');
+    // Not-your-turn is not the same as unplayable-for-a-reason: no dimming, so players can still
+    // read their own hand normally while waiting their turn.
+    const cardImageWrapper = screen.getByAltText('Shiny').parentElement;
+    expect(cardImageWrapper).not.toHaveStyle({ opacity: '0.55' });
   });
 
   it('marks an unplayable card aria-disabled, non-tabbable, and does not fire onCardActivate on click', () => {

@@ -106,6 +106,21 @@ public sealed class GameSessionHandCardPlayabilityTests
     }
 
     [Fact]
+    public void Yumyum_InActivePlayersOwnHand_ReportsOpponentTriggeredReason_NotAPhaseReason()
+    {
+        var (p0, _, session) = CreateTwoPlayerSession();
+
+        var yumyum = new Card(CardName.Yumyum);
+        p0.Hand.Add(yumyum);
+
+        var view = session.GetViewForPlayer(0);
+        var cardView = view.HandCards.Single(c => c.CardId == yumyum.Id);
+
+        Assert.Null(cardView.PlayableAs);
+        Assert.Equal("Can only be played when an opponent chooses to stop rolling.", cardView.UnplayableReason);
+    }
+
+    [Fact]
     public void NonActivePlayer_WithNoOpenInterruptWindow_SeesEveryCardWithNullPlayableAsAndReason()
     {
         var (p0, p1, session) = CreateTwoPlayerSession();
