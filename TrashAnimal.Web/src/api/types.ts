@@ -142,6 +142,7 @@ export interface GameLogEntryView {
   turnNumber: number;
   actingPlayerSeat: number;
   message: string;
+  affectedPlayerSeat: number | null;
 }
 
 export interface GameView {

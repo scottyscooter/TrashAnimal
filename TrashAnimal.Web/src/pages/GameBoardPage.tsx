@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useGameClientIdentity } from '../hooks/useGameClientIdentity'
 import { useGameView } from '../hooks/useGameView'
 import { useGameSignalR } from '../hooks/useGameSignalR'
+import { useGameLogAnnouncements } from '../hooks/useGameLogAnnouncements'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
 import { useToast } from '../components/Toast/useToast'
 import type { GameAction, TokenAction } from '../api/types'
@@ -38,6 +39,7 @@ function GameBoardPage() {
 
   const gameViewQuery = useGameView(gameId ?? '', identity?.seatIndex ?? -1)
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
+  useGameLogAnnouncements(gameViewQuery.data?.view.log ?? [], identity?.seatIndex ?? -1)
   const submitCommand = useSubmitCommand(gameId ?? '', identity?.seatIndex ?? -1)
 
   if (!gameId) {
