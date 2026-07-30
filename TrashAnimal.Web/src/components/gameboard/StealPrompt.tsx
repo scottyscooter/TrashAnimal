@@ -1,5 +1,6 @@
 import type { GameAction, GameState, StealPhaseView } from '../../api/types';
 import Modal from './Modal';
+import StealPickFan from './StealPickFan';
 
 interface StealPromptProps {
   state: GameState;
@@ -74,20 +75,7 @@ function StealPrompt({
         <h2 id="steal-pick-heading" className="mb-3 text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
           Pick a card from {stealPhase.victimName}'s {stealPhase.initialStealTargetZone.toLowerCase()}
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {stealPhase.thiefPickSlots.map((slot) => (
-            <button
-              key={slot.cardId}
-              type="button"
-              disabled={isPending}
-              onClick={() => onCardPick(slot.cardId)}
-              className="gb-glass gb-glass-hover rounded-lg px-4 py-3 text-sm font-medium disabled:opacity-50"
-              style={{ color: 'var(--gb-text-primary)' }}
-            >
-              {slot.thiefFacingLabel}
-            </button>
-          ))}
-        </div>
+        <StealPickFan slots={stealPhase.thiefPickSlots} onPick={onCardPick} isPending={isPending} />
       </Modal>
     );
   }
