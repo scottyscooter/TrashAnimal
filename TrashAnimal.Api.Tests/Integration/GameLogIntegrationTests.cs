@@ -56,13 +56,15 @@ public sealed class GameLogIntegrationTests : IClassFixture<TrashApiTestFactory>
         var victimSeqs = victimView!.View.Log.Select(e => e.SequenceNumber).ToList();
         Assert.Equal(thiefSeqs, victimSeqs);
 
-        // ...but the steal-completion line's wording differs: the thief sees the card's identity,
-        // the victim does not.
+        // ...but the steal-completion line's wording still differs: the thief's line names the
+        // victim ("from Bob"), the victim's line says "from you" instead. Both name the card —
+        // the victim already knew its identity before losing it, so that isn't a hidden-information
+        // leak (see GameLogProjector.BuildStealCompletedMessage's doc comment).
         var thiefStealLine = thiefView.View.Log.Single(e => e.Message.Contains("stole"));
         var victimStealLine = victimView.View.Log.Single(e => e.Message.Contains("stole"));
 
         Assert.Contains("MmmPie", thiefStealLine.Message);
-        Assert.DoesNotContain("MmmPie", victimStealLine.Message);
+        Assert.Contains("MmmPie", victimStealLine.Message);
         Assert.NotEqual(thiefStealLine.Message, victimStealLine.Message);
     }
 
