@@ -43,7 +43,9 @@ public sealed partial class GameSession
 
         var ownStashPile = _players[playerIndex].StashPile;
         var ownStash = new OwnStashView(
-            ownStashPile.Count(e => !e.IsFaceUp),
+            ownStashPile.Where(e => !e.IsFaceUp)
+                .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
+                .ToList(),
             ownStashPile.Where(e => e.IsFaceUp)
                 .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
                 .ToList());
