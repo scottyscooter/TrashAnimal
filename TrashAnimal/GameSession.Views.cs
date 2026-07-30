@@ -18,7 +18,7 @@ public sealed partial class GameSession
             .Select(e => new HandCardView(e.Card.Id, e.Card.Name))
             .ToList();
 
-        var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
+        var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players, _shuffleRandom);
 
         var tokenPhase = _tokenPhaseCoordinator.IsActive
             ? _tokenPhaseCoordinator.BuildView(playerIndex)

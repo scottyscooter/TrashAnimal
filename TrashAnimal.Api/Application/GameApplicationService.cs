@@ -43,7 +43,7 @@ public sealed class GameApplicationService
         var dealCounts = _options.StartingHandCounts.Take(playerNames.Count).ToList();
         deck.DealToPlayers(players, dealCounts);
 
-        var session = new GameSession(players, deck);
+        var session = new GameSession(players, deck, rng);
         var die = new Die(rng);
         var entry = new GameSessionEntry(session, die);
         var gameId = Guid.NewGuid();
