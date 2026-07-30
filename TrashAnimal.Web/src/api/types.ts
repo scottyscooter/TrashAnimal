@@ -47,6 +47,7 @@ export const TOKEN_PHASE_STEP_VALUES = [
   'DoubleStashChoosingCards',
   'BanditAwaitOpponentResponse',
   'RecycleChoosingReplacement',
+  'StealChoosingVictim',
 ] as const;
 export type TokenPhaseStep = typeof TOKEN_PHASE_STEP_VALUES[number];
 
@@ -198,7 +199,7 @@ export type GameCommandRequest =
   | { kind: 'action'; playerSeat: number; action: GameAction }
   | { kind: 'playFeesh'; playerSeat: number; cardId: string }
   | { kind: 'playShiny'; playerSeat: number; victimSeat: number }
-  | { kind: 'resolveTokenSteal'; playerSeat: number; victimSeat: number }
+  | { kind: 'resolveTokenSteal'; playerSeat: number; victimSeat: number | null }
   | { kind: 'cardPick'; playerSeat: number; cardId: string }
   | { kind: 'doubleStash'; playerSeat: number; cardIds: string[] }
   | { kind: 'recyclePick'; playerSeat: number; replacement: TokenAction };
@@ -220,6 +221,7 @@ export interface PlayerViewResponse {
 export interface GameCommandResponse {
   succeeded: boolean;
   errorMessage: string | null;
+  infoMessage?: string | null;
   view: GameView | null;
   allowedActions: GameAction[] | null;
 }

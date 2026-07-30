@@ -178,7 +178,109 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
 
         var (_, finalThiefView) = await _client.GetViewAsync(gameId, playerSeat: 0);
         Assert.Contains(finalThiefView!.View.HandCards, c => c.CardId == victimCard.Id);
-        Assert.Equal(GameState.TokenPhase, finalThiefView.View.State);
+
+        // Regression assertions for the Steal-exhaustion bug: Steal was the only token collected this
+        // turn, so completing it must remove it from RemainingTokens and end the turn — previously the
+        // API's explicit-victim-choice path never touched RemainingTokens/ActiveToken at all, so the
+        // token was offered forever and the turn could never complete.
+        Assert.Equal(GameState.TurnEnd, finalThiefView.View.State);
+        Assert.DoesNotContain(GameAction.ResolveTokenSteal, finalThiefView.AllowedActions);
+        Assert.Contains(GameAction.EndTurn, finalThiefView.AllowedActions);
+    }
+
+    [Fact]
+    public async Task ResolveTokenSteal_WithNullVictimSeat_AutoResolvesWhenNoOpponentHasCards()
+    {
+        var gameId = Guid.NewGuid();
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        // p1's hand is intentionally left empty — the fizzle condition under test.
+        var die = DieMockFactory.CreateSequenced(TokenAction.Steal).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
+        _factory.SessionRepository.RegisterSession(gameId, session, die);
+
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.StopRolling);
+        await AssertActionSucceedsAsync(gameId, 1, GameAction.YumYumPass);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.AdvanceToResolveTokens);
+
+        var (status, body) = await _client.ResolveTokenStealAsync(gameId, 0, victimSeat: null);
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.True(body!.Succeeded, body.ErrorMessage);
+        Assert.False(string.IsNullOrWhiteSpace(body.InfoMessage));
+        Assert.Equal(GameState.TurnEnd, body.View!.State);
+        Assert.DoesNotContain(GameAction.ResolveTokenSteal, body.AllowedActions!);
+    }
+
+    [Fact]
+    public async Task MmmPie_ThenCompletingFirstSteal_CascadesIntoFizzledRepeat_PopulatesInfoMessage()
+    {
+        var gameId = Guid.NewGuid();
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var mmmPie = new Card(CardName.MmmPie);
+        p0.AddCards([mmmPie]);
+        var victimCard = new Card(CardName.Feesh);
+        p1.AddCards([victimCard]); // exactly one card — the first steal succeeds, then p1's hand is empty
+        var die = DieMockFactory.CreateSequenced(TokenAction.Steal).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
+        _factory.SessionRepository.RegisterSession(gameId, session, die);
+
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.StopRolling);
+        await AssertActionSucceedsAsync(gameId, 1, GameAction.YumYumPass);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.AdvanceToResolveTokens);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.PlayMmmPieTokenPhase);
+
+        var (startStatus, startBody) = await _client.ResolveTokenStealAsync(gameId, 0, victimSeat: 1);
+        Assert.Equal(HttpStatusCode.OK, startStatus);
+        Assert.True(startBody!.Succeeded, startBody.ErrorMessage);
+        Assert.Null(startBody.InfoMessage);
+
+        await AssertActionSucceedsAsync(gameId, 1, GameAction.StealPass);
+
+        var (_, thiefView) = await _client.GetViewAsync(gameId, playerSeat: 0);
+        var pickSlot = Assert.Single(thiefView!.View.StealPhase!.ThiefPickSlots!);
+
+        // Completing this pick finishes the first Steal resolution; MmmPie's repeat cascades Steal
+        // immediately (via TokenPhaseCoordinator.OnStealResolvedWhileInTokenPhase), finds zero remaining
+        // candidates, and fizzles. This must populate InfoMessage on the CardPickCommand response even
+        // though CardPickCommand is a different command than the one that started the Steal token — the
+        // gap this test guards against.
+        var (pickStatus, pickBody) = await _client.CardPickAsync(gameId, 0, pickSlot.CardId);
+        Assert.Equal(HttpStatusCode.OK, pickStatus);
+        Assert.True(pickBody!.Succeeded, pickBody.ErrorMessage);
+        Assert.False(string.IsNullOrWhiteSpace(pickBody.InfoMessage));
+        Assert.Contains("Steal", pickBody.InfoMessage);
+        Assert.Equal(GameState.TurnEnd, pickBody.View!.State);
+    }
+
+    [Fact]
+    public async Task Bandit_EmptyDeck_ViaPlainPlayActionCommand_PopulatesInfoMessage()
+    {
+        var gameId = Guid.NewGuid();
+        var p0 = new Player(0, "Alice");
+        var p1 = new Player(1, "Bob");
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit).Object;
+        var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(0).Object);
+        _factory.SessionRepository.RegisterSession(gameId, session, die);
+
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.RollDie);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.StopRolling);
+        await AssertActionSucceedsAsync(gameId, 1, GameAction.YumYumPass);
+        await AssertActionSucceedsAsync(gameId, 0, GameAction.AdvanceToResolveTokens);
+
+        // A first-pick Bandit-with-empty-deck fizzle triggered via a plain PlayActionCommand (not the
+        // dedicated Steal API) — the case that was silently broken even without MmmPie in the picture,
+        // since only ExecuteTokenStealUnlockedAsync's bespoke bool ever reported a fizzle before this fix.
+        var (status, body) = await _client.SubmitCommandAsync(gameId, new PlayActionCommand(0, GameAction.ResolveTokenBandit));
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.True(body!.Succeeded, body.ErrorMessage);
+        Assert.False(string.IsNullOrWhiteSpace(body.InfoMessage));
+        Assert.Contains("Bandit", body.InfoMessage);
+        Assert.Equal(GameState.TurnEnd, body.View!.State);
     }
 
     private async Task AssertActionSucceedsAsync(Guid gameId, int playerSeat, GameAction action)

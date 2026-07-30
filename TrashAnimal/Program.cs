@@ -1,4 +1,5 @@
 ﻿using TrashAnimal;
+using TrashAnimal.Helpers;
 using TrashAnimal.TokenPhase;
 
 var die = new Die();
@@ -48,18 +49,6 @@ session.ChooseShinyStealVictim = (thiefIndex, candidates) =>
     return controllers[thiefIndex].ChooseShinyStealVictim(view, candidates);
 };
 
-session.ChooseTokenHandStealVictim = (thiefIndex, candidates) =>
-{
-    var view = session.GetViewForPlayer(thiefIndex);
-    Console.WriteLine();
-    Console.WriteLine($"{players[thiefIndex].Name}: choose a victim to steal one card from hand:");
-    for (var i = 0; i < candidates.Count; i++)
-        Console.WriteLine($"{i + 1}. {players[candidates[i]].Name} (index {candidates[i]})");
-
-    var choice = Cli.ReadIntInRange("Choice: ", 1, candidates.Count);
-    return candidates[choice - 1];
-};
-
 Console.WriteLine();
 Console.WriteLine("Game start. Press Ctrl+C to quit.");
 
@@ -96,7 +85,7 @@ while (true)
             ? currentController.ChooseAction(view, allowed)
             : GameAction.EndTurn;
 
-        if (!session.ApplyAction(session.CurrentPlayerIndex, action, die, out var err) && err is not null)
+        if (!session.ApplyAction(session.CurrentPlayerIndex, action, die, out var err, out _) && err is not null)
             Console.WriteLine(err);
 
         continue;
@@ -111,7 +100,7 @@ while (true)
         var slots = thiefView.StealPhase?.ThiefPickSlots
             ?? throw new InvalidOperationException("Steal pick slots missing from view.");
         var cardId = thiefController.ChooseStealCard(thiefView, slots);
-        if (!session.TryCompleteStealWithCard(thiefIndex, cardId, out var stealErr) && stealErr is not null)
+        if (!session.TryCompleteStealWithCard(thiefIndex, cardId, out var stealErr, out _) && stealErr is not null)
             Console.WriteLine(stealErr);
 
         continue;
@@ -125,7 +114,7 @@ while (true)
         var victimView = session.GetViewForPlayer(victimIndex);
         var allowed = session.GetAllowedActionsForPlayer(victimIndex);
         var stealAction = victimController.ChooseAction(victimView, allowed);
-        if (!session.ApplyAction(victimIndex, stealAction, die, out var stealRespondErr) && stealRespondErr is not null)
+        if (!session.ApplyAction(victimIndex, stealAction, die, out var stealRespondErr, out _) && stealRespondErr is not null)
             Console.WriteLine(stealRespondErr);
 
         continue;
@@ -144,7 +133,7 @@ while (true)
             ? GameAction.YumYumPlay
             : GameAction.YumYumPass;
 
-        if (!session.ApplyAction(responderIndex.Value, action, die, out var err) && err is not null)
+        if (!session.ApplyAction(responderIndex.Value, action, die, out var err, out _) && err is not null)
             Console.WriteLine(err);
 
         continue;
@@ -162,7 +151,7 @@ while (true)
         {
             var opts = session.GetTokenPhaseRecycleOptions();
             var pick = controller.ChooseRecycleReplacement(view, opts);
-            if (!session.TryTokenPhaseRecyclePick(currentPlayerIndex, pick, out var recErr) && recErr is not null)
+            if (!session.TryTokenPhaseRecyclePick(currentPlayerIndex, pick, out var recErr, out _) && recErr is not null)
                 Console.WriteLine(recErr);
 
             continue;
@@ -177,10 +166,10 @@ while (true)
             responderController.ChooseBanditResponse(responderView, out var stash, out var cardId);
             if (stash && cardId is { } gid)
             {
-                if (!session.TryBanditStashMatchingCard(responderIdx, gid, out var bErr) && bErr is not null)
+                if (!session.TryBanditStashMatchingCard(responderIdx, gid, out var bErr, out _) && bErr is not null)
                     Console.WriteLine(bErr);
             }
-            else if (!session.TryBanditPass(responderIdx, out var pErr) && pErr is not null)
+            else if (!session.TryBanditPass(responderIdx, out var pErr, out _) && pErr is not null)
                 Console.WriteLine(pErr);
 
             continue;
@@ -189,7 +178,7 @@ while (true)
         if (tp?.Step == TokenPhaseStep.DoubleStashChoosingCards)
         {
             var ids = controller.ChooseDoubleStashCardIds(view, tp.StashableHandCardsForCurrentPrompt);
-            if (!session.TryTokenPhaseDoubleStash(currentPlayerIndex, ids, out var dsErr) && dsErr is not null)
+            if (!session.TryTokenPhaseDoubleStash(currentPlayerIndex, ids, out var dsErr, out _) && dsErr is not null)
                 Console.WriteLine(dsErr);
 
             continue;
@@ -198,9 +187,15 @@ while (true)
         if (tp?.Step == TokenPhaseStep.StashTrashPickCard)
         {
             var cardId = controller.ChooseStashTrashStashCard(view, tp.StashableHandCardsForCurrentPrompt);
-            if (!session.TryTokenPhaseStashTrashPickCard(currentPlayerIndex, cardId, out var stErr) && stErr is not null)
+            if (!session.TryTokenPhaseStashTrashPickCard(currentPlayerIndex, cardId, out var stErr, out _) && stErr is not null)
                 Console.WriteLine(stErr);
 
+            continue;
+        }
+
+        if (tp?.Step == TokenPhaseStep.StealChoosingVictim)
+        {
+            PromptAndStartTokenSteal(session, players, controllers, currentPlayerIndex, view);
             continue;
         }
 
@@ -220,7 +215,7 @@ while (true)
 
         if (playerAction == GameAction.TokenStashTrashStashMode)
         {
-            if (!session.ApplyAction(currentPlayerIndex, playerAction, die, out var e1) && e1 is not null)
+            if (!session.ApplyAction(currentPlayerIndex, playerAction, die, out var e1, out _) && e1 is not null)
                 Console.WriteLine(e1);
             continue;
         }
@@ -228,12 +223,21 @@ while (true)
         if (playerAction == GameAction.TokenDoubleStashSubmit)
         {
             var ids = controller.ChooseDoubleStashCardIds(view, tp?.StashableHandCardsForCurrentPrompt ?? Array.Empty<StashableHandCard>());
-            if (!session.TryTokenPhaseDoubleStash(currentPlayerIndex, ids, out var e2) && e2 is not null)
+            if (!session.TryTokenPhaseDoubleStash(currentPlayerIndex, ids, out var e2, out _) && e2 is not null)
                 Console.WriteLine(e2);
             continue;
         }
 
-        if (!session.ApplyAction(currentPlayerIndex, playerAction, die, out var error) && error is not null)
+        if (playerAction == GameAction.ResolveTokenSteal)
+        {
+            // Steal always needs a victim, so it is never dispatched as a plain action — it goes through
+            // the same explicit-choice entry point the API/frontend use, whether this is the first pick
+            // (ChoosingNextToken) or an MmmPie repeat (StealChoosingVictim, handled above).
+            PromptAndStartTokenSteal(session, players, controllers, currentPlayerIndex, view);
+            continue;
+        }
+
+        if (!session.ApplyAction(currentPlayerIndex, playerAction, die, out var error, out _) && error is not null)
             Console.WriteLine(error);
 
         continue;
@@ -249,6 +253,27 @@ while (true)
     Console.WriteLine($"-- {rollActive.Name}'s RollPhase --");
 
     var rollAction = rollController.ChooseAction(rollView, rollAllowed);
-    if (!session.ApplyAction(rollPlayerIndex, rollAction, die, out var rollError) && rollError is not null)
+    if (!session.ApplyAction(rollPlayerIndex, rollAction, die, out var rollError, out _) && rollError is not null)
         Console.WriteLine(rollError);
+}
+
+// Drives the Steal token's explicit-choice API for both the first pick (GameAction.ResolveTokenSteal from
+// ChoosingNextToken) and an MmmPie repeat (TokenPhaseStep.StealChoosingVictim) — the CLI now uses the same
+// entry point as the API/frontend instead of a Func<> delegate. If no opponent has any card in hand, it
+// passes victimIndex: null so the session auto-resolves the fizzle instead of prompting.
+void PromptAndStartTokenSteal(
+    GameSession activeSession,
+    List<Player> allPlayers,
+    List<IPlayerController> allControllers,
+    int thiefIndex,
+    GameView thiefView)
+{
+    var candidates = Opponents.GetAllWithNonEmptyHand(allPlayers, thiefIndex).ToList();
+    int? victimIndex = candidates.Count == 0
+        ? null
+        : allControllers[thiefIndex].ChooseTokenStealVictim(thiefView, candidates);
+
+    if (!activeSession.TryStartTokenStealWithVictimChoice(thiefIndex, victimIndex, out var stealError, out _)
+        && stealError is not null)
+        Console.WriteLine(stealError);
 }

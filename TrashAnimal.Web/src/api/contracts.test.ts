@@ -163,6 +163,25 @@ describe('API Contract Tests', () => {
       assertGameCommandResponseStructure(body);
     });
 
+    it('accepts ResolveTokenStealCommand (kind: "resolveTokenSteal") with a null victimSeat', async () => {
+      const request = {
+        kind: 'resolveTokenSteal',
+        playerSeat: 0,
+        victimSeat: null,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/games/${gameId}/commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+
+      expect([200, 422]).toContain(response.status);
+
+      const body = await response.json();
+      assertGameCommandResponseStructure(body);
+    });
+
     it('accepts CardPickCommand (kind: "cardPick") with cardId', async () => {
       const request = {
         kind: 'cardPick',
@@ -492,6 +511,12 @@ function assertGameCommandResponseStructure(response: unknown): void {
 
   expect(r).toHaveProperty('errorMessage');
   expect(r.errorMessage === null || typeof r.errorMessage === 'string').toBe(true);
+
+  // infoMessage is optional on the wire (only populated for the Steal-fizzle case), so only
+  // assert its shape when present rather than requiring every response to carry it.
+  if ('infoMessage' in r) {
+    expect(r.infoMessage === null || typeof r.infoMessage === 'string').toBe(true);
+  }
 
   expect(r).toHaveProperty('view');
   expect(r).toHaveProperty('allowedActions');

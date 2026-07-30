@@ -8,5 +8,6 @@ public enum TokenPhaseStep
     StashTrashPickCard,
     DoubleStashChoosingCards,
     BanditAwaitOpponentResponse,
-    RecycleChoosingReplacement
+    RecycleChoosingReplacement,
+    StealChoosingVictim
 }

@@ -8,13 +8,16 @@ public sealed class TokenPhaseState
         foreach (var t in tokensFromRollPhase)
         {
             RemainingTokens.Add(t);
-            InitialTokensSnapshot.Add(t);
-        }        
+            TokensIneligibleForRecycle.Add(t);
+        }
     }
 
     public HashSet<TokenAction> RemainingTokens { get; } = new();
 
-    public HashSet<TokenAction> InitialTokensSnapshot { get; } = new();
+    /// <summary>Tokens ineligible for a Recycle pick this TokenPhase — the tokens rolled at turn start,
+    /// plus any token a Recycle pick has already placed into <see cref="RemainingTokens"/> since. A token
+    /// can never be recycled into twice, whether it arrived by roll or by an earlier Recycle pick.</summary>
+    public HashSet<TokenAction> TokensIneligibleForRecycle { get; } = new();
 
     public TokenPhaseStep Step { get; set; } = TokenPhaseStep.ChoosingNextToken;
 

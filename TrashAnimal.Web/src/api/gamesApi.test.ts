@@ -107,6 +107,29 @@ describe('gamesApi', () => {
     expect(capturedBody).toEqual(request);
   });
 
+  it('submitCommand sends ResolveTokenStealCommand with a null victimSeat when no opponent has any cards', async () => {
+    let capturedBody: unknown;
+    server.use(
+      http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({
+          succeeded: true,
+          errorMessage: null,
+          infoMessage: 'No opponents had any cards to steal — the token resolved with no effect.',
+          view: null,
+          allowedActions: [],
+        });
+      }),
+    );
+
+    const request: GameCommandRequest = { kind: 'resolveTokenSteal', playerSeat: 1, victimSeat: null };
+    const response = await gamesApi.submitCommand('game-1', request);
+    expect(capturedBody).toEqual(request);
+    expect(response.infoMessage).toBe(
+      'No opponents had any cards to steal — the token resolved with no effect.',
+    );
+  });
+
   it('submitCommand sends CardPickCommand with kind: "cardPick"', async () => {
     let capturedBody: unknown;
     server.use(

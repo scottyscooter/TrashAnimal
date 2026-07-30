@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '../test/test-utils';
+import { render, screen, waitFor, within } from '../test/test-utils';
 import * as router from 'react-router-dom';
 import { server } from '../test/msw/server';
 import { API_BASE_URL } from '../api/httpClient';
@@ -191,6 +191,85 @@ describe('GameBoardPage', () => {
 
     await waitFor(() => {
       expect(capturedRequest).toEqual({ kind: 'doubleStash', playerSeat: 0, cardIds: ['c1'] });
+    });
+  });
+
+  describe('Steal token resolution', () => {
+    const TOKEN_PHASE_VIEW: GameView = {
+      ...BASE_VIEW,
+      state: 'TokenPhase',
+      tokenPhase: {
+        step: 'ChoosingNextToken',
+        remainingTokens: ['Steal'],
+        activeToken: null,
+        banditRevealedCardName: null,
+        banditCurrentResponderIndex: null,
+        stashableHandCardsForCurrentPrompt: [],
+        recycleReplacementOptions: [],
+      },
+    };
+
+    it('dispatches resolveTokenSteal with victimSeat: null and shows a toast when no opponent has any cards', async () => {
+      storeIdentity(0);
+      mockView(
+        {
+          ...TOKEN_PHASE_VIEW,
+          opponents: [{ ...BASE_VIEW.opponents[0], handCount: 0 }],
+        },
+        ['ResolveTokenSteal'],
+      );
+      const user = userEvent.setup();
+
+      let capturedRequest: GameCommandRequest | undefined;
+      server.use(
+        http.post(`${API_BASE_URL}/games/:gameId/commands`, async ({ request }) => {
+          capturedRequest = (await request.json()) as GameCommandRequest;
+          return HttpResponse.json<GameCommandResponse>({
+            succeeded: true,
+            errorMessage: null,
+            infoMessage: 'No opponents had any cards to steal — the token resolved with no effect.',
+            view: TOKEN_PHASE_VIEW,
+            allowedActions: [],
+          });
+        }),
+      );
+
+      render(<GameBoardPage />);
+
+      await user.click(await screen.findByRole('button', { name: /steal/i }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(capturedRequest).toEqual({ kind: 'resolveTokenSteal', playerSeat: 0, victimSeat: null });
+      });
+
+      expect(
+        await screen.findByText(/no opponents had any cards to steal/i),
+      ).toBeInTheDocument();
+    });
+
+    it('opens the victim picker excluding opponents with an empty hand when some opponents have cards', async () => {
+      storeIdentity(0);
+      mockView(
+        {
+          ...TOKEN_PHASE_VIEW,
+          opponents: [
+            { ...BASE_VIEW.opponents[0], seatIndex: 1, name: 'Bob', handCount: 0 },
+            { ...BASE_VIEW.opponents[0], seatIndex: 2, name: 'Carol', handCount: 3 },
+          ],
+        },
+        ['ResolveTokenSteal'],
+      );
+      const user = userEvent.setup();
+
+      render(<GameBoardPage />);
+
+      await user.click(await screen.findByRole('button', { name: /steal/i }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByRole('button', { name: /carol/i })).toBeInTheDocument();
+      expect(within(dialog).queryByRole('button', { name: /bob/i })).not.toBeInTheDocument();
     });
   });
 });

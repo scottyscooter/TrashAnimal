@@ -92,8 +92,10 @@ public sealed partial class GameSession
         return true;
     }
 
-    public bool TryStealPlayDoggo(int victimIndex, out string? error)
+    public bool TryStealPlayDoggo(int victimIndex, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
+        error = null;
+        resolvedWithNoEffectToken = null;
         EnsureState(GameState.AwaitingStealResponse);
         var wasStealToken = _tokenPhaseCoordinator.IsActive && _tokenPhaseCoordinator.ActiveTokenIsSteal;
         var thiefIndex = _steal.ThiefIndex;
@@ -116,8 +118,9 @@ public sealed partial class GameSession
 
             State = StealResumeState;
             ResetStealResumeStateToRollPhase();
-            if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
-                _tokenPhaseCoordinator.OnStealResolvedWhileInTokenPhase(wasStealToken);
+            if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive
+                && !_tokenPhaseCoordinator.OnStealResolvedWhileInTokenPhase(wasStealToken, out error, out resolvedWithNoEffectToken))
+                return false;
         }
 
         return true;
@@ -133,8 +136,10 @@ public sealed partial class GameSession
         return true;
     }
 
-    public bool TryCompleteStealWithCard(int thiefIndex, Guid cardId, out string? error)
+    public bool TryCompleteStealWithCard(int thiefIndex, Guid cardId, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
+        error = null;
+        resolvedWithNoEffectToken = null;
         EnsureState(GameState.AwaitingStealCardPick);
         var wasStealToken = _tokenPhaseCoordinator.IsActive && _tokenPhaseCoordinator.ActiveTokenIsSteal;
         var victimIndex = _steal.VictimIndex!.Value;
@@ -148,8 +153,9 @@ public sealed partial class GameSession
 
         State = StealResumeState;
         ResetStealResumeStateToRollPhase();
-        if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
-            _tokenPhaseCoordinator.OnStealResolvedWhileInTokenPhase(wasStealToken);
+        if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive
+            && !_tokenPhaseCoordinator.OnStealResolvedWhileInTokenPhase(wasStealToken, out error, out resolvedWithNoEffectToken))
+            return false;
 
         return true;
     }

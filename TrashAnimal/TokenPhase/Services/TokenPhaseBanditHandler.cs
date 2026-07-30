@@ -27,9 +27,10 @@ internal sealed class TokenPhaseBanditHandler
         return state.BanditOpponentOrder[state.BanditOpponentIndexInOrder];
     }
 
-    public bool TryBanditPass(int opponentIndex, TokenPhaseState state, out string? error)
+    public bool TryBanditPass(int opponentIndex, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.BanditAwaitOpponentResponse)
         {
             error = "Not awaiting a Bandit response.";
@@ -42,13 +43,13 @@ internal sealed class TokenPhaseBanditHandler
             return false;
         }
 
-        AdvanceBanditWindow(state);
-        return true;
+        return AdvanceBanditWindow(state, out error, out resolvedWithNoEffectToken);
     }
 
-    public bool TryBanditStashMatchingCard(int opponentIndex, Guid cardId, TokenPhaseState state, out string? error)
+    public bool TryBanditStashMatchingCard(int opponentIndex, Guid cardId, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.BanditAwaitOpponentResponse)
         {
             error = "Not awaiting a Bandit response.";
@@ -104,8 +105,7 @@ internal sealed class TokenPhaseBanditHandler
                 drawn.Select(c => c.Name).ToList()));
         }
 
-        AdvanceBanditWindow(state);
-        return true;
+        return AdvanceBanditWindow(state, out error, out resolvedWithNoEffectToken);
     }
 
     public bool StartBandit(TokenPhaseState state, out string? error)
@@ -134,16 +134,20 @@ internal sealed class TokenPhaseBanditHandler
         return true;
     }
 
-    private void AdvanceBanditWindow(TokenPhaseState state)
+    private bool AdvanceBanditWindow(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
+        error = null;
+        resolvedWithNoEffectToken = null;
         state.BanditOpponentIndexInOrder++;
         if (state.BanditOpponentIndexInOrder >= state.BanditOpponentOrder.Count)
-            FinishBanditToken(state);
+            return FinishBanditToken(state, out error, out resolvedWithNoEffectToken);
+
+        return true;
     }
 
-    private void FinishBanditToken(TokenPhaseState state)
+    private bool FinishBanditToken(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         state.ResetBanditWindow();
-        _ = _tokenCompletion.TryFinishCurrentTokenPassOrRepeat(state, out _);
+        return _tokenCompletion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
     }
 }

@@ -45,7 +45,7 @@ internal sealed class TokenPhaseViewBuilder
         {
             if (value == TokenAction.Recycle)
                 continue;
-            if (state.InitialTokensSnapshot.Contains(value))
+            if (state.TokensIneligibleForRecycle.Contains(value))
                 continue;
             list.Add(value);
         }

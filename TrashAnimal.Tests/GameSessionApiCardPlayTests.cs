@@ -30,9 +30,9 @@ public sealed class GameSessionApiCardPlayTests
 
     private static void BustWithTwoIdenticalRolls(GameSession session, Die die)
     {
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.False(session.PhaseOne.IsBusted);
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.True(session.PhaseOne.IsBusted);
     }
 
@@ -107,7 +107,7 @@ public sealed class GameSessionApiCardPlayTests
 
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
         BustWithTwoIdenticalRolls(session, die);
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
 
         var afterNanners = session.GetAllowedActionsForPlayer(0);
 
@@ -127,7 +127,7 @@ public sealed class GameSessionApiCardPlayTests
 
         var die = DieMockFactory.CreateSequenced(TokenAction.Recycle, TokenAction.Recycle).Object;
         BustWithTwoIdenticalRolls(session, die);
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
 
         var afterNanners = session.GetAllowedActionsForPlayer(0);
         Assert.Contains(GameAction.PlayFeesh, afterNanners);

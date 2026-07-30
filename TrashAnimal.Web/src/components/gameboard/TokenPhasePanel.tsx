@@ -95,24 +95,28 @@ function TokenPhasePanel({
 
       {tokenPhase.step === 'StashTrashChooseBranch' && (
         <div className="flex gap-3">
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onAction('TokenStashTrashDrawOne')}
-            className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
-            style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
-          >
-            Draw a card
-          </button>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onAction('TokenStashTrashStashMode')}
-            className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
-            style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
-          >
-            Stash a card
-          </button>
+          {allowedActions.includes('TokenStashTrashDrawOne') && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onAction('TokenStashTrashDrawOne')}
+              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
+              style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
+            >
+              Draw a card
+            </button>
+          )}
+          {allowedActions.includes('TokenStashTrashStashMode') && (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => onAction('TokenStashTrashStashMode')}
+              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
+              style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
+            >
+              Stash a card
+            </button>
+          )}
         </div>
       )}
 
@@ -158,6 +162,23 @@ function TokenPhasePanel({
             style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
           >
             Stash {doubleStashSelection.length} card{doubleStashSelection.length === 1 ? '' : 's'}
+          </button>
+        </>
+      )}
+
+      {tokenPhase.step === 'StealChoosingVictim' && (
+        <>
+          <p className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+            STEAL AGAIN — CHOOSE A PLAYER
+          </p>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onStartSteal}
+            className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+            style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
+          >
+            Choose a player
           </button>
         </>
       )}

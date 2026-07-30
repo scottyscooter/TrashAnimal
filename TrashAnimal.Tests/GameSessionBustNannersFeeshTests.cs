@@ -23,9 +23,9 @@ public sealed class GameSessionBustNannersFeeshTests
 
     private static void BustWithTwoIdenticalRolls(GameSession session, Die die)
     {
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.False(session.PhaseOne.IsBusted);
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.True(session.PhaseOne.IsBusted);
     }
 
@@ -48,14 +48,14 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.Contains(GameAction.AbandonBust, bustActions);
         Assert.DoesNotContain(GameAction.PlayFeesh, bustActions);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out var err1), err1);
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out var err1, out _), err1);
         Assert.False(session.PhaseOne.IsBusted);
 
         var afterNanners = session.GetAllowedActionsForPlayer(0);
         Assert.DoesNotContain(GameAction.PlayFeesh, afterNanners);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterNanners);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2), err2);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2, out _), err2);
         Assert.Equal(GameState.TokenPhase, session.State);
         Assert.Single(session.LastPhaseTwoTokens);
         Assert.Equal(TokenAction.Bandit, session.LastPhaseTwoTokens[0]);
@@ -74,17 +74,17 @@ public sealed class GameSessionBustNannersFeeshTests
         var die = DieMockFactory.CreateSequenced(TokenAction.Recycle, TokenAction.Recycle).Object;
         BustWithTwoIdenticalRolls(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
 
         var afterNanners = session.GetAllowedActionsForPlayer(0);
         Assert.Contains(GameAction.PlayFeesh, afterNanners);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterNanners);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err, out _), err);
         Assert.Contains(mmmPie, p0.Hand.Select(e => e.Card));
         Assert.DoesNotContain(session.DiscardPile, c => c.Id == mmmPie.Id);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -102,12 +102,12 @@ public sealed class GameSessionBustNannersFeeshTests
         var die = DieMockFactory.CreateSequenced(TokenAction.Steal, TokenAction.Steal).Object;
         BustWithTwoIdenticalRolls(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _, out _));
         Assert.Contains(shiny, p0.Hand.Select(e => e.Card));
         Assert.DoesNotContain(GameAction.PlayShiny, session.GetAllowedActionsForPlayer(0));
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -127,18 +127,18 @@ public sealed class GameSessionBustNannersFeeshTests
         var die = DieMockFactory.CreateSequenced(TokenAction.DoubleTrash, TokenAction.DoubleTrash).Object;
         BustWithTwoIdenticalRolls(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _, out _));
         Assert.Contains(shinyOnDiscard, p0.Hand.Select(e => e.Card));
 
         var afterFeesh = session.GetAllowedActionsForPlayer(0);
         Assert.Contains(GameAction.PlayShiny, afterFeesh);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterFeesh);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
         Assert.Equal(GameState.AwaitingStealResponse, session.State);
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _));
-        Assert.True(session.TryCompleteStealWithCard(0, stashedFeesh.Id, out var pickErr), pickErr);
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _, out _));
+        Assert.True(session.TryCompleteStealWithCard(0, stashedFeesh.Id, out var pickErr, out _), pickErr);
 
         Assert.Contains(stashedFeesh, p0.Hand.Select(e => e.Card));
         Assert.Empty(p1.StashPile);
@@ -147,7 +147,7 @@ public sealed class GameSessionBustNannersFeeshTests
         Assert.Contains(GameAction.PlayFeesh, beforeAdvance);
         Assert.Contains(GameAction.AdvanceToResolveTokens, beforeAdvance);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
         Assert.Equal(GameState.TokenPhase, session.State);
 
         var names = session.DiscardPile.Select(c => c.Name).ToArray();
@@ -172,17 +172,17 @@ public sealed class GameSessionBustNannersFeeshTests
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash, TokenAction.StashTrash).Object;
         BustWithTwoIdenticalRolls(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _));
-        Assert.True(session.TryCompleteStealWithCard(0, stashedFeesh.Id, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayNanners, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _, out _));
+        Assert.True(session.TryCompleteStealWithCard(0, stashedFeesh.Id, out _, out _));
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var feesh2Err), feesh2Err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var feesh2Err, out _), feesh2Err);
         Assert.Contains(shinyOnDiscard, p0.Hand.Select(e => e.Card));
         Assert.Empty(p1.StashPile);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
         Assert.Equal(GameState.TokenPhase, session.State);
 
         Assert.Equal(2, session.DiscardPile.Count(c => c.Name == CardName.Feesh));

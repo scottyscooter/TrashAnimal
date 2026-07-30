@@ -39,9 +39,11 @@ public sealed record PlayShinyCommand(int PlayerSeat, int VictimSeat)
     : GameCommandRequest(PlayerSeat);
 
 /// <summary>
-/// Resolve a token-phase steal by selecting the victim.
+/// Resolve a token-phase steal by selecting the victim. <see cref="VictimSeat"/> is null when the client has
+/// determined no opponent has any card in hand to steal (every opponent's hand is empty) — the token
+/// auto-resolves with no effect in that case rather than requiring a victim that doesn't exist.
 /// </summary>
-public sealed record ResolveTokenStealCommand(int PlayerSeat, int VictimSeat)
+public sealed record ResolveTokenStealCommand(int PlayerSeat, int? VictimSeat)
     : GameCommandRequest(PlayerSeat);
 
 /// <summary>

@@ -23,7 +23,7 @@ public sealed class GameLogEmissionTests
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err, out _), err);
 
         var rolled = Assert.Single(session.LogEvents.OfType<DieRolledEvent>());
         Assert.Equal(0, rolled.ActingPlayerSeat);
@@ -39,8 +39,8 @@ public sealed class GameLogEmissionTests
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err, out _), err);
 
         var rolls = session.LogEvents.OfType<DieRolledEvent>().ToList();
         Assert.Equal(2, rolls.Count);
@@ -63,7 +63,7 @@ public sealed class GameLogEmissionTests
         sessionDelegatePath.DiscardPile.Add(new Card(CardName.MmmPie));
         p0A.Hand.Clear();
         p0A.Hand.Add(new Card(CardName.Feesh));
-        Assert.True(sessionDelegatePath.ApplyAction(0, GameAction.PlayFeesh, new Die(), out var err1), err1);
+        Assert.True(sessionDelegatePath.ApplyAction(0, GameAction.PlayFeesh, new Die(), out var err1, out _), err1);
 
         var p0B = new Player(0, "Alice");
         var p1B = new Player(1, "Bob");
@@ -90,7 +90,7 @@ public sealed class GameLogEmissionTests
         p1A.AddToStash(new Card(CardName.Nanners), faceUp: true);
         p0A.Hand.Clear();
         p0A.Hand.Add(new Card(CardName.Shiny));
-        Assert.True(sessionDelegatePath.ApplyAction(0, GameAction.PlayShiny, new Die(), out var err1), err1);
+        Assert.True(sessionDelegatePath.ApplyAction(0, GameAction.PlayShiny, new Die(), out var err1, out _), err1);
 
         var p0B = new Player(0, "Alice");
         var p1B = new Player(1, "Bob");
@@ -119,12 +119,12 @@ public sealed class GameLogEmissionTests
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenStashTrash, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.TokenStashTrashDrawOne, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenStashTrash, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.TokenStashTrashDrawOne, die, out _, out _));
 
         var sequenceNumbers = session.LogEvents.Select(e => e.SequenceNumber).ToList();
         Assert.Equal(sequenceNumbers.OrderBy(n => n), sequenceNumbers);
@@ -153,12 +153,12 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(cardA);
         p0.Hand.Add(cardB);
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenDoubleStash, die, out _));
-        Assert.True(session.TryTokenPhaseDoubleStash(0, new[] { cardA.Id, cardB.Id }, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenDoubleStash, die, out _, out _));
+        Assert.True(session.TryTokenPhaseDoubleStash(0, new[] { cardA.Id, cardB.Id }, out var err, out _), err);
 
         var stashedEvent = Assert.Single(session.LogEvents.OfType<CardStashedEvent>());
         Assert.Equal(2, stashedEvent.CardIds.Count);
@@ -175,11 +175,11 @@ public sealed class GameLogEmissionTests
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.True(session.PhaseOne.IsBusted);
 
-        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out var err, out _), err);
 
         var busted = session.LogEvents.OfType<PlayerBustedEvent>().Single();
         var resolved = session.LogEvents.OfType<TurnResolvedEvent>().Single();
@@ -200,9 +200,9 @@ public sealed class GameLogEmissionTests
         var session = new GameSession(new[] { p0, p1 }, pile);
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _, out _));
 
         Assert.Equal(GameState.GameEnded, session.State);
         var ended = Assert.Single(session.LogEvents.OfType<GameEndedEvent>());
@@ -230,8 +230,8 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.Shiny));
         var die = new Die();
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err, out _), err);
 
         var blocked = Assert.Single(session.LogEvents.OfType<StealBlockedEvent>());
         Assert.Equal(1, blocked.ActingPlayerSeat);
@@ -251,8 +251,8 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.Shiny));
         var die = new Die();
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPlayKitteh, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayKitteh, die, out var err, out _), err);
 
         var swapped = Assert.Single(session.LogEvents.OfType<StealRoleSwappedEvent>());
         Assert.Equal(1, swapped.ActingPlayerSeat);
@@ -271,9 +271,9 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.Shiny));
         var die = new Die();
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _));
-        Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out _, out _));
+        Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err, out _), err);
 
         var completed = Assert.Single(session.LogEvents.OfType<StealCompletedEvent>());
         Assert.Equal(0, completed.ActingPlayerSeat);
@@ -298,12 +298,12 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.Shiny));
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShinyTokenPhase, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShinyTokenPhase, die, out var err, out _), err);
 
         var attempted = Assert.Single(session.LogEvents.OfType<StealAttemptedEvent>());
         Assert.Equal(0, attempted.ActingPlayerSeat);
@@ -324,12 +324,12 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.Feesh));
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeeshTokenPhase, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeeshTokenPhase, die, out var err, out _), err);
 
         var drawn = Assert.Single(session.LogEvents.OfType<CardDrawnPrivatelyEvent>());
         Assert.Equal(0, drawn.ActingPlayerSeat);
@@ -346,13 +346,13 @@ public sealed class GameLogEmissionTests
         p0.Hand.Add(new Card(CardName.MmmPie));
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
 
         var beforeCount = session.LogEvents.Count;
-        Assert.True(session.ApplyAction(0, GameAction.PlayMmmPieTokenPhase, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayMmmPieTokenPhase, die, out var err, out _), err);
 
         var played = Assert.Single(session.LogEvents.OfType<CardPlayedEvent>());
         Assert.Equal(0, played.ActingPlayerSeat);

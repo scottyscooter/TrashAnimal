@@ -1,5 +1,11 @@
 using TrashAnimal.GameLog;
-using TrashAnimal.Helpers;
+
+// TokenPhaseTokenResolver owns "start/resolve a token," used by both the CLI's delegate-driven
+// path (TryStartToken) and the API's explicit-choice path (TryStartHandStealWithVictim,
+// TryResolveStealAutoWithNoTargets). Any token that can't produce its normal effect (Steal with no hand
+// candidates, Bandit with an empty deck) auto-resolves with a TokenResolvedWithNoEffectEvent instead of
+// leaving the token stuck and unresolvable. Finishing/repeating an in-progress pass (including MmmPie's
+// "resolve this token twice") is owned by TokenPhaseTokenCompletionEngine — see that type's doc comment.
 
 namespace TrashAnimal.TokenPhase;
 
@@ -9,6 +15,8 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
     private readonly TokenPhaseCardEligibility _eligibility;
     private readonly TokenPhaseViewBuilder _viewBuilder;
     private readonly TokenPhaseBanditHandler _bandit;
+    private readonly TokenPhaseStealHandler _steal;
+    private readonly TokenPhaseTokenCompletionEngine _completion;
 
     public TokenPhaseTokenResolver(
         GameSession session,
@@ -19,16 +27,20 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         _eligibility = eligibility;
         _viewBuilder = viewBuilder;
         _bandit = new TokenPhaseBanditHandler(session, eligibility, this);
+        _steal = new TokenPhaseStealHandler(session);
+        _completion = new TokenPhaseTokenCompletionEngine(session, _bandit, _steal, viewBuilder);
     }
 
     internal TokenPhaseBanditHandler BanditHandler => _bandit;
 
-    public bool TryFinishCurrentTokenPassOrRepeat(TokenPhaseState state, out string? error) =>
-        FinishCurrentTokenPassOrRepeat(state, out error);
+    public bool TryFinishCurrentTokenPassOrRepeat(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken) =>
+        _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
 
-    public bool TryStartToken(TokenAction token, TokenPhaseState state, out string? error)
+    public bool TryStartToken(TokenAction token, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
+
         if (state.Step != TokenPhaseStep.ChoosingNextToken)
         {
             error = "Pick a token only when choosing the next token.";
@@ -44,16 +56,26 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         if (!state.TokenResolutionStartLocked)
             state.TokenResolutionStartLocked = true;
 
-        RecordTokenResolutionStarted(token);
+        TokenPhaseTokenLogRecording.RecordTokenResolutionStarted(_session, token);
 
         if (token == TokenAction.Steal)
         {
-            if (!StartHandSteal(out error))
-                return false;
+            if (!_steal.HasCandidates())
+            {
+                state.RemainingTokens.Remove(token);
+                state.ActiveToken = null;
+                TokenPhaseTokenLogRecording.RecordTokenResolvedWithNoEffect(_session, token);
+                var finished = _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out _);
+                resolvedWithNoEffectToken = token;
+                return finished;
+            }
 
-            state.RemainingTokens.Remove(token);
-            state.ActiveToken = token;
-            return true;
+            // Starting a Steal (first-pick, candidates present) always requires a chosen victim; callers
+            // must use the explicit-choice entry point (GameSession.TryStartTokenStealWithVictimChoice /
+            // TokenPhaseCoordinator.TryStartHandStealWithVictim) instead of the plain ResolveTokenSteal
+            // action, same as the CLI and the API/frontend both already do.
+            error = "A steal victim must be selected; use the explicit steal-victim API.";
+            return false;
         }
 
         state.RemainingTokens.Remove(token);
@@ -70,20 +92,30 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
                 return true;
 
             case TokenAction.DoubleTrash:
-                RunDoubleTrashDraws();
-                return FinishCurrentTokenPassOrRepeat(state, out error);
+                return _completion.TryRunDoubleTrashAndFinish(state, out error, out resolvedWithNoEffectToken);
 
             case TokenAction.Bandit:
                 if (!_bandit.StartBandit(state, out error))
                 {
-                    state.RemainingTokens.Add(token);
                     state.ActiveToken = null;
-                    return false;
+                    TokenPhaseTokenLogRecording.RecordTokenResolvedWithNoEffect(_session, token);
+                    var finished = _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out _);
+                    resolvedWithNoEffectToken = token;
+                    return finished;
                 }
 
                 return true;
 
             case TokenAction.Recycle:
+                if (_viewBuilder.GetRecycleOptions(state).Count == 0)
+                {
+                    state.ActiveToken = null;
+                    TokenPhaseTokenLogRecording.RecordTokenResolvedWithNoEffect(_session, token);
+                    var recycleFinished = _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out _);
+                    resolvedWithNoEffectToken = token;
+                    return recycleFinished;
+                }
+
                 state.Step = TokenPhaseStep.RecycleChoosingReplacement;
                 return true;
 
@@ -93,9 +125,10 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         }
     }
 
-    public bool TryStashTrashDraw(TokenPhaseState state, out string? error)
+    public bool TryStashTrashDraw(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.StashTrashChooseBranch)
         {
             error = "Not resolving StashTrash.";
@@ -105,16 +138,23 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         var drawn = _session.DrawPile.DealCards(1).ToList();
         _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
         _session.RegisterDrawOutcome(drawn);
-        RecordCardsDrawnPrivately(drawn);
-        return FinishCurrentTokenPassOrRepeat(state, out error);
+        TokenPhaseTokenLogRecording.RecordCardsDrawnPrivately(_session, drawn);
+        return _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
     }
 
-    public bool TryStashTrashEnterStashMode(TokenPhaseState state, out string? error)
+    public bool TryStashTrashEnterStashMode(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.StashTrashChooseBranch)
         {
             error = "Not resolving StashTrash.";
+            return false;
+        }
+
+        if (!_session.CurrentPlayer.Hand.Any(e => _eligibility.CanOfferCardForStashPrompt(e.Card.Name)))
+        {
+            error = "You have no cards that can be stashed.";
             return false;
         }
 
@@ -122,9 +162,10 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         return true;
     }
 
-    public bool TryStashTrashPickCard(int playerIndex, Guid cardId, TokenPhaseState state, out string? error)
+    public bool TryStashTrashPickCard(int playerIndex, Guid cardId, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.StashTrashPickCard)
         {
             error = "Not choosing a StashTrash stash card.";
@@ -150,13 +191,14 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         }
 
         _session.CurrentPlayer.AddToStash(card, faceUp: false);
-        RecordCardsStashed(new[] { card }, wasFaceUp: false);
-        return FinishCurrentTokenPassOrRepeat(state, out error);
+        TokenPhaseTokenLogRecording.RecordCardsStashed(_session, new[] { card }, wasFaceUp: false);
+        return _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
     }
 
-    public bool TryDoubleStashSubmit(int playerIndex, IReadOnlyList<Guid> cardIds, TokenPhaseState state, out string? error)
+    public bool TryDoubleStashSubmit(int playerIndex, IReadOnlyList<Guid> cardIds, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.DoubleStashChoosingCards)
         {
             error = "Not in DoubleStash resolution.";
@@ -202,14 +244,64 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         }
 
         if (stashedCards.Count > 0)
-            RecordCardsStashed(stashedCards, wasFaceUp: false);
+            TokenPhaseTokenLogRecording.RecordCardsStashed(_session, stashedCards, wasFaceUp: false);
 
-        return FinishCurrentTokenPassOrRepeat(state, out error);
+        return _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
     }
 
-    public bool TryRecycleReplacementPick(int playerIndex, TokenAction replacement, TokenPhaseState state, out string? error)
+    /// <summary>
+    /// Auto-resolves the Steal token when zero opponents have any card in hand to steal, instead of leaving
+    /// it stuck and unresolvable. Re-checks candidates defensively (never trusts the caller) before fizzling.
+    /// Used by the API's explicit-choice path (<see cref="GameSession.ApiSupport"/>); the CLI's delegate-driven
+    /// path already routes through the same fizzle handling inside <see cref="TryStartToken"/>/the completion engine.
+    /// </summary>
+    public bool TryResolveStealAutoWithNoTargets(TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
+        if (_steal.HasCandidates())
+        {
+            error = "Opponents have cards available to steal; a victim must be selected.";
+            return false;
+        }
+
+        state.RemainingTokens.Remove(TokenAction.Steal);
+        state.ActiveToken = null;
+        TokenPhaseTokenLogRecording.RecordTokenResolvedWithNoEffect(_session, TokenAction.Steal);
+        var finished = _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out _);
+        resolvedWithNoEffectToken = TokenAction.Steal;
+        return finished;
+    }
+
+    /// <summary>
+    /// Begins the Steal token's hand-steal with an already-chosen victim — used for both the first pick
+    /// (API/CLI explicit-choice path) and an MmmPie repeat parked in
+    /// <see cref="TokenPhaseStep.StealChoosingVictim"/>. Performs the same RemainingTokens/ActiveToken
+    /// exhaustion bookkeeping <see cref="TryStartToken"/> does for every other token, so Steal exhausts
+    /// correctly regardless of which entry point started it. Never itself fizzles (candidates are required
+    /// to already exist), so <paramref name="resolvedWithNoEffectToken"/> is always null.
+    /// </summary>
+    public bool TryStartHandStealWithVictim(int victimIndex, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
+    {
+        error = null;
+        resolvedWithNoEffectToken = null;
+        if (!_steal.StartWithVictim(victimIndex, out error))
+            return false;
+
+        state.RemainingTokens.Remove(TokenAction.Steal);
+        state.ActiveToken = TokenAction.Steal;
+        // Once the steal actually begins, GameSession.State drives the flow (AwaitingStealResponse), not
+        // the TokenPhase step; ChoosingNextToken is the correct neutral value here, matching what
+        // TryFinishCurrentTokenPassOrRepeat sets once the steal resolves. Harmless on the first-pick path,
+        // where the step is already ChoosingNextToken.
+        state.Step = TokenPhaseStep.ChoosingNextToken;
+        return true;
+    }
+
+    public bool TryRecycleReplacementPick(int playerIndex, TokenAction replacement, TokenPhaseState state, out string? error, out TokenAction? resolvedWithNoEffectToken)
+    {
+        error = null;
+        resolvedWithNoEffectToken = null;
         if (state.Step != TokenPhaseStep.RecycleChoosingReplacement)
         {
             error = "Not choosing a Recycle replacement.";
@@ -228,7 +320,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
             return false;
         }
 
-        if (state.InitialTokensSnapshot.Contains(replacement))
+        if (state.TokensIneligibleForRecycle.Contains(replacement))
         {
             error = "You did not have that token at the start of TokenPhase.";
             return false;
@@ -242,136 +334,7 @@ internal sealed class TokenPhaseTokenResolver : ITokenPhaseTokenCompletion
         }
 
         state.RemainingTokens.Add(replacement);
-        return FinishCurrentTokenPassOrRepeat(state, out error);
-    }
-
-    private void RunDoubleTrashDraws()
-    {
-        var drawn = _session.DrawPile.DealCards(2).ToList();
-        _session.CurrentPlayer.AddCards(drawn, markReceivedOnOwnerCurrentTurn: true);
-        _session.RegisterDrawOutcome(drawn);
-        RecordCardsDrawnPrivately(drawn);
-    }
-
-    private void RecordTokenResolutionStarted(TokenAction token) =>
-        _session.RecordLogEvent(new TokenResolutionStartedEvent(0, _session.TurnNumber, _session.CurrentPlayerIndex, token));
-
-    private void RecordCardsDrawnPrivately(IReadOnlyList<Card> drawn)
-    {
-        if (drawn.Count == 0)
-            return;
-
-        _session.RecordLogEvent(new CardDrawnPrivatelyEvent(
-            0,
-            _session.TurnNumber,
-            _session.CurrentPlayerIndex,
-            drawn.Select(c => c.Id).ToList(),
-            drawn.Select(c => c.Name).ToList()));
-    }
-
-    private void RecordCardsStashed(IReadOnlyList<Card> stashed, bool wasFaceUp)
-    {
-        if (stashed.Count == 0)
-            return;
-
-        _session.RecordLogEvent(new CardStashedEvent(
-            0,
-            _session.TurnNumber,
-            _session.CurrentPlayerIndex,
-            stashed.Select(c => c.Id).ToList(),
-            stashed.Select(c => c.Name).ToList(),
-            wasFaceUp));
-    }
-
-    private bool StartHandSteal(out string? error)
-    {
-        error = null;
-        if (_session.ChooseTokenHandStealVictim is null)
-        {
-            error = "No token-steal victim selector configured.";
-            return false;
-        }
-
-        var candidates = Opponents.GetAllWithNonEmptyHand(_session.Players, _session.CurrentPlayerIndex).ToList();
-        if (candidates.Count == 0)
-        {
-            error = "No opponent has a card in hand to steal.";
-            return false;
-        }
-
-        var victimIndex = _session.ChooseTokenHandStealVictim(_session.CurrentPlayerIndex, candidates);
-        if (!candidates.Contains(victimIndex))
-        {
-            error = "Token steal victim selection is invalid.";
-            return false;
-        }
-
-        if (_session.Players[victimIndex].Hand.Count == 0)
-        {
-            error = "Selected victim has an empty hand.";
-            return false;
-        }
-
-        _session.Steal.Begin(_session.CurrentPlayerIndex, victimIndex, StealTargetZone.Hand);
-        _session.ArmStealResumeState(GameState.TokenPhase);
-        _session.SetGameState(GameState.AwaitingStealResponse);
-        _session.RecordLogEvent(RollPhaseLogEventFactory.ForTokenStealBegun(_session.CurrentPlayerIndex, _session.TurnNumber, victimIndex));
-        return true;
-    }
-
-    private bool FinishCurrentTokenPassOrRepeat(TokenPhaseState state, out string? error)
-    {
-        error = null;
-        if (state.ResolveTokenTwice && state.ActiveToken is { } activeForRepeat)
-        {
-            state.ResolveTokenTwice = false;
-            RestartSubflow(activeForRepeat, state, out error);
-            return error is null;
-        }
-
-        state.ActiveToken = null;
-        state.Step = TokenPhaseStep.ChoosingNextToken;
-        state.ResetBanditWindow();
-
-        if (state.RemainingTokens.Count == 0)
-            _session.CompleteTokenPhaseAndEndTurn();
-
-        return true;
-    }
-
-    private bool RestartSubflow(TokenAction token, TokenPhaseState state, out string? error)
-    {
-        error = null;
-        state.ResetBanditWindow();
-        RecordTokenResolutionStarted(token);
-
-        switch (token)
-        {
-            case TokenAction.StashTrash:
-                state.Step = TokenPhaseStep.StashTrashChooseBranch;
-                return true;
-
-            case TokenAction.DoubleStash:
-                state.Step = TokenPhaseStep.DoubleStashChoosingCards;
-                return true;
-
-            case TokenAction.DoubleTrash:
-                RunDoubleTrashDraws();
-                return FinishCurrentTokenPassOrRepeat(state, out error);
-
-            case TokenAction.Bandit:
-                return _bandit.StartBandit(state, out error);
-
-            case TokenAction.Steal:
-                return StartHandSteal(out error);
-
-            case TokenAction.Recycle:
-                state.Step = TokenPhaseStep.RecycleChoosingReplacement;
-                return true;
-
-            default:
-                error = "Unsupported token for repeat.";
-                return false;
-        }
+        state.TokensIneligibleForRecycle.Add(replacement);
+        return _completion.TryFinishCurrentTokenPassOrRepeat(state, out error, out resolvedWithNoEffectToken);
     }
 }

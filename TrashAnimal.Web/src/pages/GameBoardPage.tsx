@@ -82,6 +82,8 @@ function GameBoardPage() {
       onSuccess: (response) => {
         if (!response.succeeded) {
           showToast(response.errorMessage ?? 'That action was rejected.')
+        } else if (response.infoMessage) {
+          showToast(response.infoMessage, 'info')
         }
       },
     })
@@ -117,12 +119,28 @@ function GameBoardPage() {
     setVictimPickerMode(null)
   }
 
+  function handleStartSteal() {
+    const opponentsWithCards = gameView.opponents.filter((opponent) => opponent.handCount > 0)
+    if (opponentsWithCards.length > 0) {
+      setVictimPickerMode('steal')
+    } else {
+      dispatch({ kind: 'resolveTokenSteal', playerSeat: localSeatIndex, victimSeat: null })
+    }
+  }
+
   const isLocalYumYumResponder =
     gameView.state === 'AwaitingYumYum' && gameView.yumYumResponderIndex === localSeatIndex
 
   const isAwaitingBanditResponse = gameView.tokenPhase?.step === 'BanditAwaitOpponentResponse'
   const isLocalBanditResponder =
     isAwaitingBanditResponse && gameView.tokenPhase!.banditCurrentResponderIndex === localSeatIndex
+
+  const shinyDisabledExplanation =
+    isLocalPlayerTurn &&
+    !allowedActions.includes('PlayShiny') &&
+    gameView.opponents.every((o) => o.stashFaceDownCount === 0 && o.stashFaceUpCards.length === 0)
+      ? 'No opponent has anything in their stash to steal.'
+      : null
 
   return (
     <div className="gb-root">
@@ -141,6 +159,7 @@ function GameBoardPage() {
         handCards={gameView.handCards}
         allowedActions={allowedActions}
         onFeeshClick={() => setFeeshPickerOpen(true)}
+        shinyDisabledExplanation={shinyDisabledExplanation}
       />
 
       <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2">
@@ -202,7 +221,7 @@ function GameBoardPage() {
           onCardPick={handleCardPick}
           onDoubleStashSubmit={handleDoubleStashSubmit}
           onRecyclePick={handleRecyclePick}
-          onStartSteal={() => setVictimPickerMode('steal')}
+          onStartSteal={handleStartSteal}
         />
       )}
 
@@ -221,7 +240,11 @@ function GameBoardPage() {
       {victimPickerMode && (
         <VictimPicker
           title={victimPickerMode === 'shiny' ? 'Play Shiny — steal from a stash' : 'Steal from a hand'}
-          opponents={gameView.opponents}
+          opponents={
+            victimPickerMode === 'steal'
+              ? gameView.opponents.filter((opponent) => opponent.handCount > 0)
+              : gameView.opponents
+          }
           onPick={handleVictimPick}
           onClose={() => setVictimPickerMode(null)}
           isPending={isPending}
