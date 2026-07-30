@@ -46,6 +46,7 @@ internal static class GameLogProjector
         TurnResolvedEvent e => BuildTurnResolvedMessage(e, viewerIndex, players),
         TurnEndedEvent e => BuildTurnEndedMessage(e, viewerIndex, players),
         GameEndedEvent e => BuildGameEndedMessage(e, viewerIndex, players),
+        TokenResolvedWithNoEffectEvent e => BuildTokenResolvedWithNoEffectMessage(e, viewerIndex, players),
         _ => throw new NotSupportedException($"Unhandled GameLogEvent type: {evt.GetType().Name}")
     };
 
@@ -151,6 +152,18 @@ internal static class GameLogProjector
             return "You won the game!";
 
         return $"{players[e.WinningPlayerSeat].Name} won the game!";
+    }
+
+    private static string BuildTokenResolvedWithNoEffectMessage(TokenResolvedWithNoEffectEvent e, int viewerIndex, IReadOnlyList<Player> players)
+    {
+        var actor = Actor(e.ActingPlayerSeat, viewerIndex, players);
+        return e.Token switch
+        {
+            TokenAction.Steal => $"{actor} picked a Steal token, but no opponent had a card — nothing happened.",
+            TokenAction.Bandit => $"{actor} picked a Bandit token, but the deck was empty — nothing happened.",
+            TokenAction.Recycle => $"{actor} picked a Recycle token, but there was no unrolled token to swap in — nothing happened.",
+            _ => $"{actor} picked a {e.Token} token, but nothing happened."
+        };
     }
 
     private static string Actor(int seat, int viewerIndex, IReadOnlyList<Player> players) =>

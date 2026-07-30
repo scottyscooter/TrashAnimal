@@ -50,9 +50,6 @@ public sealed partial class GameSession
 
     public Func<int, IReadOnlyList<int>, int>? ChooseShinyStealVictim { get; set; }
 
-    /// <summary>Selects victim index for the Steal token; candidates are opponents with at least one card in hand.</summary>
-    public Func<int, IReadOnlyList<int>, int>? ChooseTokenHandStealVictim { get; set; }
-
     public int? StealThiefIndex => _steal.ThiefIndex;
     public int? StealVictimIndex => _steal.VictimIndex;
     public StealTargetZone? InitialStealTargetZone => _steal.InitialStealTargetZone;
@@ -168,9 +165,13 @@ public sealed partial class GameSession
         return rollActions;
     }
 
-    public bool ApplyAction(int playerIndex, GameAction action, Die die, out string? error)
+    /// <param name="resolvedWithNoEffectToken">Set to the token that fizzled (produced no effect) if this
+    /// action caused a token to complete/repeat and fizzle in the process (e.g. a Bandit response that
+    /// closes the response window and, via MmmPie, repeats into an empty deck); null otherwise.</param>
+    public bool ApplyAction(int playerIndex, GameAction action, Die die, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
 
         if (State == GameState.GameEnded)
         {
@@ -217,7 +218,7 @@ public sealed partial class GameSession
                 return TryStealPass(playerIndex, out error);
 
             case GameAction.StealPlayDoggo:
-                return TryStealPlayDoggo(playerIndex, out error);
+                return TryStealPlayDoggo(playerIndex, out error, out resolvedWithNoEffectToken);
 
             case GameAction.StealPlayKitteh:
                 return TryStealPlayKitteh(playerIndex, out error);
@@ -227,34 +228,16 @@ public sealed partial class GameSession
                 return true;
 
             case GameAction.TokenBanditMatchPass:
-                return TryBanditPass(playerIndex, out error);
+                return TryBanditPass(playerIndex, out error, out resolvedWithNoEffectToken);
 
             default:
                 if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive)
-                    return _tokenPhaseCoordinator.TryApplyGameAction(playerIndex, action, out error);
+                    return _tokenPhaseCoordinator.TryApplyGameAction(playerIndex, action, out error, out resolvedWithNoEffectToken);
 
                 error = "Unknown action.";
                 return false;
         }
     }
-
-    public bool TryBanditPass(int opponentIndex, out string? error) =>
-        _tokenPhaseCoordinator.TryBanditPass(opponentIndex, out error);
-
-    public bool TryBanditStashMatchingCard(int opponentIndex, Guid cardId, out string? error) =>
-        _tokenPhaseCoordinator.TryBanditStashMatchingCard(opponentIndex, cardId, out error);
-
-    public bool TryTokenPhaseStashTrashPickCard(int playerIndex, Guid cardId, out string? error) =>
-        _tokenPhaseCoordinator.TryStashTrashPickCard(playerIndex, cardId, out error);
-
-    public bool TryTokenPhaseDoubleStash(int playerIndex, IReadOnlyList<Guid> cardIds, out string? error) =>
-        _tokenPhaseCoordinator.TryDoubleStashSubmit(playerIndex, cardIds, out error);
-
-    public bool TryTokenPhaseRecyclePick(int playerIndex, TokenAction replacement, out string? error) =>
-        _tokenPhaseCoordinator.TryRecycleReplacementPick(playerIndex, replacement, out error);
-
-    public IReadOnlyList<TokenAction> GetTokenPhaseRecycleOptions() =>
-        _tokenPhaseCoordinator.GetRecycleReplacementOptions();
 
     public bool TryAdvanceToResolveTokens(out string? error)
     {
@@ -304,65 +287,6 @@ public sealed partial class GameSession
 
         var action = cardName == CardName.Shiny ? GameAction.PlayShiny : GameAction.PlayFeesh;
         return TryExecuteRollPhaseHandler(action, playerIndex, out error);
-    }
-
-    public GameView GetViewForPlayer(int playerIndex)
-    {
-        var responderIndex = GetCurrentYumYumResponderIndex();
-        var responderName = responderIndex is null ? null : _players[responderIndex.Value].Name;
-
-        var hand = _players[playerIndex].Hand
-            .Select(e => new HandCardView(e.Card.Id, e.Card.Name))
-            .ToList();
-
-        var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
-
-        var tokenPhase = _tokenPhaseCoordinator.IsActive
-            ? _tokenPhaseCoordinator.BuildView(playerIndex)
-            : null;
-
-        var opponents = _players
-            .Where(p => p.Index != playerIndex)
-            .Select(p => new OpponentSummaryView(
-                p.Index,
-                p.Name,
-                p.Hand.Count,
-                p.StashPile.Count(e => !e.IsFaceUp),
-                p.StashPile.Where(e => e.IsFaceUp)
-                    .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
-                    .ToList()))
-            .ToList();
-
-        var discardPile = DiscardPile
-            .Select(c => new DiscardCardView(c.Id, c.Name))
-            .ToList();
-
-        var ownStashPile = _players[playerIndex].StashPile;
-        var ownStash = new OwnStashView(
-            ownStashPile.Count(e => !e.IsFaceUp),
-            ownStashPile.Where(e => e.IsFaceUp)
-                .Select(e => new StashableHandCard(e.Card.Id, e.Card.Name))
-                .ToList());
-
-        var log = GameLogProjector.BuildForViewer(_logRecorder.Events, playerIndex, _players);
-
-        return new GameView(
-            State,
-            CurrentPlayerIndex,
-            CurrentPlayer.Name,
-            PhaseOne.IsBusted,
-            PhaseOne.ForcedRollRemaining,
-            PhaseOne.Tokens,
-            hand,
-            responderIndex,
-            responderName,
-            stealPhase,
-            tokenPhase,
-            opponents,
-            _drawPile.GetDeckCount(),
-            discardPile,
-            ownStash,
-            log);
     }
 
     public void EndTurn()

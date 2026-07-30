@@ -158,12 +158,19 @@ public sealed partial class GameSession
     }
 
     /// <summary>
-    /// Start the Steal token resolution by selecting a victim to steal from their hand.
-    /// This method bypasses the ChooseTokenHandStealVictim delegate for API use.
+    /// Start the Steal token resolution by selecting a victim to steal from their hand — or, when
+    /// <paramref name="victimIndex"/> is null, auto-resolve the Steal token because no opponent has any card
+    /// in hand to steal (<paramref name="resolvedWithNoEffectToken"/> is set to <see cref="TokenAction.Steal"/>
+    /// in that case). This method bypasses the ChooseTokenHandStealVictim delegate for API use. A thin adapter
+    /// over <see cref="TokenPhaseCoordinator"/> — same pattern as <see cref="TryPlayShinyWithVictimChoice"/> /
+    /// <see cref="TryPlayFeeshWithCardChoice"/> — so RemainingTokens/ActiveToken exhaustion bookkeeping lives
+    /// in exactly one place (<see cref="TokenPhase.Services.TokenPhaseTokenResolver"/>) regardless of which
+    /// entry point started the Steal token.
     /// </summary>
-    public bool TryStartTokenStealWithVictimChoice(int playerIndex, int victimIndex, out string? error)
+    public bool TryStartTokenStealWithVictimChoice(int playerIndex, int? victimIndex, out string? error, out TokenAction? resolvedWithNoEffectToken)
     {
         error = null;
+        resolvedWithNoEffectToken = null;
         if (State != GameState.TokenPhase)
         {
             error = "Token steal can only be resolved during TokenPhase.";
@@ -179,26 +186,21 @@ public sealed partial class GameSession
         var candidates = Opponents.GetAllWithNonEmptyHand(Players, CurrentPlayerIndex).ToList();
         if (candidates.Count == 0)
         {
-            error = "No opponent has a card in hand to steal.";
-            return false;
+            if (victimIndex is not null)
+            {
+                error = "No opponent has a card in hand to steal.";
+                return false;
+            }
+
+            return _tokenPhaseCoordinator.TryResolveStealAutoWithNoTargets(out error, out resolvedWithNoEffectToken);
         }
 
-        if (!candidates.Contains(victimIndex))
+        if (victimIndex is not int victim || !candidates.Contains(victim))
         {
             error = "Selected victim does not have cards in hand or is not a valid opponent.";
             return false;
         }
 
-        if (_players[victimIndex].Hand.Count == 0)
-        {
-            error = "Selected victim has an empty hand.";
-            return false;
-        }
-
-        _steal.Begin(CurrentPlayerIndex, victimIndex, StealTargetZone.Hand);
-        ArmStealResumeState(GameState.TokenPhase);
-        State = GameState.AwaitingStealResponse;
-        RecordLogEvent(RollPhaseLogEventFactory.ForTokenStealBegun(playerIndex, TurnNumber, victimIndex));
-        return true;
+        return _tokenPhaseCoordinator.TryStartHandStealWithVictim(victim, out error, out resolvedWithNoEffectToken);
     }
 }

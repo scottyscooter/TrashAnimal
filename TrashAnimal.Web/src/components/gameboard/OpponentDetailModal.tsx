@@ -38,9 +38,7 @@ function OpponentDetailModal({ opponents, selectedIndex, onSelectIndex, onClose 
         </button>
       )}
 
-      {/* Matches the "YOUR TOKENS" panel's width (6 x 64px slots + 5x14px gaps + px-6 padding =
-          510px) rather than the generic wide preset, which extended well past it. */}
-      <Modal onClose={onClose} labelledBy="opponent-modal-heading" maxWidthClassName="max-w-[510px]">
+      <Modal onClose={onClose} labelledBy="opponent-modal-heading" maxWidthClassName="max-w-[620px]">
         <div className="mb-4 flex items-center gap-3">
           <span
             className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"

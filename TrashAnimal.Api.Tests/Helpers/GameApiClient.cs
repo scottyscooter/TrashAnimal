@@ -83,6 +83,6 @@ public sealed class GameApiClient
         SubmitCommandAsync(gameId, new RecyclePickCommand(playerSeat, replacement));
 
     public Task<(HttpStatusCode Status, GameCommandResponse? Body)> ResolveTokenStealAsync(
-        Guid gameId, int playerSeat, int victimSeat) =>
+        Guid gameId, int playerSeat, int? victimSeat) =>
         SubmitCommandAsync(gameId, new ResolveTokenStealCommand(playerSeat, victimSeat));
 }

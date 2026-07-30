@@ -31,6 +31,12 @@ internal sealed class TokenPhaseInterruptCardPlay
             return false;
         }
 
+        if (state.ResolveTokenTwice)
+        {
+            error = "A token repeat is already pending.";
+            return false;
+        }
+
         if (!_session.CurrentPlayer.TryRemoveCard(CardName.MmmPie, out var pie))
         {
             error = "No MmmPie in hand.";
@@ -169,7 +175,9 @@ internal sealed class TokenPhaseInterruptCardPlay
     public bool CanPlayMmmPie(TokenPhaseState state)
     {
         var entry = _session.CurrentPlayer.Hand.FirstOrDefault(e => e.Card.Name == CardName.MmmPie);
-        return entry is not null && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked);
+        return entry is not null
+            && _eligibility.CanPlayCardForActionDuringTokenPhase(entry, state.TokenResolutionStartLocked)
+            && !state.ResolveTokenTwice;
     }
 
     public bool CanPlayShinyTokenPhase(TokenPhaseState state)

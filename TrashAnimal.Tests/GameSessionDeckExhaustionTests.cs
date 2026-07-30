@@ -15,13 +15,13 @@ public sealed class GameSessionDeckExhaustionTests
         var session = new GameSession(new[] { p0, p1 }, pile);
 
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
         Assert.True(session.PhaseOne.IsBusted);
 
         var aliceHandBefore = p0.Hand.Count;
         var bobHandBefore = p1.Hand.Count;
-        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out var err, out _), err);
 
         Assert.Equal(GameState.GameEnded, session.State);
         Assert.Equal(0, session.CurrentPlayerIndex);
@@ -39,14 +39,14 @@ public sealed class GameSessionDeckExhaustionTests
         var session = new GameSession(new[] { p0, p1 }, pileMock.Object);
 
         var die = DieMockFactory.CreateSequenced(TokenAction.DoubleTrash).Object;
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _));
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _));
         Assert.Equal(GameState.TokenPhase, session.State);
 
-        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenDoubleTrash, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.ResolveTokenDoubleTrash, die, out _, out _));
         Assert.Equal(GameState.TurnEnd, session.State);
         Assert.Equal(0, pileMock.Object.GetDeckCount());
 
@@ -65,12 +65,12 @@ public sealed class GameSessionDeckExhaustionTests
         var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _, out _));
         Assert.Equal(GameState.GameEnded, session.State);
 
-        Assert.False(session.ApplyAction(0, GameAction.RollDie, die, out var err));
+        Assert.False(session.ApplyAction(0, GameAction.RollDie, die, out var err, out _));
         Assert.Equal("The game has ended.", err);
     }
 
@@ -92,9 +92,9 @@ public sealed class GameSessionDeckExhaustionTests
         var pile = DrawPileMockFactory.CreateWithCards(1).Object;
         var session = new GameSession(new[] { p0, p1 }, pile);
         var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _));
-        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out _, out _));
+        Assert.True(session.ApplyAction(0, GameAction.AbandonBust, die, out _, out _));
 
         var summary = session.GetGameEndScoreSummary();
         Assert.Equal(2, summary.Count);

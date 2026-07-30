@@ -28,14 +28,14 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         {
             var responder = session.GetCurrentYumYumResponderIndex();
             Assert.NotNull(responder);
-            Assert.True(session.ApplyAction(responder.Value, GameAction.YumYumPass, die, out var err), err);
+            Assert.True(session.ApplyAction(responder.Value, GameAction.YumYumPass, die, out var err, out _), err);
         }
     }
 
     private static void RollOnceThenVoluntaryStop(GameSession session, Die die)
     {
-        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err1), err1);
-        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out var err2), err2);
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var err1, out _), err1);
+        Assert.True(session.ApplyAction(0, GameAction.StopRolling, die, out var err2, out _), err2);
         Assert.Equal(GameState.AwaitingYumYum, session.State);
     }
 
@@ -66,7 +66,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.DoesNotContain(GameAction.PlayShiny, afterWindow);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterWindow);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err, out _), err);
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -93,11 +93,11 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.AdvanceToResolveTokens, mid);
         Assert.DoesNotContain(GameAction.PlayShiny, mid);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1), err1);
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1, out _), err1);
         Assert.Contains(shinyInHand, p0.Hand.Select(e => e.Card));
         Assert.Contains(nannersOnDiscard, p0.Hand.Select(e => e.Card));
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2), err2);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err2, out _), err2);
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -119,7 +119,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1), err1);
+        Assert.True(session.ApplyAction(0, GameAction.PlayFeesh, die, out var err1, out _), err1);
         Assert.Contains(shinyOnDiscard, p0.Hand.Select(e => e.Card));
         Assert.DoesNotContain(p0.Hand, e => e.Card.Name == CardName.Feesh);
 
@@ -151,7 +151,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.DoesNotContain(GameAction.PlayShiny, actions);
         Assert.Contains(GameAction.AdvanceToResolveTokens, actions);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err, out _), err);
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -172,13 +172,13 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         RollOnceThenVoluntaryStop(session, die);
         PassEntireYumYumWindow(session, die);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1), err1);
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2), err2);
-        Assert.True(session.TryCompleteStealWithCard(0, stashedPie.Id, out var err3), err3);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1, out _), err1);
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2, out _), err2);
+        Assert.True(session.TryCompleteStealWithCard(0, stashedPie.Id, out var err3, out _), err3);
         Assert.Contains(stashedPie, p0.Hand.Select(e => e.Card));
         Assert.Empty(p1.StashPile);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4), err4);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4, out _), err4);
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 
@@ -208,9 +208,9 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.PlayShiny, afterWindow);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterWindow);
 
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1), err1);
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2), err2);
-        Assert.True(session.TryCompleteStealWithCard(0, mmmPieInStash.Id, out var err3), err3);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1, out _), err1);
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2, out _), err2);
+        Assert.True(session.TryCompleteStealWithCard(0, mmmPieInStash.Id, out var err3, out _), err3);
 
         Assert.Contains(feeshInHand, p0.Hand.Select(e => e.Card));
         Assert.Contains(mmmPieInStash, p0.Hand.Select(e => e.Card));
@@ -219,7 +219,7 @@ public sealed class GameSessionVoluntaryStopScenariosTests
         Assert.Contains(GameAction.PlayFeesh, afterSteal);
         Assert.Contains(GameAction.AdvanceToResolveTokens, afterSteal);
 
-        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4), err4);
+        Assert.True(session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out var err4, out _), err4);
         Assert.Equal(GameState.TokenPhase, session.State);
     }
 }

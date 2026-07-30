@@ -150,8 +150,8 @@ public sealed class GameApplicationService
             "Game {GameId}: player {PlayerSeat} submitting action {Action}.",
             gameId, playerSeat, action);
 
-        var succeeded = entry.Session.ApplyAction(playerSeat, action, entry.Die, out var error);
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        var succeeded = entry.Session.ApplyAction(playerSeat, action, entry.Die, out var error, out var resolvedWithNoEffectToken);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
     }
 
     private async Task<GameCommandResult> ExecutePlayFeeshUnlockedAsync(
@@ -212,12 +212,12 @@ public sealed class GameApplicationService
         GameSessionEntry entry,
         Guid gameId,
         int playerSeat,
-        int victimSeat)
+        int? victimSeat)
     {
         _logger.LogInformation("Game {GameId}: player {PlayerSeat} resolving token steal against player {VictimSeat}.", gameId, playerSeat, victimSeat);
 
-        var succeeded = entry.Session.TryStartTokenStealWithVictimChoice(playerSeat, victimSeat, out var error);
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        var succeeded = entry.Session.TryStartTokenStealWithVictimChoice(playerSeat, victimSeat, out var error, out var resolvedWithNoEffectToken);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
     }
 
     private async Task<GameCommandResult> ExecuteDoubleStashUnlockedAsync(
@@ -228,8 +228,8 @@ public sealed class GameApplicationService
     {
         _logger.LogInformation("Game {GameId}: player {PlayerSeat} submitting double stash ({CardCount} cards).", gameId, playerSeat, cardIds.Count);
 
-        var succeeded = entry.Session.TryTokenPhaseDoubleStash(playerSeat, cardIds, out var error);
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        var succeeded = entry.Session.TryTokenPhaseDoubleStash(playerSeat, cardIds, out var error, out var resolvedWithNoEffectToken);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
     }
 
     private async Task<GameCommandResult> ExecuteRecyclePickUnlockedAsync(
@@ -240,8 +240,8 @@ public sealed class GameApplicationService
     {
         _logger.LogInformation("Game {GameId}: player {PlayerSeat} picking recycle replacement {Replacement}.", gameId, playerSeat, replacement);
 
-        var succeeded = entry.Session.TryTokenPhaseRecyclePick(playerSeat, replacement, out var error);
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        var succeeded = entry.Session.TryTokenPhaseRecyclePick(playerSeat, replacement, out var error, out var resolvedWithNoEffectToken);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
     }
 
     private async Task<GameCommandResult> ExecuteCardPickUnlockedAsync(
@@ -252,12 +252,13 @@ public sealed class GameApplicationService
     {
         bool succeeded;
         string? error;
+        TokenAction? resolvedWithNoEffectToken;
 
         switch (entry.Session.State)
         {
             case GameState.AwaitingStealCardPick:
                 _logger.LogInformation("Game {GameId}: player {PlayerSeat} completing steal pick, card {CardId}.", gameId, playerSeat, cardId);
-                succeeded = entry.Session.TryCompleteStealWithCard(playerSeat, cardId, out error);
+                succeeded = entry.Session.TryCompleteStealWithCard(playerSeat, cardId, out error, out resolvedWithNoEffectToken);
                 break;
 
             case GameState.TokenPhase:
@@ -266,12 +267,12 @@ public sealed class GameApplicationService
                 {
                     case TokenPhaseStep.StashTrashPickCard:
                         _logger.LogInformation("Game {GameId}: player {PlayerSeat} picking card {CardId} for stash-trash.", gameId, playerSeat, cardId);
-                        succeeded = entry.Session.TryTokenPhaseStashTrashPickCard(playerSeat, cardId, out error);
+                        succeeded = entry.Session.TryTokenPhaseStashTrashPickCard(playerSeat, cardId, out error, out resolvedWithNoEffectToken);
                         break;
 
                     case TokenPhaseStep.BanditAwaitOpponentResponse:
                         _logger.LogInformation("Game {GameId}: player {PlayerSeat} stashing card {CardId} for bandit.", gameId, playerSeat, cardId);
-                        succeeded = entry.Session.TryBanditStashMatchingCard(playerSeat, cardId, out error);
+                        succeeded = entry.Session.TryBanditStashMatchingCard(playerSeat, cardId, out error, out resolvedWithNoEffectToken);
                         break;
 
                     default:
@@ -283,7 +284,7 @@ public sealed class GameApplicationService
                 return GameCommandResult.Failure("A card pick is not expected in the current game state.");
         }
 
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
     }
 
     private async Task<GameCommandResult> WithSessionLockAsync(
@@ -310,7 +311,8 @@ public sealed class GameApplicationService
         Guid gameId,
         int playerSeat,
         bool succeeded,
-        string? error)
+        string? error,
+        string? infoMessage = null)
     {
         if (!succeeded)
         {
@@ -323,9 +325,26 @@ public sealed class GameApplicationService
 
         var view = entry.Session.GetViewForPlayer(playerSeat);
         var allowedActions = entry.Session.GetAllowedActionsForPlayer(playerSeat);
-        return GameCommandResult.Ok(view, allowedActions);
+        return GameCommandResult.Ok(view, allowedActions, infoMessage);
     }
 
     private static bool IsValidPlayerSeat(GameSession session, int playerSeat) =>
         playerSeat >= 0 && playerSeat < session.Players.Count;
+
+    /// <summary>
+    /// Builds the player-facing toast text for a token that auto-resolved with no effect (see
+    /// <c>TrashAnimal.GameLog.GameLogProjector.BuildTokenResolvedWithNoEffectMessage</c> for the equivalent
+    /// game-log wording). This is the single place every command handler that can trigger a token
+    /// fizzle — directly (a first pick with zero valid targets) or as an automatic MmmPie-repeat cascade off
+    /// a different command — routes through, so <see cref="GameCommandResponse.InfoMessage"/> is populated
+    /// consistently regardless of which command triggered the fizzle.
+    /// </summary>
+    private static string? BuildTokenFizzleInfoMessage(TokenAction? resolvedWithNoEffectToken) => resolvedWithNoEffectToken switch
+    {
+        null => null,
+        TokenAction.Steal => "No opponents had any cards to steal — the Steal token resolved with no effect.",
+        TokenAction.Bandit => "The deck was empty — the Bandit token resolved with no effect.",
+        TokenAction.Recycle => "There was no unrolled token to swap in — the Recycle token resolved with no effect.",
+        var token => $"The {token} token resolved with no effect."
+    };
 }

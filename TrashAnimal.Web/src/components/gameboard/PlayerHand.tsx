@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import type { GameAction, HandCardView } from '../../api/types';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import InfoBadge from '../InfoBadge';
 
 interface PlayerHandProps {
   handCards: HandCardView[];
   allowedActions: GameAction[];
   onFeeshClick: () => void;
+  shinyDisabledExplanation: string | null;
 }
 
 /** Fanned hand per the design: hover-spreads the whole fan, and the specifically-hovered card
  * additionally scales up and lifts to the front. */
-function PlayerHand({ handCards, allowedActions, onFeeshClick }: PlayerHandProps) {
+function PlayerHand({ handCards, allowedActions, onFeeshClick, shinyDisabledExplanation }: PlayerHandProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const canPlayFeesh = allowedActions.includes('PlayFeesh');
 
@@ -33,6 +35,15 @@ function PlayerHand({ handCards, allowedActions, onFeeshClick }: PlayerHandProps
         const hoverLift = isHovered ? 34 : 0;
         const translateY = dropFromCenter - hoverLift;
         const scale = isHovered ? 1.16 : 1;
+        const isShiny = card.name === 'Shiny';
+        const cardImage = (
+          <div
+            className="h-full w-full overflow-hidden rounded-[14px]"
+            style={isShiny && shinyDisabledExplanation ? { opacity: 0.5 } : undefined}
+          >
+            <img src={CARD_IMAGE_BY_NAME[card.name]} alt={card.name} className="h-full w-full object-cover" />
+          </div>
+        );
 
         return (
           // A native <button disabled> suppresses hover/mouseenter in most browsers, not just
@@ -52,7 +63,7 @@ function PlayerHand({ handCards, allowedActions, onFeeshClick }: PlayerHandProps
                 onFeeshClick();
               }
             }}
-            className="absolute bottom-0 left-1/2 h-[277px] w-[198px] overflow-hidden rounded-[14px] shadow-lg transition-[left,transform] duration-200 ease-out"
+            className="absolute bottom-0 left-1/2 h-[277px] w-[198px] shadow-lg transition-[left,transform] duration-200 ease-out"
             style={{
               left: `calc(50% + ${offset * spacing}px)`,
               transform: `translateX(-50%) translateY(${translateY}px) rotate(${rotation}deg) scale(${scale})`,
@@ -63,11 +74,7 @@ function PlayerHand({ handCards, allowedActions, onFeeshClick }: PlayerHandProps
             }}
             title={canPlayFeesh ? `Play Feesh to retrieve a card (uses ${card.name})` : card.name}
           >
-            <img
-              src={CARD_IMAGE_BY_NAME[card.name]}
-              alt={card.name}
-              className="h-full w-full object-cover"
-            />
+            {isShiny ? <InfoBadge info={shinyDisabledExplanation}>{cardImage}</InfoBadge> : cardImage}
           </div>
         );
       })}

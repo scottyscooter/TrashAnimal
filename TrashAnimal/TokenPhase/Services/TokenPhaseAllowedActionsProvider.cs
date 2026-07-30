@@ -4,11 +4,16 @@ internal sealed class TokenPhaseAllowedActionsProvider
 {
     private readonly GameSession _session;
     private readonly TokenPhaseInterruptCardPlay _interruptCards;
+    private readonly TokenPhaseCardEligibility _eligibility;
 
-    public TokenPhaseAllowedActionsProvider(GameSession session, TokenPhaseInterruptCardPlay interruptCards)
+    public TokenPhaseAllowedActionsProvider(
+        GameSession session,
+        TokenPhaseInterruptCardPlay interruptCards,
+        TokenPhaseCardEligibility eligibility)
     {
         _session = session;
         _interruptCards = interruptCards;
+        _eligibility = eligibility;
     }
 
     public IReadOnlyList<GameAction> GetAllowedActions(TokenPhaseState state, int playerIndex)
@@ -44,7 +49,8 @@ internal sealed class TokenPhaseAllowedActionsProvider
 
             case TokenPhaseStep.StashTrashChooseBranch:
                 actions.Add(GameAction.TokenStashTrashDrawOne);
-                actions.Add(GameAction.TokenStashTrashStashMode);
+                if (HasStashableHandCard())
+                    actions.Add(GameAction.TokenStashTrashStashMode);
                 if (_interruptCards.CanPlayMmmPie(state))
                     actions.Add(GameAction.PlayMmmPieTokenPhase);
                 if (_interruptCards.CanPlayShinyTokenPhase(state))
@@ -74,8 +80,15 @@ internal sealed class TokenPhaseAllowedActionsProvider
 
             case TokenPhaseStep.RecycleChoosingReplacement:
                 break;
+
+            case TokenPhaseStep.StealChoosingVictim:
+                actions.Add(GameAction.ResolveTokenSteal);
+                break;
         }
 
         return actions;
     }
+
+    private bool HasStashableHandCard() =>
+        _session.CurrentPlayer.Hand.Any(e => _eligibility.CanOfferCardForStashPrompt(e.Card.Name));
 }

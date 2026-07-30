@@ -70,6 +70,20 @@ public sealed class CliHumanController : IPlayerController
         return opponentIndicesWithNonEmptyStash[choice - 1];
     }
 
+    public int ChooseTokenStealVictim(GameView view, IReadOnlyList<int> opponentIndicesWithNonEmptyHand)
+    {
+        if (opponentIndicesWithNonEmptyHand.Count == 0)
+            throw new InvalidOperationException("Token steal victim choice requires at least one candidate.");
+
+        Console.WriteLine();
+        Console.WriteLine($"{DisplayName}: choose a victim to steal one card from hand:");
+        for (var i = 0; i < opponentIndicesWithNonEmptyHand.Count; i++)
+            Console.WriteLine($"{i + 1}. Player index {opponentIndicesWithNonEmptyHand[i]}");
+
+        var choice = Cli.ReadIntInRange("Choice: ", 1, opponentIndicesWithNonEmptyHand.Count);
+        return opponentIndicesWithNonEmptyHand[choice - 1];
+    }
+
     public Guid ChooseStealCard(GameView view, IReadOnlyList<StealPickSlot> slots)
     {
         if (slots.Count == 0)

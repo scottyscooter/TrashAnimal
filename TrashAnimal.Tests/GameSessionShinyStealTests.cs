@@ -49,13 +49,13 @@ public sealed class GameSessionShinyStealTests
         p0.Hand.Add(new Card(CardName.Shiny));
 
         var die = new Die();
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1), err1);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out var err1, out _), err1);
         Assert.Equal(GameState.AwaitingStealResponse, session.State);
 
-        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2), err2);
+        Assert.True(session.ApplyAction(1, GameAction.StealPass, die, out var err2, out _), err2);
         Assert.Equal(GameState.AwaitingStealCardPick, session.State);
 
-        Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err3), err3);
+        Assert.True(session.TryCompleteStealWithCard(0, stashed.Id, out var err3, out _), err3);
         Assert.Equal(GameState.RollPhase, session.State);
         Assert.Contains(stashed, p0.Hand.Select(e => e.Card));
         Assert.DoesNotContain(p1.StashPile, e => e.Card.Id == stashed.Id);
@@ -72,8 +72,8 @@ public sealed class GameSessionShinyStealTests
 
         var before = deck.GetDeckCount();
         var die = new Die();
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err), err);
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err, out _), err);
         Assert.Equal(GameState.RollPhase, session.State);
         Assert.Equal(before - 2, deck.GetDeckCount());
 
@@ -100,8 +100,8 @@ public sealed class GameSessionShinyStealTests
         session.ChooseShinyStealVictim = (_, _) => 1;
 
         var die = new Die();
-        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _));
-        Assert.True(session.ApplyAction(1, GameAction.StealPlayKitteh, die, out _));
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayKitteh, die, out _, out _));
 
         Assert.Equal(1, session.StealThiefIndex);
         Assert.Equal(0, session.StealVictimIndex);
@@ -111,8 +111,8 @@ public sealed class GameSessionShinyStealTests
         Assert.NotNull(view.StealPhase);
         Assert.Equal(StealTargetZone.Stash, view.StealPhase!.InitialStealTargetZone);
 
-        Assert.True(session.ApplyAction(0, GameAction.StealPass, die, out _));
-        Assert.True(session.TryCompleteStealWithCard(1, p0.StashPile[0].Card.Id, out _), "Bob steals Alice's stash card");
+        Assert.True(session.ApplyAction(0, GameAction.StealPass, die, out _, out _));
+        Assert.True(session.TryCompleteStealWithCard(1, p0.StashPile[0].Card.Id, out _, out _), "Bob steals Alice's stash card");
         Assert.Contains(victimCard, p1.Hand.Select(e => e.Card));
     }
 }

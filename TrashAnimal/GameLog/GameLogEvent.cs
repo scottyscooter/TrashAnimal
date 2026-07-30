@@ -147,3 +147,14 @@ public sealed record GameEndedEvent(
     int TurnNumber,
     int ActingPlayerSeat,
     int WinningPlayerSeat) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);
+
+/// <summary>The acting player picked <paramref name="Token"/>, but its normal effect couldn't happen (Steal:
+/// no opponent had a card in hand; Bandit: the deck was empty), so it resolved with no effect. One event
+/// shape reused across every token that can fizzle this way — the fact ("token X resolved without producing
+/// its effect") is identical in shape regardless of token; only the human-readable reason differs, and that's
+/// a projection concern (see <see cref="GameLogProjector"/>), not a new fact type.</summary>
+public sealed record TokenResolvedWithNoEffectEvent(
+    int SequenceNumber,
+    int TurnNumber,
+    int ActingPlayerSeat,
+    TokenAction Token) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);

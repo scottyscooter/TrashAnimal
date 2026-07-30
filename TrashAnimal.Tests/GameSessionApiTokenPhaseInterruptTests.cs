@@ -26,10 +26,10 @@ public sealed class GameSessionApiTokenPhaseInterruptTests
         var session = new GameSession(new[] { p0, p1 }, new Deck());
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
 
-        session.ApplyAction(0, GameAction.RollDie, die, out _);
-        session.ApplyAction(0, GameAction.StopRolling, die, out _);
-        session.ApplyAction(1, GameAction.YumYumPass, die, out _);
-        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _);
+        session.ApplyAction(0, GameAction.RollDie, die, out _, out _);
+        session.ApplyAction(0, GameAction.StopRolling, die, out _, out _);
+        session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _);
+        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _);
 
         Assert.Equal(GameState.TokenPhase, session.State);
         p0.Hand.Clear();

@@ -105,7 +105,7 @@ public sealed class GamesController : ControllerBase
     /// | Standard game action | <c>"action"</c> | <c>action</c> (GameAction) |
     /// | Play Feesh card | <c>"playFeesh"</c> | <c>cardId</c> (Guid) |
     /// | Play Shiny card | <c>"playShiny"</c> | <c>victimSeat</c> (int) |
-    /// | Resolve token steal | <c>"resolveTokenSteal"</c> | <c>victimSeat</c> (int) |
+    /// | Resolve token steal | <c>"resolveTokenSteal"</c> | <c>victimSeat</c> (int, nullable — null means no opponent has any card in hand to steal, and the token auto-resolves with no effect) |
     /// | Card pick (context-dependent) | <c>"cardPick"</c> | <c>cardId</c> (Guid) |
     /// | Double stash submit | <c>"doubleStash"</c> | <c>cardIds</c> (Guid[]) |
     /// | Recycle pick | <c>"recyclePick"</c> | <c>replacement</c> (TokenAction) |
@@ -116,9 +116,14 @@ public sealed class GamesController : ControllerBase
     ///   "succeeded": true,
     ///   "errorMessage": null,
     ///   "view": { ...updated GameView for the acting player... },
-    ///   "allowedActions": ["EndTurn"]
+    ///   "allowedActions": ["EndTurn"],
+    ///   "infoMessage": null
     /// }
     /// </code>
+    ///
+    /// <c>infoMessage</c> is populated (non-null) on some successful commands to convey a note that isn't an
+    /// error — e.g. resolving a token-phase Steal with <c>victimSeat: null</c> because no opponent had any
+    /// card in hand returns <c>succeeded: true</c> with an explanatory <c>infoMessage</c> instead of an error.
     ///
     /// 422 response body (game rule rejection):
     /// <code>
@@ -148,7 +153,7 @@ public sealed class GamesController : ControllerBase
             return UnprocessableEntity(GameCommandResponse.FromFailure(result.ErrorMessage!));
         }
 
-        return Ok(GameCommandResponse.FromSuccess(result.View!, result.AllowedActions!));
+        return Ok(GameCommandResponse.FromSuccess(result.View!, result.AllowedActions!, result.InfoMessage));
     }
 
     /// <summary>Returns the final scoreboard for a completed game.</summary>

@@ -58,10 +58,10 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
         var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
 
-        session.ApplyAction(0, GameAction.RollDie, die, out _);
-        session.ApplyAction(0, GameAction.StopRolling, die, out _);
-        session.ApplyAction(1, GameAction.YumYumPass, die, out _);
-        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _);
+        session.ApplyAction(0, GameAction.RollDie, die, out _, out _);
+        session.ApplyAction(0, GameAction.StopRolling, die, out _, out _);
+        session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _);
+        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _);
 
         Assert.Equal(GameState.TokenPhase, session.State);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
@@ -83,10 +83,10 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
         var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
 
-        session.ApplyAction(0, GameAction.RollDie, die, out _);
-        session.ApplyAction(0, GameAction.StopRolling, die, out _);
-        session.ApplyAction(1, GameAction.YumYumPass, die, out _);
-        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _);
+        session.ApplyAction(0, GameAction.RollDie, die, out _, out _);
+        session.ApplyAction(0, GameAction.StopRolling, die, out _, out _);
+        session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _);
+        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _);
 
         Assert.Equal(GameState.TokenPhase, session.State);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
@@ -148,10 +148,10 @@ public sealed class TokenPhaseInterruptTests : IClassFixture<TrashApiTestFactory
         var die = DieMockFactory.CreateSequenced(TokenAction.StashTrash).Object;
         var session = new GameSession([p0, p1], DrawPileMockFactory.CreateWithCards(50).Object);
 
-        session.ApplyAction(0, GameAction.RollDie, die, out _);
-        session.ApplyAction(0, GameAction.StopRolling, die, out _);
-        session.ApplyAction(1, GameAction.YumYumPass, die, out _);
-        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _);
+        session.ApplyAction(0, GameAction.RollDie, die, out _, out _);
+        session.ApplyAction(0, GameAction.StopRolling, die, out _, out _);
+        session.ApplyAction(1, GameAction.YumYumPass, die, out _, out _);
+        session.ApplyAction(0, GameAction.AdvanceToResolveTokens, die, out _, out _);
 
         Assert.Equal(GameState.TokenPhase, session.State);
         _factory.SessionRepository.RegisterSession(gameId, session, die);
