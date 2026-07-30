@@ -495,6 +495,9 @@ function assertGameLogEntryStructure(entry: unknown): void {
 
   expect(e).toHaveProperty('message');
   expect(typeof e.message).toBe('string');
+
+  expect(e).toHaveProperty('affectedPlayerSeat');
+  expect(e.affectedPlayerSeat === null || typeof e.affectedPlayerSeat === 'number').toBe(true);
 }
 
 /**

@@ -173,7 +173,7 @@ public sealed partial class GameSession
     {
         EnsureState(GameState.AwaitingYumYum);
         var rollerIndex = CurrentPlayerIndex;
-        return _yumYumWindow.TryRespond(
+        var succeeded = _yumYumWindow.TryRespond(
             opponentPlayerIndex,
             playYumYum,
             _players,
@@ -186,6 +186,15 @@ public sealed partial class GameSession
             },
             onWindowClosedReturnToRollPhase: () => State = GameState.RollPhase,
             out error);
+
+        if (succeeded && !playYumYum && _yumYumWindow.IsAwaiting)
+        {
+            var nextResponder = GetCurrentYumYumResponderIndex();
+            if (nextResponder.HasValue)
+                RecordLogEvent(new YumYumResponseWindowAdvancedEvent(0, TurnNumber, rollerIndex, nextResponder.Value));
+        }
+
+        return succeeded;
     }
 
     public bool TryRecoverFromBustWithNanners(out string? error) =>
@@ -230,6 +239,11 @@ public sealed partial class GameSession
         _yumYumWindow.Open(GetOpponentIndicesClockwise(CurrentPlayerIndex, _players.Count));
         State = GameState.AwaitingYumYum;
         RecordLogEvent(new TurnStoppedRollingEvent(0, TurnNumber, CurrentPlayerIndex));
+
+        var initialResponder = GetCurrentYumYumResponderIndex();
+        if (initialResponder.HasValue)
+            RecordLogEvent(new YumYumResponseWindowAdvancedEvent(0, TurnNumber, CurrentPlayerIndex, initialResponder.Value));
+
         return true;
     }
 }

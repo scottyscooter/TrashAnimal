@@ -158,3 +158,39 @@ public sealed record TokenResolvedWithNoEffectEvent(
     int TurnNumber,
     int ActingPlayerSeat,
     TokenAction Token) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);
+
+/// <summary>The Yum Yum response window opened (a voluntary stop) or advanced to the next clockwise
+/// opponent (a pass that didn't close the window). <see cref="GameLogEvent.ActingPlayerSeat"/> is the
+/// roller whose stop opened the window (carried through every advance, since that's still the reason a
+/// response is needed); <paramref name="ResponderSeat"/> is the opponent now on the clock. Emitted from
+/// both <c>GameSession.StealYumRoll.cs</c>'s window-open (<c>TryRequestVoluntaryStop</c>) and window-advance
+/// (<c>TryYumYumRespond</c>, on a pass that leaves the window open) call sites.</summary>
+public sealed record YumYumResponseWindowAdvancedEvent(
+    int SequenceNumber,
+    int TurnNumber,
+    int ActingPlayerSeat,
+    int ResponderSeat) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);
+
+/// <summary>The Bandit response window opened (the reveal) or advanced to the next opponent in
+/// <c>BanditOpponentOrder</c> (a pass or stash-pick that didn't finish the token).
+/// <see cref="GameLogEvent.ActingPlayerSeat"/> is the current-turn player who picked the Bandit token
+/// (carried through every advance); <paramref name="ResponderSeat"/> is the opponent now on the clock;
+/// <paramref name="RevealedCard"/> is the card everyone is being asked to match. Emitted from
+/// <c>TokenPhaseBanditHandler.StartBandit</c> and <c>AdvanceBanditWindow</c>.</summary>
+public sealed record BanditResponseWindowAdvancedEvent(
+    int SequenceNumber,
+    int TurnNumber,
+    int ActingPlayerSeat,
+    int ResponderSeat,
+    CardName RevealedCard) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);
+
+/// <summary>Play passed to a new active player (the counterpart to <see cref="TurnEndedEvent"/>).
+/// <see cref="GameLogEvent.ActingPlayerSeat"/> is the player whose turn just ended, causing this;
+/// <paramref name="NewCurrentPlayerSeat"/> is the player whose turn is now beginning (the affected seat).
+/// Emitted from <c>GameSession.EndTurn</c>, right after <c>BeginTurn()</c> — not emitted for the very first
+/// turn of the game (no prior player to attribute the transition to).</summary>
+public sealed record TurnBeganEvent(
+    int SequenceNumber,
+    int TurnNumber,
+    int ActingPlayerSeat,
+    int NewCurrentPlayerSeat) : GameLogEvent(SequenceNumber, TurnNumber, ActingPlayerSeat);
