@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import userEvent from '@testing-library/user-event';
-import { render, screen } from '../../test/test-utils';
+import { render, screen, fireEvent } from '../../test/test-utils';
 import type { HandCardView } from '../../api/types';
 import PlayerHand from './PlayerHand';
 
@@ -8,7 +7,6 @@ const HAND_CARDS: HandCardView[] = [{ cardId: 'shiny-1', name: 'Shiny' }];
 
 describe('PlayerHand', () => {
   it('shows the Shiny info badge with the given explanation when Shiny is not playable', async () => {
-    const user = userEvent.setup();
     render(
       <PlayerHand
         handCards={HAND_CARDS}
@@ -19,7 +17,10 @@ describe('PlayerHand', () => {
     );
 
     const badge = screen.getByRole('button', { name: /more information/i });
-    await user.click(badge);
+    // fireEvent so this exercises the click handler in isolation, without also simulating the
+    // mouse hovering over the badge first (see InfoBadge.test.tsx for why that distinction
+    // matters post-A4: a click while already visible via hover now dismisses, by design).
+    fireEvent.click(badge);
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
       'No opponent has anything in their stash to steal.',
     );
