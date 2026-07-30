@@ -19,6 +19,14 @@ internal static class HandCardPlayabilityProjector
 {
     internal const string NewlyDrawnReason = "Cards drawn during your current turn cannot be played.";
 
+    /// <summary>Yumyum has no phase-mapped play action for the active player at all — <see
+    /// cref="MapCardToActionForState"/> always returns null for it, since it is never something the
+    /// active player plays on their own turn. Without this dedicated reason, that null would fall
+    /// through to the generic "cannot be played during the X phase" rank-2 wording, which is false:
+    /// Yumyum can't be played during either phase by the active player, full stop, regardless of
+    /// which phase they're in — the real constraint is who may play it and when, not the phase.</summary>
+    internal const string YumyumReason = "Can only be played when an opponent chooses to stop rolling.";
+
     /// <summary>
     /// Maps a card to the <see cref="GameAction"/> it would be played as in <paramref name="state"/>, or null
     /// if this card has no play action in that phase at all (either because it's never phase-playable this
@@ -86,6 +94,12 @@ internal static class HandCardPlayabilityProjector
         // Rank 1: drawn this turn, most specific — wins over every other reason.
         if (entry.NewlyAdded)
             return new HandCardView(cardId, cardName, null, NewlyDrawnReason);
+
+        // Yumyum's unplayability isn't phase-shaped (see YumyumReason's doc comment) — special-case
+        // it before the generic phase-name rank-2 wording, which would otherwise misattribute the
+        // reason to "the phase" rather than "who's allowed to play it."
+        if (cardName == CardName.Yumyum)
+            return new HandCardView(cardId, cardName, null, YumyumReason);
 
         var action = MapCardToActionForState(cardName, state);
 

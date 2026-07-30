@@ -41,10 +41,16 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
         const translateY = dropFromCenter - hoverLift;
         const scale = isHovered ? 1.16 : 1;
         const isPlayable = card.playableAs !== null;
+        // A null unplayableReason alongside a null playableAs means "not your turn, nothing to
+        // explain" (see HandCardPlayabilityProjector) rather than "unplayable for a specific
+        // reason" — that case renders like any other card in your hand (no dim, no grayscale, no
+        // badge) so players can still read their own hand normally while waiting their turn. Only
+        // dim/badge a card that has an actual reason to report.
+        const hasUnplayableReason = card.unplayableReason !== null;
         const cardImage = (
           <div
             className="h-full w-full overflow-hidden rounded-[14px]"
-            style={isPlayable ? undefined : { opacity: 0.55, filter: 'grayscale(0.6)' }}
+            style={hasUnplayableReason ? { opacity: 0.55, filter: 'grayscale(0.6)' } : undefined}
           >
             <img src={CARD_IMAGE_BY_NAME[card.name]} alt={card.name} className="h-full w-full object-cover" />
           </div>
@@ -82,8 +88,9 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
               zIndex: isHovered ? 100 : index,
               // Always pointer on hover, same convention as OpponentTile — hover is the "this is
               // interactive" affordance regardless of whether this particular card happens to be
-              // playable right now.
-              cursor: isPlayable ? 'pointer' : 'not-allowed',
+              // playable right now. A card with no reason to report (not your turn) isn't "not
+              // allowed" so much as "not applicable right now" — default cursor, not a slashed circle.
+              cursor: isPlayable ? 'pointer' : hasUnplayableReason ? 'not-allowed' : 'default',
             }}
           >
             {/* InfoBadge is the sole explanation surface for an unplayable card — no `title=`
