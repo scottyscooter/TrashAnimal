@@ -43,7 +43,12 @@ public sealed class GameApplicationService
         var dealCounts = _options.StartingHandCounts.Take(playerNames.Count).ToList();
         deck.DealToPlayers(players, dealCounts);
 
-        var session = new GameSession(players, deck, rng);
+        // The hidden-information steal-pick shuffle must never derive from the same RNG stream as
+        // dieSeed: dieSeed is client-suppliable, and a caller who can seed the deck/die shuffle
+        // could otherwise reconstruct GameSession's shuffle RNG state and invert the steal-pick
+        // Fisher-Yates permutation, defeating the anti-leak fix it drives. Always seed it
+        // independently of dieSeed.
+        var session = new GameSession(players, deck);
         var die = new Die(rng);
         var entry = new GameSessionEntry(session, die);
         var gameId = Guid.NewGuid();
