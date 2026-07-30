@@ -21,7 +21,13 @@ public sealed record GameView(
     IReadOnlyList<GameLogEntryView> Log);
 
 /// <summary>One card in the viewing player's own hand.</summary>
-public sealed record HandCardView(Guid CardId, CardName Name);
+/// <param name="PlayableAs">The <see cref="GameAction"/> this card can be played as right now, or null if it
+/// is not currently playable. Also the routing key for actually submitting the play.</param>
+/// <param name="UnplayableReason">Human-readable explanation for why the card is not currently playable, or
+/// null when <paramref name="PlayableAs"/> is set. Left null (with no reason) when it simply isn't the
+/// viewer's turn and no interrupt window is open for this card — that state is already visible elsewhere in
+/// the view (whose turn it is), so a per-card reason would be redundant.</param>
+public sealed record HandCardView(Guid CardId, CardName Name, GameAction? PlayableAs, string? UnplayableReason);
 
 /// <summary>One card currently in the discard pile (public information).</summary>
 public sealed record DiscardCardView(Guid CardId, CardName Name);

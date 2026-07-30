@@ -1,11 +1,16 @@
 using TrashAnimal.GameLog;
 using TrashAnimal.Helpers;
+using TrashAnimal.RollPhase;
 
 namespace TrashAnimal.TokenPhase;
 
 // todo refactor this. There is overlap between card functionality from roll phase being used here
 internal sealed class TokenPhaseInterruptCardPlay
 {
+    /// <summary>Also reused by <c>GameSession.Views.cs</c>'s per-hand-card playability projection for
+    /// <see cref="GameAction.PlayMmmPieTokenPhase"/>, so the wording stays in one place.</summary>
+    public const string TokenRepeatPendingReason = "A token repeat is already pending.";
+
     private readonly GameSession _session;
     private readonly TokenPhaseCardEligibility _eligibility;
 
@@ -33,7 +38,7 @@ internal sealed class TokenPhaseInterruptCardPlay
 
         if (state.ResolveTokenTwice)
         {
-            error = "A token repeat is already pending.";
+            error = TokenRepeatPendingReason;
             return false;
         }
 
@@ -63,7 +68,7 @@ internal sealed class TokenPhaseInterruptCardPlay
         var candidates = GetShinyCandidates();
         if (candidates.Count == 0)
         {
-            error = "No opponent has a card in their stash to steal.";
+            error = ShinyPlayHandler.TargetUnavailableReason;
             return false;
         }
 
@@ -96,7 +101,7 @@ internal sealed class TokenPhaseInterruptCardPlay
         var candidates = GetShinyCandidates();
         if (candidates.Count == 0)
         {
-            error = "No opponent has a card in their stash to steal.";
+            error = ShinyPlayHandler.TargetUnavailableReason;
             return false;
         }
 
@@ -121,7 +126,7 @@ internal sealed class TokenPhaseInterruptCardPlay
 
         if (_session.DiscardPile.Count == 0)
         {
-            error = "No cards in discard pile to retrieve with Feesh.";
+            error = FeeshPlayHandler.NoDiscardCardsReason;
             return false;
         }
 
@@ -159,7 +164,7 @@ internal sealed class TokenPhaseInterruptCardPlay
 
         if (_session.DiscardPile.Count == 0)
         {
-            error = "No cards in discard pile to retrieve with Feesh.";
+            error = FeeshPlayHandler.NoDiscardCardsReason;
             return false;
         }
 

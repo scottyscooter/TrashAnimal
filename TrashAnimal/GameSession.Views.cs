@@ -14,8 +14,9 @@ public sealed partial class GameSession
         var responderIndex = GetCurrentYumYumResponderIndex();
         var responderName = responderIndex is null ? null : _players[responderIndex.Value].Name;
 
+        var allowedActionsForViewer = GetAllowedActionsForPlayer(playerIndex);
         var hand = _players[playerIndex].Hand
-            .Select(e => new HandCardView(e.Card.Id, e.Card.Name))
+            .Select(e => HandCardPlayabilityProjector.Build(e, State, playerIndex, CurrentPlayerIndex, allowedActionsForViewer))
             .ToList();
 
         var stealPhase = _steal.BuildPhaseView(State, playerIndex, _players);
