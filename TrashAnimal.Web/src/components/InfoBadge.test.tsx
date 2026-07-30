@@ -85,4 +85,104 @@ describe('InfoBadge', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
+
+  it('clicking the badge while hovering dismisses the bubble and it stays hidden while the pointer remains over the card (regression for issue #16)', async () => {
+    const user = userEvent.setup();
+    render(
+      <InfoBadge info="Explanation text">
+        <span>Card content</span>
+      </InfoBadge>,
+    );
+
+    const badge = screen.getByRole('button', { name: /more information/i });
+    const wrapper = badge.parentElement!;
+
+    await user.hover(wrapper);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Explanation text');
+
+    // Click the badge without moving the pointer off the card — hover is still active.
+    fireEvent.click(badge);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    // The bug: hover alone used to keep the bubble visible regardless of the click. Assert it
+    // really does stay hidden while the pointer is still over the card, not just immediately
+    // after the click.
+    fireEvent.mouseMove(wrapper);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows the bubble again after mouse-leave and a fresh hover, even after a dismiss', async () => {
+    const user = userEvent.setup();
+    render(
+      <InfoBadge info="Explanation text">
+        <span>Card content</span>
+      </InfoBadge>,
+    );
+
+    const badge = screen.getByRole('button', { name: /more information/i });
+    const wrapper = badge.parentElement!;
+
+    await user.hover(wrapper);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.click(badge);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.unhover(wrapper);
+    await user.hover(wrapper);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Explanation text');
+  });
+
+  it('clicking while not hovering pins the bubble open, and it survives a subsequent mouse-leave', async () => {
+    render(
+      <InfoBadge info="Explanation text">
+        <span>Card content</span>
+      </InfoBadge>,
+    );
+
+    const badge = screen.getByRole('button', { name: /more information/i });
+    const wrapper = badge.parentElement!;
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    fireEvent.click(badge);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.mouseLeave(wrapper);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+  });
+
+  it('Escape and outside-click both close the bubble without permanently suppressing it, so a later hover still works', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <InfoBadge info="Explanation text">
+          <span>Card content</span>
+        </InfoBadge>
+        <button type="button">Outside</button>
+      </>,
+    );
+
+    const badge = screen.getByRole('button', { name: /more information/i });
+    const wrapper = badge.parentElement!;
+
+    fireEvent.click(badge);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.hover(wrapper);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Explanation text');
+    await user.unhover(wrapper);
+
+    fireEvent.click(badge);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Outside' }));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.hover(wrapper);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Explanation text');
+  });
 });
