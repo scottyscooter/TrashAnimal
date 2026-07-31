@@ -75,7 +75,7 @@ function GroupedCardPicker({
                   src={CARD_IMAGE_BY_NAME[name]}
                   alt={name}
                   className="h-[120px] w-[86px] rounded-lg object-cover"
-                  style={{ opacity: count > 0 ? 1 : 0.6 }}
+                  style={{ opacity: 1 }}
                 />
                 <span
                   className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold"
