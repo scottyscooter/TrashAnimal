@@ -3,7 +3,7 @@ import type { CardName, TokenAction } from '../../api/types';
 import dayBackground from '../../assets/images/backgrounds/day_background.webp';
 import nightBackground from '../../assets/images/backgrounds/night_background.webp';
 
-import cardBack from '../../assets/images/cards/back.png';
+import cardBack from '../../assets/images/cards/back.webp';
 import blammoCard from '../../assets/images/cards/blammo.webp';
 import doggoCard from '../../assets/images/cards/doggo.webp';
 import feeshCard from '../../assets/images/cards/feesh.webp';
@@ -13,15 +13,13 @@ import nannersCard from '../../assets/images/cards/nanners.webp';
 import shinyCard from '../../assets/images/cards/shiny.webp';
 import yumYumCard from '../../assets/images/cards/yumYum.webp';
 
-// .png, not .webp — these are the pre-cropped, edge-to-edge variants (the plain *_token.webp
-// files have substantial transparent padding around the icon and were never meant to be used
-// directly in a circular slot; see the design handoff's cropped_*_token.png originals).
-import banditToken from '../../assets/images/tokens/bandit_token.png';
-import doubleStashToken from '../../assets/images/tokens/doubleStash_token.png';
-import doubleTrashToken from '../../assets/images/tokens/doubleTrash_token.png';
-import recycleToken from '../../assets/images/tokens/recycle_token.png';
-import stashTrashToken from '../../assets/images/tokens/stashTrash_token.png';
-import stealToken from '../../assets/images/tokens/steal_token.png';
+// Pre-cropped, edge-to-edge variants (vs. the padded originals in the design handoff) — now WebP like the rest of the art.
+import banditToken from '../../assets/images/tokens/bandit_token.webp';
+import doubleStashToken from '../../assets/images/tokens/doubleStash_token.webp';
+import doubleTrashToken from '../../assets/images/tokens/doubleTrash_token.webp';
+import recycleToken from '../../assets/images/tokens/recycle_token.webp';
+import stashTrashToken from '../../assets/images/tokens/stashTrash_token.webp';
+import stealToken from '../../assets/images/tokens/steal_token.webp';
 
 import bustedStamp from '../../assets/icons/busted.png';
 
