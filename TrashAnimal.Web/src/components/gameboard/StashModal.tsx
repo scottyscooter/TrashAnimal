@@ -20,11 +20,11 @@ function StashModal({ title, cards, onClose }: StashModalProps) {
   const entries = [...grouped.entries()].sort((a, b) => b[1] - a[1]);
 
   return (
-    <Modal onClose={onClose} labelledBy="stash-modal-heading" wide>
-      <h2 id="stash-modal-heading" className="mb-1 text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
+    <Modal onClose={onClose} labelledBy="stash-modal-heading" wide fitContent>
+      <h2 id="stash-modal-heading" className="mb-1 min-w-[200px] text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
         {title}
       </h2>
-      <p className="mb-4 text-xs tracking-[0.06em]" style={{ color: 'var(--gb-text-label)' }}>
+      <p className="mb-6 text-xs tracking-[0.06em]" style={{ color: 'var(--gb-text-label)' }}>
         {cards.length} TOTAL
       </p>
       <div className="flex flex-wrap gap-3">
