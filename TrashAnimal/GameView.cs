@@ -41,6 +41,10 @@ public sealed record OpponentSummaryView(
     int StashFaceDownCount,
     IReadOnlyList<StashableHandCard> StashFaceUpCards);
 
-/// <summary>The viewing player's own stash pile.</summary>
-public sealed record OwnStashView(int FaceDownCount, IReadOnlyList<StashableHandCard> FaceUpCards);
+/// <summary>The viewing player's own stash pile. Face-down-ness is only hidden from opponents (see
+/// <see cref="OpponentSummaryView.StashFaceDownCount"/>) — the owner already knows what they stashed, so
+/// their own face-down cards are fully identified here, not just counted.</summary>
+public sealed record OwnStashView(
+    IReadOnlyList<StashableHandCard> FaceDownCards,
+    IReadOnlyList<StashableHandCard> FaceUpCards);
 

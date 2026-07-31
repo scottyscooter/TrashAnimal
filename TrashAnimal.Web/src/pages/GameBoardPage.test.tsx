@@ -51,7 +51,7 @@ const BASE_VIEW: GameView = {
   ],
   deckCount: 30,
   discardPile: [],
-  ownStash: { faceDownCount: 0, faceUpCards: [] },
+  ownStash: { faceDownCards: [], faceUpCards: [] },
   log: [],
 };
 

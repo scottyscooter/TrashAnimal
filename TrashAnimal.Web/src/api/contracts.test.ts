@@ -508,6 +508,8 @@ function assertGameViewStructure(view: unknown): void {
   expect(Array.isArray(v.discardPile)).toBe(true);
 
   expect(v).toHaveProperty('ownStash');
+  expect(Array.isArray((v.ownStash as { faceDownCards: unknown }).faceDownCards)).toBe(true);
+  expect(Array.isArray((v.ownStash as { faceUpCards: unknown }).faceUpCards)).toBe(true);
 
   expect(v).toHaveProperty('log');
   expect(Array.isArray(v.log)).toBe(true);

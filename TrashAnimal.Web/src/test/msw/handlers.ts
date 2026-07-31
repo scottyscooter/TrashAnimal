@@ -48,7 +48,13 @@ const DEFAULT_GAME_VIEW: PlayerViewResponse = {
     ],
     deckCount: 30,
     discardPile: [{ cardId: 'cccccccc-0000-0000-0000-000000000001', name: 'MmmPie' }],
-    ownStash: { faceDownCount: 2, faceUpCards: [] },
+    ownStash: {
+      faceDownCards: [
+        { cardId: 'dddddddd-0000-0000-0000-000000000001', name: 'Nanners' },
+        { cardId: 'dddddddd-0000-0000-0000-000000000002', name: 'Blammo' },
+      ],
+      faceUpCards: [],
+    },
     log: [],
   },
   allowedActions: ['RollDie'],
