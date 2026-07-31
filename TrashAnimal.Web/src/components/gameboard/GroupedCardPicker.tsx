@@ -101,7 +101,7 @@ function GroupedCardPicker({
                   disabled={isPending || count <= 0}
                   aria-label={`Remove ${name}`}
                   className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
-                  style={{ background: 'rgba(255,255,255,.12)', color: 'var(--gb-text-primary)' }}
+                  style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
                 >
                   −
                 </button>
@@ -111,7 +111,7 @@ function GroupedCardPicker({
                   disabled={isPending || !canIncrement}
                   aria-label={`Add ${name}`}
                   className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
-                  style={{ background: 'rgba(255,255,255,.12)', color: 'var(--gb-text-primary)' }}
+                  style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
                 >
                   +
                 </button>
