@@ -115,8 +115,8 @@ describe('TokenPhasePanel', () => {
       />,
     );
 
-    await user.click(screen.getByAltText('Yumyum'));
-    await user.click(screen.getByAltText('Feesh'));
+    await user.click(screen.getByRole('button', { name: /add yumyum/i }));
+    await user.click(screen.getByRole('button', { name: /add feesh/i }));
     expect(screen.getByRole('button', { name: /stash 2 cards/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /stash 2 cards/i }));
