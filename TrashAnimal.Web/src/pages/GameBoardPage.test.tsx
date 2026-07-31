@@ -187,8 +187,8 @@ describe('GameBoardPage', () => {
 
     render(<GameBoardPage />);
 
-    const kittehImage = await screen.findByAltText('Kitteh');
-    await user.click(kittehImage.closest('button')!);
+    await screen.findByAltText('Kitteh');
+    await user.click(screen.getByRole('button', { name: /add kitteh/i }));
     await user.click(screen.getByRole('button', { name: /stash 1 card/i }));
 
     await waitFor(() => {
