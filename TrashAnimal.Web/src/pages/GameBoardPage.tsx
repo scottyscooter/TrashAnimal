@@ -210,7 +210,7 @@ function GameBoardPage() {
 
         <OpponentRail gameView={gameView} />
         <OpponentIndexTabs gameView={gameView} />
-        <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px] phone-landscape:hidden">
+        <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px] phone-landscape:hidden tablet-landscape:w-[260px]">
           <GameLogPanel entries={gameLog} />
         </div>
         <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />

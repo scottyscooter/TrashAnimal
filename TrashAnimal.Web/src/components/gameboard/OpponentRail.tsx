@@ -12,7 +12,7 @@ function OpponentRail({ gameView }: OpponentRailProps) {
 
   return (
     <>
-      <div className="fixed left-7 top-[110px] z-10 flex w-[236px] flex-col gap-4 phone-landscape:hidden">
+      <div className="fixed left-7 top-[110px] z-10 flex w-[236px] flex-col gap-4 phone-landscape:hidden tablet-landscape:w-[180px]">
         {gameView.opponents.map((opponent, index) => (
           <OpponentTile
             key={opponent.seatIndex}
