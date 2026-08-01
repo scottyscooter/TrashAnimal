@@ -38,13 +38,13 @@ function TokenPhasePanel({
   onStartSteal,
 }: TokenPhasePanelProps) {
   return (
-    <GlassPanel className="fixed bottom-[520px] left-1/2 z-20 flex w-[520px] -translate-x-1/2 flex-col gap-3 rounded-2xl p-5">
+    <GlassPanel className="fixed bottom-[520px] left-1/2 z-20 flex w-[520px] -translate-x-1/2 flex-col gap-3 rounded-2xl p-5 phone-landscape:bottom-[18%] phone-landscape:w-[85%] phone-landscape:max-w-[450px] phone-landscape:p-3 phone-landscape:gap-2">
       {allowedActions.includes('PlayMmmPieTokenPhase') && (
         <button
           type="button"
           disabled={isPending}
           onClick={() => onAction('PlayMmmPieTokenPhase')}
-          className="self-start rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+          className="self-start rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
           style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
         >
           Play MmmPie (repeat this token)
@@ -53,7 +53,7 @@ function TokenPhasePanel({
 
       {tokenPhase.step === 'ChoosingNextToken' && (
         <>
-          <p className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+          <p className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
             RESOLVE A TOKEN
           </p>
           <div className="flex flex-wrap gap-3">
@@ -65,15 +65,15 @@ function TokenPhasePanel({
                   type="button"
                   disabled={isPending}
                   onClick={() => (token === 'Steal' ? onStartSteal() : action && onAction(action))}
-                  className="flex flex-col items-center gap-1 disabled:opacity-50"
+                  className="flex flex-col items-center gap-1 disabled:opacity-50 phone-landscape:gap-0"
                 >
                   <img
                     src={TOKEN_IMAGE_BY_ACTION[token]}
                     alt={token}
-                    className="h-[52px] w-[52px] rounded-full border-2 object-cover"
+                    className="h-[52px] w-[52px] rounded-full border-2 object-cover phone-landscape:h-[40px] phone-landscape:w-[40px]"
                     style={{ borderColor: 'var(--gb-gold)' }}
                   />
-                  <span className="text-[11px]" style={{ color: 'var(--gb-text-primary)' }}>
+                  <span className="text-[11px] phone-landscape:text-[8px]" style={{ color: 'var(--gb-text-primary)' }}>
                     {token}
                   </span>
                 </button>
@@ -84,13 +84,13 @@ function TokenPhasePanel({
       )}
 
       {tokenPhase.step === 'StashTrashChooseBranch' && (
-        <div className="flex gap-3">
+        <div className="flex gap-3 phone-landscape:gap-2">
           {allowedActions.includes('TokenStashTrashDrawOne') && (
             <button
               type="button"
               disabled={isPending}
               onClick={() => onAction('TokenStashTrashDrawOne')}
-              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
+              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50 phone-landscape:py-1 phone-landscape:text-xs"
               style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
             >
               Draw a card
@@ -101,7 +101,7 @@ function TokenPhasePanel({
               type="button"
               disabled={isPending}
               onClick={() => onAction('TokenStashTrashStashMode')}
-              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
+              className="flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50 phone-landscape:py-1 phone-landscape:text-xs"
               style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
             >
               Stash a card
@@ -132,14 +132,14 @@ function TokenPhasePanel({
 
       {tokenPhase.step === 'StealChoosingVictim' && (
         <>
-          <p className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+          <p className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
             STEAL AGAIN — CHOOSE A PLAYER
           </p>
           <button
             type="button"
             disabled={isPending}
             onClick={onStartSteal}
-            className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+            className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 phone-landscape:px-3 phone-landscape:py-1 phone-landscape:text-xs"
             style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
           >
             Choose a player
@@ -149,25 +149,25 @@ function TokenPhasePanel({
 
       {tokenPhase.step === 'RecycleChoosingReplacement' && (
         <>
-          <p className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+          <p className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
             PICK A REPLACEMENT TOKEN
           </p>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 phone-landscape:gap-2">
             {tokenPhase.recycleReplacementOptions.map((token) => (
               <button
                 key={token}
                 type="button"
                 disabled={isPending}
                 onClick={() => onRecyclePick(token)}
-                className="flex flex-col items-center gap-1 disabled:opacity-50"
+                className="flex flex-col items-center gap-1 disabled:opacity-50 phone-landscape:gap-0"
               >
                 <img
                   src={TOKEN_IMAGE_BY_ACTION[token]}
                   alt={token}
-                  className="h-[52px] w-[52px] rounded-full border-2 object-cover"
+                  className="h-[52px] w-[52px] rounded-full border-2 object-cover phone-landscape:h-[40px] phone-landscape:w-[40px]"
                   style={{ borderColor: 'var(--gb-gold)' }}
                 />
-                <span className="text-[11px]" style={{ color: 'var(--gb-text-primary)' }}>
+                <span className="text-[11px] phone-landscape:text-[8px]" style={{ color: 'var(--gb-text-primary)' }}>
                   {token}
                 </span>
               </button>

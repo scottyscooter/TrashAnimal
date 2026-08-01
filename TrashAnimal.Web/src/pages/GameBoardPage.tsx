@@ -176,7 +176,7 @@ function GameBoardPage() {
     <div className="gb-root">
       <DayNightBackground />
       <GameBoardThemeToggle />
-      <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} />
+      <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />
       {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
       <OpponentRail gameView={gameView} />
@@ -187,9 +187,9 @@ function GameBoardPage() {
       <PlayerStash ownStash={gameView.ownStash} />
       <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
 
-      <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2">
-        <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3">
-          <span className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
+      <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[6%]">
+        <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-1 phone-landscape:px-3 phone-landscape:py-1.5">
+          <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[9px]" style={{ color: 'var(--gb-text-label)' }}>
             YOUR TOKENS
           </span>
           {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
@@ -214,7 +214,7 @@ function GameBoardPage() {
           type="button"
           disabled={isPending}
           onClick={() => setVictimPickerMode('shiny')}
-          className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+          className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 phone-landscape:bottom-[26%] phone-landscape:right-[2%] phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
           style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
         >
           Play Shiny

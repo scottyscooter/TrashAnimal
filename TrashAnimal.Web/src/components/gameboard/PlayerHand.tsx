@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { HandCardView } from '../../api/types';
+import { useIsPhoneLandscape } from '../../hooks/useLandscapeBreakpoint';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
 import InfoBadge from '../InfoBadge';
 
@@ -24,12 +25,18 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
   const count = handCards.length;
   const centerOffset = (count - 1) / 2;
   const isFanned = hoveredIndex !== null;
-  const spacing = isFanned ? 177 : 90;
+
+  // Reduce spacing on phone landscape for compact display
+  const isPhoneLandscape = useIsPhoneLandscape();
+  const spacing = isPhoneLandscape ? (isFanned ? 70 : 45) : (isFanned ? 177 : 90);
   const rotationStep = isFanned ? 4 : 2;
   const liftStep = isFanned ? 20 : 5;
 
+  const cardWidth = isPhoneLandscape ? 140 : 198;
+  const cardHeight = isPhoneLandscape ? 195 : 277;
+
   return (
-    <div className="fixed bottom-[190px] left-1/2 z-10 h-[320px] w-[1050px] -translate-x-1/2">
+    <div className="fixed bottom-[190px] left-1/2 z-10 h-[320px] w-[1050px] -translate-x-1/2 phone-landscape:bottom-auto phone-landscape:top-1/2 phone-landscape:-translate-y-1/2 phone-landscape:h-auto phone-landscape:w-[90%] phone-landscape:max-w-[900px]">
       {handCards.map((card, index) => {
         const offset = index - centerOffset;
         const isHovered = hoveredIndex === index;
@@ -86,8 +93,10 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
                 activate();
               }
             }}
-            className="absolute bottom-0 left-1/2 h-[277px] w-[198px] shadow-lg transition-[left,transform] duration-200 ease-out"
+            className="absolute bottom-0 left-1/2 shadow-lg transition-[left,transform] duration-200 ease-out"
             style={{
+              height: `${cardHeight}px`,
+              width: `${cardWidth}px`,
               left: `calc(50% + ${offset * spacing}px)`,
               transform: `translateX(-50%) translateY(${translateY}px) rotate(${rotation}deg) scale(${scale})`,
               zIndex: isHovered ? 100 : index,
