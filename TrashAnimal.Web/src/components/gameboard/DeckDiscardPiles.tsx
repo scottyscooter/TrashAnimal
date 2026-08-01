@@ -15,9 +15,9 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
 
   return (
     <>
-      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16">
-        <div className="flex flex-col items-center gap-2">
-          <div className="relative h-[277px] w-[198px]">
+      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16 phone-landscape:top-[3%] phone-landscape:left-0 phone-landscape:right-0 phone-landscape:w-full phone-landscape:justify-between phone-landscape:translate-x-0 phone-landscape:px-[2%] phone-landscape:gap-0">
+        <div className="flex flex-col items-center gap-2 phone-landscape:gap-1">
+          <div className="relative h-[277px] w-[198px] phone-landscape:h-[100px] phone-landscape:w-[72px]">
             {[9, 4, 0].map((offset) => (
               <img
                 key={offset}
@@ -29,26 +29,26 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
               />
             ))}
             <span
-              className="absolute -bottom-[15px] -right-[15px] flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold"
+              className="absolute -bottom-[15px] -right-[15px] flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold phone-landscape:-bottom-2 phone-landscape:-right-2 phone-landscape:h-7 phone-landscape:w-7 phone-landscape:text-[10px]"
               style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text-dark)' }}
             >
               {deckCount}
             </span>
           </div>
           <span
-            className="text-[13px] font-semibold tracking-[0.08em]"
+            className="text-[13px] font-semibold tracking-[0.08em] phone-landscape:text-[9px]"
             style={{ color: 'var(--gb-text-label)', textShadow: '0 1px 2px rgba(0,0,0,.6)' }}
           >
             DECK
           </span>
         </div>
 
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-2 phone-landscape:gap-1">
           <button
             type="button"
             onClick={() => setCarouselOpen(true)}
             disabled={!topDiscard}
-            className="relative h-[277px] w-[198px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100"
+            className="relative h-[277px] w-[198px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
           >
             {topDiscard ? (
               <img
@@ -60,14 +60,14 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
               <EmptyPileSlot className="h-full w-full rounded-[14px]" />
             )}
             <span
-              className="absolute -bottom-[15px] -right-[15px] flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold"
+              className="absolute -bottom-[15px] -right-[15px] flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold phone-landscape:-bottom-2 phone-landscape:-right-2 phone-landscape:h-7 phone-landscape:w-7 phone-landscape:text-[10px]"
               style={{ background: 'var(--gb-red)', color: 'var(--gb-gold-text-dark)' }}
             >
               {discardPile.length}
             </span>
           </button>
           <span
-            className="text-[13px] font-semibold tracking-[0.08em]"
+            className="text-[13px] font-semibold tracking-[0.08em] phone-landscape:text-[9px]"
             style={{ color: 'var(--gb-text-label)', textShadow: '0 1px 2px rgba(0,0,0,.6)' }}
           >
             DISCARD
