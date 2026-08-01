@@ -15,7 +15,12 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
 
   return (
     <>
-      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16 phone-landscape:top-[3%] phone-landscape:left-0 phone-landscape:right-0 phone-landscape:w-full phone-landscape:justify-between phone-landscape:translate-x-0 phone-landscape:px-[2%] phone-landscape:gap-0">
+      {/* phone-landscape: px-[14%] (not the original 2%) keeps the discard pile clear of the
+          top-right icon corner (GameBoardThemeToggle + GameLogButton, both fixed-px positioned
+          right-6/right-[92px]) — at a 960-1024px viewport that leaves a several-px horizontal gap
+          between the discard pile's right edge and the log button's left edge regardless of the
+          row's vertical offset, rather than trying to fine-tune vertical clearance instead. */}
+      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16 phone-landscape:top-[3%] phone-landscape:left-0 phone-landscape:right-0 phone-landscape:w-full phone-landscape:justify-between phone-landscape:translate-x-0 phone-landscape:px-[14%] phone-landscape:gap-0">
         <div className="flex flex-col items-center gap-2 phone-landscape:gap-1">
           <div className="relative h-[277px] w-[198px] phone-landscape:h-[100px] phone-landscape:w-[72px]">
             {[9, 4, 0].map((offset) => (

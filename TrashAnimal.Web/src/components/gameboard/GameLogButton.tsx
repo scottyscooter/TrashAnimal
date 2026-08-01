@@ -1,3 +1,5 @@
+import { forwardRef } from 'react';
+
 interface GameLogButtonProps {
   onClick: () => void;
 }
@@ -11,10 +13,17 @@ interface GameLogButtonProps {
  * overlapping it — this button sits to its immediate left at a smaller, phone-landscape-appropriate
  * size. Hidden outside phone landscape via CSS only (`hidden phone-landscape:flex`), same pattern
  * as `OpponentIndexTabs`, since nothing here needs JS-level orientation awareness.
+ *
+ * Forwards its ref so `GameBoardPage` can restore keyboard focus here when the focus panel closes
+ * (part of the game log's focus-trap contract — see `GameBoardPage.tsx`'s `isGameLogOpen` wiring).
  */
-function GameLogButton({ onClick }: GameLogButtonProps) {
+const GameLogButton = forwardRef<HTMLButtonElement, GameLogButtonProps>(function GameLogButton(
+  { onClick },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       aria-label="Open game log"
@@ -27,6 +36,6 @@ function GameLogButton({ onClick }: GameLogButtonProps) {
       </span>
     </button>
   );
-}
+});
 
 export default GameLogButton;

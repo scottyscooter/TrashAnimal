@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGameClientIdentity } from '../hooks/useGameClientIdentity'
 import { useGameView } from '../hooks/useGameView'
@@ -41,6 +41,19 @@ function GameBoardPage() {
   const [victimPickerMode, setVictimPickerMode] = useState<VictimPickerMode>(null)
   const [feeshPickerOpen, setFeeshPickerOpen] = useState(false)
   const [isGameLogOpen, setIsGameLogOpen] = useState(false)
+  const gameLogButtonRef = useRef<HTMLButtonElement>(null)
+  const wasGameLogOpenRef = useRef(false)
+
+  // Close half of the game log's focus-trap contract (open half lives in GameLogFocusPanel,
+  // which focuses its own close button on mount): once the panel unmounts, return keyboard focus
+  // to the button that opened it. Guarded on the open->closed transition specifically (not just
+  // "isGameLogOpen is false") so this doesn't try to focus the trigger on initial page load.
+  useEffect(() => {
+    if (wasGameLogOpenRef.current && !isGameLogOpen) {
+      gameLogButtonRef.current?.focus()
+    }
+    wasGameLogOpenRef.current = isGameLogOpen
+  }, [isGameLogOpen])
 
   const gameViewQuery = useGameView(gameId ?? '', identity?.seatIndex ?? -1)
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
@@ -197,6 +210,12 @@ function GameBoardPage() {
           StashModal, DiscardCarouselModal — are deliberately kept outside it. */}
       <div
         className="absolute inset-0"
+        // `inert` (not just `pointer-events: none`) is what actually makes this the "only the log
+        // accepts input" lock: pointer-events only blocks mouse/touch, but a keyboard user could
+        // still Tab into this subtree and Enter-activate Roll/Stop/cards behind the blur without
+        // it. `inert` removes the whole subtree from the tab order and blocks all interaction
+        // (pointer and keyboard alike), which is exactly the native mechanism for this.
+        inert={isGameLogOpen}
         style={
           isGameLogOpen
             ? { filter: 'blur(10px) saturate(0.6) brightness(0.55)', pointerEvents: 'none' }
@@ -204,7 +223,7 @@ function GameBoardPage() {
         }
       >
         <GameBoardThemeToggle />
-        <GameLogButton onClick={() => setIsGameLogOpen(true)} />
+        <GameLogButton ref={gameLogButtonRef} onClick={() => setIsGameLogOpen(true)} />
         <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />
         {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 

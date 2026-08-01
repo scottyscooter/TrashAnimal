@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { GameLogEntryView } from '../../api/types';
 import GameLogEntryList from './GameLogEntryList';
 
@@ -17,8 +18,21 @@ interface GameLogFocusPanelProps {
  * solid (~95% opacity, no backdrop blur on the panel itself) so it reads as the sharp foreground
  * surface against the blurred/locked board behind it — the blur lives on `GameBoardPage`'s
  * background wrapper, not on this panel.
+ *
+ * This component only mounts while the log is open (`GameBoardPage` conditionally renders it), so
+ * "on mount" is exactly "on open" — moving focus to the close button here is the open half of the
+ * focus-trap contract; `GameBoardPage` handles the close half (restoring focus to `GameLogButton`
+ * once this unmounts). Combined with `inert` on the background wrapper in `GameBoardPage.tsx`,
+ * this is what actually blocks keyboard users from reaching the blurred board while the log is
+ * open — `pointer-events: none` alone only stops mouse/touch input, not `Tab`/`Enter`.
  */
 function GameLogFocusPanel({ entries, onClose }: GameLogFocusPanelProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
   return (
     <div
       role="dialog"
@@ -40,6 +54,7 @@ function GameLogFocusPanel({ entries, onClose }: GameLogFocusPanelProps) {
           GAME LOG
         </span>
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           aria-label="Close game log"
