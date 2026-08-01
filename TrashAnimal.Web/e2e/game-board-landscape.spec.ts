@@ -273,16 +273,16 @@ test.describe('portrait / desktop regression', () => {
   // Deliberately no `test.use(devices[...])` override here — this runs at the `chromium` project's
   // default desktop viewport (1280x720, per `playwright.config.ts`'s `devices['Desktop Chrome']`).
   //
-  // IMPORTANT CAVEAT discovered while writing this test: `index.css`'s `tablet-landscape` custom
-  // variant is `@media (orientation: landscape) and (min-height: 600px)` — no upper bound on width.
-  // A normal desktop browser window (1280x720 included) is landscape-orientation with height >=
-  // 600px, so it satisfies this query too, and `OpponentRail`'s `tablet-landscape:w-[180px]` DOES
-  // apply here, narrowing it from its unconditional `w-[236px]`. That means this test — run for
-  // real — currently fails, because ordinary desktop viewports were never actually excluded from
-  // the "tablet landscape" breakpoint by Commits 1/5; it only distinguishes by height, not width.
-  // This looks like a genuine gap versus the plan's "Desktop (1024px+): spacing, font sizes, layout
-  // unchanged" regression requirement, not a mistake in this test — flagging it here (and in this
-  // commit's summary) rather than loosening the assertion to quietly accommodate it.
+  // This test caught a real gap when it was first written: `index.css`'s `tablet-landscape` custom
+  // variant originally read `@media (orientation: landscape) and (min-height: 600px)` — no upper
+  // bound on width, and no distinction from a mouse-driven desktop window. An ordinary desktop
+  // browser at 1280x720 is landscape-orientation with height >= 600px, so it satisfied that query
+  // too, and `OpponentRail`'s `tablet-landscape:w-[180px]` was narrowing it there, unintentionally.
+  // Fixed by adding `(pointer: coarse)` to both `phone-landscape` and `tablet-landscape` (in
+  // index.css and the matching `useIsPhoneLandscape`/`useIsTabletLandscape` query strings) — real
+  // tablets/phones and Playwright's touch-emulated devices report `pointer: coarse`, desktop/laptop
+  // browsers with a mouse or trackpad report `pointer: fine`, so this now correctly excludes desktop
+  // regardless of its window dimensions.
   test('OpponentRail renders at its original desktop position and width, unaffected by landscape work', async ({
     page,
     browser,
@@ -298,7 +298,8 @@ test.describe('portrait / desktop regression', () => {
     const box = await opponentRailTile.boundingBox();
     if (!box) throw new Error('OpponentRail tile has no bounding box');
     // OpponentRail's unconditional width is `w-[236px]` (`OpponentRail.tsx`); only
-    // `tablet-landscape:w-[180px]` narrows it, which should not apply here — see the caveat above.
+    // `tablet-landscape:w-[180px]` narrows it, and that variant no longer matches a desktop
+    // viewport now that it requires `pointer: coarse` too — see the fix noted above.
     expect(box.width).toBeGreaterThan(200);
 
     // Phone-landscape-only triggers must not appear outside landscape/short viewports either.

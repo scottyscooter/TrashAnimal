@@ -34,11 +34,14 @@ function subscribeToQuery(query: string, listener: Listener): () => void {
 
 /**
  * Returns true when the viewport is in phone landscape orientation.
- * Phone landscape: landscape orientation with max-height of 600px.
+ * Phone landscape: landscape orientation with max-height of 600px, on a touch (coarse-pointer)
+ * device — the pointer check keeps this from also matching a resized desktop/laptop window,
+ * which is otherwise indistinguishable from a phone by dimensions alone. Must stay in sync with
+ * the `phone-landscape` custom variant in index.css.
  * Implemented via useSyncExternalStore subscribing to matchMedia changes.
  */
 export function useIsPhoneLandscape(): boolean {
-  const query = '(orientation: landscape) and (max-height: 600px)';
+  const query = '(orientation: landscape) and (max-height: 600px) and (pointer: coarse)';
   const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
   const subscribe = useCallback((listener: Listener) => subscribeToQuery(query, listener), [query]);
 
@@ -47,11 +50,14 @@ export function useIsPhoneLandscape(): boolean {
 
 /**
  * Returns true when the viewport is in tablet landscape orientation.
- * Tablet landscape: landscape orientation with min-height of 600px or greater.
+ * Tablet landscape: landscape orientation with min-height of 600px or greater, on a touch
+ * (coarse-pointer) device — without the pointer check this also matches virtually every ordinary
+ * desktop/laptop window, since almost all desktop displays are landscape and taller than 600px.
+ * Must stay in sync with the `tablet-landscape` custom variant in index.css.
  * Implemented via useSyncExternalStore subscribing to matchMedia changes.
  */
 export function useIsTabletLandscape(): boolean {
-  const query = '(orientation: landscape) and (min-height: 600px)';
+  const query = '(orientation: landscape) and (min-height: 600px) and (pointer: coarse)';
   const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
   const subscribe = useCallback((listener: Listener) => subscribeToQuery(query, listener), [query]);
 

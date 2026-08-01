@@ -45,7 +45,7 @@ describe('useLandscapeBreakpoint', () => {
     });
 
     it('returns true when the phone landscape query matches', () => {
-      const query = '(orientation: landscape) and (max-height: 600px)';
+      const query = '(orientation: landscape) and (max-height: 600px) and (pointer: coarse)';
 
       // Pre-populate the MediaQueryList with matches: true by calling mockMatchMedia first
       mockMatchMedia(query);
@@ -62,11 +62,11 @@ describe('useLandscapeBreakpoint', () => {
 
     it('uses the correct media query string', () => {
       renderHook(() => useIsPhoneLandscape());
-      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (max-height: 600px)');
+      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
     });
 
     it('updates when the media query changes', () => {
-      const query = '(orientation: landscape) and (max-height: 600px)';
+      const query = '(orientation: landscape) and (max-height: 600px) and (pointer: coarse)';
       const { result, rerender } = renderHook(() => useIsPhoneLandscape());
 
       expect(result.current).toBe(false);
@@ -97,7 +97,7 @@ describe('useLandscapeBreakpoint', () => {
     });
 
     it('returns true when the tablet landscape query matches', () => {
-      const query = '(orientation: landscape) and (min-height: 600px)';
+      const query = '(orientation: landscape) and (min-height: 600px) and (pointer: coarse)';
 
       // Pre-populate the MediaQueryList with matches: true by calling mockMatchMedia first
       mockMatchMedia(query);
@@ -114,11 +114,11 @@ describe('useLandscapeBreakpoint', () => {
 
     it('uses the correct media query string', () => {
       renderHook(() => useIsTabletLandscape());
-      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (min-height: 600px)');
+      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (min-height: 600px) and (pointer: coarse)');
     });
 
     it('updates when the media query changes', () => {
-      const query = '(orientation: landscape) and (min-height: 600px)';
+      const query = '(orientation: landscape) and (min-height: 600px) and (pointer: coarse)';
       const { result, rerender } = renderHook(() => useIsTabletLandscape());
 
       expect(result.current).toBe(false);
