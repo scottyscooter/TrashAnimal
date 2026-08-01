@@ -38,6 +38,7 @@ function DayNightBackground() {
         <img
           src={DAY_BACKGROUND_IMAGE}
           alt=""
+          fetchPriority="high"
           className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[600ms]"
           style={{ opacity: isNight ? 0 : 1 }}
         />
@@ -46,6 +47,7 @@ function DayNightBackground() {
         <img
           src={NIGHT_BACKGROUND_IMAGE}
           alt=""
+          fetchPriority="high"
           className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[600ms]"
           style={{ opacity: isNight ? 1 : 0 }}
         />

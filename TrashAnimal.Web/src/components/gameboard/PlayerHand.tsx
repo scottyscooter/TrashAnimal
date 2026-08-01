@@ -52,7 +52,12 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
             className="h-full w-full overflow-hidden rounded-[14px]"
             style={hasUnplayableReason ? { opacity: 0.55, filter: 'grayscale(0.6)' } : undefined}
           >
-            <img src={CARD_IMAGE_BY_NAME[card.name]} alt={card.name} className="h-full w-full object-cover" />
+            <img
+              src={CARD_IMAGE_BY_NAME[card.name]}
+              alt={card.name}
+              fetchPriority="high"
+              className="h-full w-full object-cover"
+            />
           </div>
         );
 

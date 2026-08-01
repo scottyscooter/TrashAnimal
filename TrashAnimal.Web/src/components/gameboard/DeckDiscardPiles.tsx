@@ -23,6 +23,7 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
                 key={offset}
                 src={CARD_BACK_IMAGE}
                 alt=""
+                fetchPriority="high"
                 className="absolute rounded-[14px] object-cover shadow-lg"
                 style={{ top: offset, left: offset, height: '100%', width: '100%' }}
               />
