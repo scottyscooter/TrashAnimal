@@ -45,7 +45,7 @@ describe('useLandscapeBreakpoint', () => {
     });
 
     it('returns true when the phone landscape query matches', () => {
-      const query = '(orientation: landscape) and (max-height: 600px) and (pointer: coarse)';
+      const query = '(orientation: landscape) and (max-height: 599px) and (pointer: coarse)';
 
       // Pre-populate the MediaQueryList with matches: true by calling mockMatchMedia first
       mockMatchMedia(query);
@@ -62,11 +62,11 @@ describe('useLandscapeBreakpoint', () => {
 
     it('uses the correct media query string', () => {
       renderHook(() => useIsPhoneLandscape());
-      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (max-height: 600px) and (pointer: coarse)');
+      expect(mockMatchMedia).toHaveBeenCalledWith('(orientation: landscape) and (max-height: 599px) and (pointer: coarse)');
     });
 
     it('updates when the media query changes', () => {
-      const query = '(orientation: landscape) and (max-height: 600px) and (pointer: coarse)';
+      const query = '(orientation: landscape) and (max-height: 599px) and (pointer: coarse)';
       const { result, rerender } = renderHook(() => useIsPhoneLandscape());
 
       expect(result.current).toBe(false);

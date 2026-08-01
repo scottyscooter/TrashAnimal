@@ -1,10 +1,11 @@
+import type { GameState } from '../../api/types';
 import GlassPanel from './GlassPanel';
 import TrashBagIcon from './TrashBagIcon';
 
 interface TurnIndicatorProps {
   currentPlayerName: string;
   isLocalPlayerTurn: boolean;
-  state?: string;
+  state?: GameState;
 }
 
 function TurnIndicator({ currentPlayerName, isLocalPlayerTurn, state }: TurnIndicatorProps) {

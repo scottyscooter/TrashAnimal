@@ -27,7 +27,7 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
             {total} TOTAL
           </span>
         </div>
-        <div className="flex gap-5 phone-landscape:gap-0">
+        <div className="flex gap-5 phone-landscape:gap-2">
           <button
             type="button"
             onClick={() => setOpenModal('faceDown')}
@@ -50,7 +50,7 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
             type="button"
             onClick={() => setOpenModal('faceUp')}
             disabled={!topFaceUp}
-            className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:hidden"
+            className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
           >
             {topFaceUp ? (
               <img
@@ -62,7 +62,7 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
               <EmptyPileSlot className="h-full w-full rounded-[10px]" />
             )}
             <span
-              className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold"
+              className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold phone-landscape:h-7 phone-landscape:w-7 phone-landscape:text-[10px]"
               style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
             >
               {ownStash.faceUpCards.length}

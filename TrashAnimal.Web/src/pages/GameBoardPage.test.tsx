@@ -274,4 +274,55 @@ describe('GameBoardPage', () => {
       expect(within(dialog).queryByRole('button', { name: /bob/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('game log focus modal', () => {
+    it('opens the log panel and moves focus into it when the game log button is clicked', async () => {
+      storeIdentity(0);
+      mockView(BASE_VIEW, ['RollDie']);
+      const user = userEvent.setup();
+
+      render(<GameBoardPage />);
+
+      const openButton = await screen.findByRole('button', { name: /open game log/i });
+      await user.click(openButton);
+
+      const logPanel = await screen.findByRole('dialog', { name: /game log/i });
+      expect(logPanel).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /close game log/i })).toHaveFocus();
+    });
+
+    it('closes the log panel and restores focus to the trigger when its close button is clicked', async () => {
+      storeIdentity(0);
+      mockView(BASE_VIEW, ['RollDie']);
+      const user = userEvent.setup();
+
+      render(<GameBoardPage />);
+
+      const openButton = await screen.findByRole('button', { name: /open game log/i });
+      await user.click(openButton);
+      await screen.findByRole('dialog', { name: /game log/i });
+
+      await user.click(screen.getByRole('button', { name: /close game log/i }));
+
+      expect(screen.queryByRole('dialog', { name: /game log/i })).not.toBeInTheDocument();
+      expect(openButton).toHaveFocus();
+    });
+
+    it('marks the rest of the board inert while the log panel is open, and lifts it on close', async () => {
+      storeIdentity(0);
+      mockView(BASE_VIEW, ['RollDie']);
+      const user = userEvent.setup();
+
+      render(<GameBoardPage />);
+      const rollButton = await screen.findByRole('button', { name: 'ROLL' });
+      expect(rollButton.closest('[inert]')).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: /open game log/i }));
+      await screen.findByRole('dialog', { name: /game log/i });
+      expect(rollButton.closest('[inert]')).not.toBeNull();
+
+      await user.click(screen.getByRole('button', { name: /close game log/i }));
+      expect(rollButton.closest('[inert]')).toBeNull();
+    });
+  });
 });
