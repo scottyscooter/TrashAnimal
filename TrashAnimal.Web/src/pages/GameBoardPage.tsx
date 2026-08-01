@@ -28,6 +28,8 @@ import BanditResponseModal from '../components/gameboard/BanditResponseModal'
 import BanditWaitingModal from '../components/gameboard/BanditWaitingModal'
 import GlassPanel from '../components/gameboard/GlassPanel'
 import GameLogPanel from '../components/gameboard/GameLogPanel'
+import GameLogButton from '../components/gameboard/GameLogButton'
+import GameLogFocusPanel from '../components/gameboard/GameLogFocusPanel'
 
 type VictimPickerMode = 'shiny' | 'steal' | null
 
@@ -38,6 +40,7 @@ function GameBoardPage() {
 
   const [victimPickerMode, setVictimPickerMode] = useState<VictimPickerMode>(null)
   const [feeshPickerOpen, setFeeshPickerOpen] = useState(false)
+  const [isGameLogOpen, setIsGameLogOpen] = useState(false)
 
   const gameViewQuery = useGameView(gameId ?? '', identity?.seatIndex ?? -1)
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
@@ -176,51 +179,107 @@ function GameBoardPage() {
   return (
     <div className="gb-root">
       <DayNightBackground />
-      <GameBoardThemeToggle />
-      <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />
-      {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
-      <OpponentRail gameView={gameView} />
-      <OpponentIndexTabs gameView={gameView} />
-      <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px]">
-        <GameLogPanel entries={gameLog} />
-      </div>
-      <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
-      <PlayerStash ownStash={gameView.ownStash} />
-      <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
+      {/* Background wrapper for the phone-landscape game log focus modal (§B of the mobile
+          landscape plan): everything that isn't itself a modal/overlay lives inside here so it can
+          be blurred and locked as a single unit while the log panel is open. `absolute inset-0`
+          (rather than a plain unstyled div) matters specifically because of the risk called out in
+          the plan — once `filter` is applied below, this wrapper becomes the new containing block
+          for every `position: fixed` descendant inside it (TurnIndicator, RollStopControls,
+          PlayerHand, TokenPhasePanel, etc. all currently expect `fixed` to mean "relative to the
+          viewport"). Giving the wrapper the exact same box as the viewport (its parent, `.gb-root`,
+          is itself `position: fixed; inset: 0`, i.e. viewport-sized) means that becoming their
+          containing block doesn't change where those descendants render, whether or not the filter
+          is currently applied.
+          Modals/overlays that must stay sharp and interactive regardless of this wrapper's state —
+          VictimPicker, FeeshCardPicker, BanditResponseModal, BanditWaitingModal, YumYumPrompt,
+          StealPrompt, and (via a portal in Modal.tsx/OpponentDetailModal.tsx) OpponentDetailModal,
+          StashModal, DiscardCarouselModal — are deliberately kept outside it. */}
+      <div
+        className="absolute inset-0"
+        style={
+          isGameLogOpen
+            ? { filter: 'blur(10px) saturate(0.6) brightness(0.55)', pointerEvents: 'none' }
+            : undefined
+        }
+      >
+        <GameBoardThemeToggle />
+        <GameLogButton onClick={() => setIsGameLogOpen(true)} />
+        <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />
+        {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
-      <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[6%]">
-        <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-1 phone-landscape:px-3 phone-landscape:py-1.5">
-          <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[9px]" style={{ color: 'var(--gb-text-label)' }}>
-            YOUR TOKENS
-          </span>
-          {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
-              player is CURRENTLY active, not "my own tokens" — every viewer's own tray must stay
-              empty unless it's actually their turn, or everyone sees the active player's rolls
-              duplicated into their own panel. The active player's tray is what OpponentTile shows
-              to everyone else. */}
-          <TokenTray
-            phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
-            tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
-            isBusted={isLocalPlayerTurn && gameView.isBusted}
+        <OpponentRail gameView={gameView} />
+        <OpponentIndexTabs gameView={gameView} />
+        <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px] phone-landscape:hidden">
+          <GameLogPanel entries={gameLog} />
+        </div>
+        <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
+        <PlayerStash ownStash={gameView.ownStash} />
+        <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
+
+        <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[6%]">
+          <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-1 phone-landscape:px-3 phone-landscape:py-1.5">
+            <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[9px]" style={{ color: 'var(--gb-text-label)' }}>
+              YOUR TOKENS
+            </span>
+            {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
+                player is CURRENTLY active, not "my own tokens" — every viewer's own tray must stay
+                empty unless it's actually their turn, or everyone sees the active player's rolls
+                duplicated into their own panel. The active player's tray is what OpponentTile shows
+                to everyone else. */}
+            <TokenTray
+              phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
+              tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
+              isBusted={isLocalPlayerTurn && gameView.isBusted}
+            />
+          </GlassPanel>
+        </div>
+
+        {isLocalPlayerTurn && !gameView.tokenPhase && !gameView.stealPhase && !isLocalYumYumResponder && (
+          <RollStopControls allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
+        )}
+
+        {isLocalPlayerTurn && allowedActions.includes('PlayShiny') && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setVictimPickerMode('shiny')}
+            className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 phone-landscape:bottom-[26%] phone-landscape:right-[2%] phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
+            style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
+          >
+            Play Shiny
+          </button>
+        )}
+
+        {isLocalPlayerTurn && gameView.tokenPhase && !isAwaitingBanditResponse && (
+          <TokenPhasePanel
+            tokenPhase={gameView.tokenPhase}
+            allowedActions={allowedActions}
+            isPending={isPending}
+            onAction={handleAction}
+            onCardPick={handleCardPick}
+            onDoubleStashSubmit={handleDoubleStashSubmit}
+            onRecyclePick={handleRecyclePick}
+            onStartSteal={handleStartSteal}
           />
-        </GlassPanel>
+        )}
       </div>
 
-      {isLocalPlayerTurn && !gameView.tokenPhase && !gameView.stealPhase && !isLocalYumYumResponder && (
-        <RollStopControls allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
-      )}
-
-      {isLocalPlayerTurn && allowedActions.includes('PlayShiny') && (
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => setVictimPickerMode('shiny')}
-          className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 phone-landscape:bottom-[26%] phone-landscape:right-[2%] phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
-          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
-        >
-          Play Shiny
-        </button>
+      {isGameLogOpen && (
+        <>
+          {/* pointer-events: none on the wrapper above means it can't receive the "tap background
+              to close" click itself — this full-screen invisible click-catcher sits in front of
+              the (blurred, inert) wrapper but behind GameLogFocusPanel, so a tap anywhere outside
+              the panel closes the log, and a tap on the panel itself doesn't (the panel is a later,
+              higher z-indexed sibling, so it receives the click first and never bubbles down to
+              this catcher for the area it covers). */}
+          <div
+            className="fixed inset-0 z-30 hidden phone-landscape:block"
+            onClick={() => setIsGameLogOpen(false)}
+            aria-hidden="true"
+          />
+          <GameLogFocusPanel entries={gameLog} onClose={() => setIsGameLogOpen(false)} />
+        </>
       )}
 
       {isLocalYumYumResponder && (
@@ -236,19 +295,6 @@ function GameBoardPage() {
           onAction={handleAction}
           onCardPick={handleCardPick}
           isPending={isPending}
-        />
-      )}
-
-      {isLocalPlayerTurn && gameView.tokenPhase && !isAwaitingBanditResponse && (
-        <TokenPhasePanel
-          tokenPhase={gameView.tokenPhase}
-          allowedActions={allowedActions}
-          isPending={isPending}
-          onAction={handleAction}
-          onCardPick={handleCardPick}
-          onDoubleStashSubmit={handleDoubleStashSubmit}
-          onRecyclePick={handleRecyclePick}
-          onStartSteal={handleStartSteal}
         />
       )}
 

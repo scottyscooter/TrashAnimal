@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   children: ReactNode;
@@ -25,7 +26,16 @@ function Modal({ children, onClose, labelledBy, wide = false, maxWidthClassName,
 
   const widthClassName = maxWidthClassName ?? (wide ? 'max-w-3xl' : 'max-w-md');
 
-  return (
+  // Rendered via a portal directly into document.body rather than in-place: several callers of
+  // this component (StashModal, DiscardCarouselModal, OpponentDetailModal) are themselves nested
+  // inside board-content components that GameBoardPage's phone-landscape game-log wrapper wraps in
+  // a `filter` when the log is open. A `filter` on an ancestor creates a new containing block for
+  // `position: fixed` descendants and also applies the filter's visual effect (blur/pointer-events)
+  // to the whole painted subtree — so without a portal, this modal would get blurred and made
+  // inert any time it happened to be open while that ancestor's filter was active, even though it
+  // must stay a fully interactive, unblurred overlay. Portaling to document.body removes it from
+  // that DOM subtree entirely, so it's unaffected regardless of any ancestor's filter/pointer-events.
+  return createPortal(
     <div
       role="presentation"
       onClick={onClose}
@@ -55,7 +65,8 @@ function Modal({ children, onClose, labelledBy, wide = false, maxWidthClassName,
         </button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
