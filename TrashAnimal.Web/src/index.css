@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+@custom-variant phone-landscape (@media (orientation: landscape) and (max-height: 600px));
+@custom-variant tablet-landscape (@media (orientation: landscape) and (min-height: 600px));
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
