@@ -1,5 +1,22 @@
 # Notes for a future planning session: two more MmmPie-adjacent bugs
 
+> **Status: Note 1 resolved 2026-07-30 on `fix/mmmpie-yumyum-and-steal-log-messages`.** Root cause
+> confirmed exactly as hypothesized below: `TokenPhaseTokenCompletionEngine.RestartSubflow`'s
+> `DoubleStash` case just re-sets `state.Step = DoubleStashChoosingCards` (domain-side is correct,
+> no bug there) — it's purely `TokenPhasePanel`'s local `doubleStashSelection` state surviving the
+> re-entry. Fix: `TokenPhasePanel.tsx`'s submit `onClick` now clears `doubleStashSelection`
+> immediately alongside dispatching `onDoubleStashSubmit`, so a repeat prompt (same component
+> instance, `step` never leaves `DoubleStashChoosingCards` across the repeat) always starts empty.
+> Covered by a new `TokenPhasePanel.test.tsx` case. Note 2 turned out not to be a separate bug:
+> `TokenPhaseAllowedActionsProvider` already correctly gates `PlayMmmPieTokenPhase` per-step
+> (verified — it's offered during `StashTrashPickCard`/`DoubleStashChoosingCards` by design, so a
+> player can queue a repeat before finishing the current token's own prompt; see
+> `steal-token-mmmpie-repeat-fix.md` decision 2), and the "separate bug" the note anticipated was
+> this same stale-selection issue manifesting once the repeat's `DoubleStashChoosingCards` prompt
+> reopened. No further Note 2 fix needed.
+>
+> Original notes below, for historical context.
+
 > **Status: raw notes, not a plan.** Found 2026-07-29 while manually playing after the
 > `token-zero-option-deadlocks-fix.md` fix landed. Not yet diagnosed to the rigor of that plan (no
 > full site enumeration, no confirmed root cause, no settled decisions) — do that work before

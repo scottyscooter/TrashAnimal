@@ -156,8 +156,14 @@ public sealed class GameApplicationService
             gameId, playerSeat, action);
 
         var succeeded = entry.Session.ApplyAction(playerSeat, action, entry.Die, out var error, out var resolvedWithNoEffectToken);
-        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken));
+        var infoMessage = succeeded && action == GameAction.AbandonBust
+            ? AbandonBustInfoMessage
+            : BuildTokenFizzleInfoMessage(resolvedWithNoEffectToken);
+        return await BuildResultAsync(entry, gameId, playerSeat, succeeded, error, infoMessage);
     }
+
+    /// <summary>Surfaced so the busted player knows their turn ended with a consolation draw, not silence.</summary>
+    private const string AbandonBustInfoMessage = "Drew 1 card (bust consolation) — turn ended.";
 
     private async Task<GameCommandResult> ExecutePlayFeeshUnlockedAsync(
         GameSessionEntry entry,

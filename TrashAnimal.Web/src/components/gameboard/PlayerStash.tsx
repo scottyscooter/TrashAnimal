@@ -9,8 +9,8 @@ interface PlayerStashProps {
 }
 
 function PlayerStash({ ownStash }: PlayerStashProps) {
-  const [modalOpen, setModalOpen] = useState(false);
-  const total = ownStash.faceDownCount + ownStash.faceUpCards.length;
+  const [openModal, setOpenModal] = useState<'faceDown' | 'faceUp' | null>(null);
+  const total = ownStash.faceDownCards.length + ownStash.faceUpCards.length;
   const topFaceUp = ownStash.faceUpCards[ownStash.faceUpCards.length - 1] ?? null;
 
   return (
@@ -28,8 +28,13 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
           </span>
         </div>
         <div className="flex gap-5">
-          <div className="relative h-[180px] w-[128px]">
-            {ownStash.faceDownCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => setOpenModal('faceDown')}
+            disabled={ownStash.faceDownCards.length === 0}
+            className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {ownStash.faceDownCards.length > 0 ? (
               <img src={CARD_BACK_IMAGE} alt="Face-down stash" className="h-full w-full rounded-[10px] object-cover" />
             ) : (
               <EmptyPileSlot className="h-full w-full rounded-[10px]" />
@@ -38,12 +43,12 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
               className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold"
               style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text-dark)' }}
             >
-              {ownStash.faceDownCount}
+              {ownStash.faceDownCards.length}
             </span>
-          </div>
+          </button>
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => setOpenModal('faceUp')}
             disabled={!topFaceUp}
             className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100"
           >
@@ -66,11 +71,18 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
         </div>
       </div>
 
-      {modalOpen && (
+      {openModal === 'faceDown' && (
+        <StashModal
+          title="Your Face-Down Stash"
+          cards={ownStash.faceDownCards}
+          onClose={() => setOpenModal(null)}
+        />
+      )}
+      {openModal === 'faceUp' && (
         <StashModal
           title="Your Face-Up Stash"
-          faceUpCards={ownStash.faceUpCards}
-          onClose={() => setModalOpen(false)}
+          cards={ownStash.faceUpCards}
+          onClose={() => setOpenModal(null)}
         />
       )}
     </>

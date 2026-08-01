@@ -106,6 +106,53 @@ public sealed class GameSessionHandCardPlayabilityTests
     }
 
     [Fact]
+    public void Yumyum_InActivePlayersOwnHand_ReportsOpponentTriggeredReason_NotAPhaseReason()
+    {
+        var (p0, _, session) = CreateTwoPlayerSession();
+
+        var yumyum = new Card(CardName.Yumyum);
+        p0.Hand.Add(yumyum);
+
+        var view = session.GetViewForPlayer(0);
+        var cardView = view.HandCards.Single(c => c.CardId == yumyum.Id);
+
+        Assert.Null(cardView.PlayableAs);
+        Assert.Equal("Can only be played when an opponent chooses to stop rolling.", cardView.UnplayableReason);
+    }
+
+    [Fact]
+    public void NannersAndBlammo_ReportPlayableAs_OnlyWhileBusted()
+    {
+        var (p0, _, session) = CreateTwoPlayerSession();
+        var nanners = new Card(CardName.Nanners);
+        var blammo = new Card(CardName.Blammo);
+        p0.Hand.Add(nanners);
+        p0.Hand.Add(blammo);
+
+        // Not busted yet: rank-3 "not busted" reason, not playable.
+        var viewBeforeBust = session.GetViewForPlayer(0);
+        var nannersBefore = viewBeforeBust.HandCards.Single(c => c.CardId == nanners.Id);
+        var blammoBefore = viewBeforeBust.HandCards.Single(c => c.CardId == blammo.Id);
+        Assert.Null(nannersBefore.PlayableAs);
+        Assert.Equal("Not busted.", nannersBefore.UnplayableReason);
+        Assert.Null(blammoBefore.PlayableAs);
+        Assert.Equal("Not busted.", blammoBefore.UnplayableReason);
+
+        var die = DieMockFactory.CreateSequenced(TokenAction.Bandit, TokenAction.Bandit).Object;
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var rollErr1, out _), rollErr1);
+        Assert.True(session.ApplyAction(0, GameAction.RollDie, die, out var rollErr2, out _), rollErr2);
+        Assert.True(session.PhaseOne.IsBusted);
+
+        var viewWhileBusted = session.GetViewForPlayer(0);
+        var nannersWhileBusted = viewWhileBusted.HandCards.Single(c => c.CardId == nanners.Id);
+        var blammoWhileBusted = viewWhileBusted.HandCards.Single(c => c.CardId == blammo.Id);
+        Assert.Equal(GameAction.PlayNanners, nannersWhileBusted.PlayableAs);
+        Assert.Null(nannersWhileBusted.UnplayableReason);
+        Assert.Equal(GameAction.PlayBlammo, blammoWhileBusted.PlayableAs);
+        Assert.Null(blammoWhileBusted.UnplayableReason);
+    }
+
+    [Fact]
     public void NonActivePlayer_WithNoOpenInterruptWindow_SeesEveryCardWithNullPlayableAsAndReason()
     {
         var (p0, p1, session) = CreateTwoPlayerSession();

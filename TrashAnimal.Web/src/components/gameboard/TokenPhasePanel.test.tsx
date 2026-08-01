@@ -92,4 +92,36 @@ describe('TokenPhasePanel', () => {
     expect(screen.getByRole('button', { name: /draw a card/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /stash a card/i })).toBeInTheDocument();
   });
+
+  it('clears the DoubleStash card selection immediately on submit, so an MmmPie-triggered repeat prompt starts empty', async () => {
+    const user = userEvent.setup();
+    const onDoubleStashSubmit = vi.fn();
+    render(
+      <TokenPhasePanel
+        tokenPhase={buildTokenPhase({
+          step: 'DoubleStashChoosingCards',
+          stashableHandCardsForCurrentPrompt: [
+            { cardId: 'card-1', name: 'Yumyum' },
+            { cardId: 'card-2', name: 'Feesh' },
+          ],
+        })}
+        allowedActions={['TokenDoubleStashSubmit']}
+        isPending={false}
+        onAction={() => {}}
+        onCardPick={() => {}}
+        onDoubleStashSubmit={onDoubleStashSubmit}
+        onRecyclePick={() => {}}
+        onStartSteal={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add yumyum/i }));
+    await user.click(screen.getByRole('button', { name: /add feesh/i }));
+    expect(screen.getByRole('button', { name: /stash 2 cards/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /stash 2 cards/i }));
+
+    expect(onDoubleStashSubmit).toHaveBeenCalledWith(['card-1', 'card-2']);
+    expect(screen.getByRole('button', { name: /stash 0 cards/i })).toBeInTheDocument();
+  });
 });

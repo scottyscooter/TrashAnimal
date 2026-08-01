@@ -23,43 +23,17 @@ function RollStopControls({ allowedActions, onAction, isPending }: RollStopContr
 
   return (
     <div className="fixed bottom-[60px] right-[80px] z-20 flex flex-col items-center gap-5">
-      {(allowedActions.includes('PlayNanners') ||
-        allowedActions.includes('PlayBlammo') ||
-        allowedActions.includes('AbandonBust')) && (
+      {allowedActions.includes('AbandonBust') && (
         <div className="flex gap-2">
-          {allowedActions.includes('PlayNanners') && (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => onAction('PlayNanners')}
-              className="gb-glass rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] disabled:opacity-50"
-              style={{ color: 'var(--gb-text-primary)' }}
-            >
-              PLAY NANNERS
-            </button>
-          )}
-          {allowedActions.includes('PlayBlammo') && (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => onAction('PlayBlammo')}
-              className="gb-glass rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] disabled:opacity-50"
-              style={{ color: 'var(--gb-text-primary)' }}
-            >
-              PLAY BLAMMO
-            </button>
-          )}
-          {allowedActions.includes('AbandonBust') && (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => onAction('AbandonBust')}
-              className="rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] text-white disabled:opacity-50"
-              style={{ background: 'var(--gb-red)' }}
-            >
-              ABANDON
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => onAction('AbandonBust')}
+            className="rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] text-white disabled:opacity-50"
+            style={{ background: 'var(--gb-red)' }}
+          >
+            DRAW 1 & END TURN
+          </button>
         </div>
       )}
 

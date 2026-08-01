@@ -1,7 +1,7 @@
-import { useState } from 'react';
 import type { GameAction, TokenAction, TokenPhaseView } from '../../api/types';
-import { CARD_IMAGE_BY_NAME, TOKEN_IMAGE_BY_ACTION } from '../../pages/GameBoard/assetMaps';
+import { TOKEN_IMAGE_BY_ACTION } from '../../pages/GameBoard/assetMaps';
 import GlassPanel from './GlassPanel';
+import GroupedCardPicker from './GroupedCardPicker';
 
 const RESOLVE_TOKEN_ACTION: Record<TokenAction, GameAction | null> = {
   StashTrash: 'ResolveTokenStashTrash',
@@ -37,16 +37,6 @@ function TokenPhasePanel({
   onRecyclePick,
   onStartSteal,
 }: TokenPhasePanelProps) {
-  const [doubleStashSelection, setDoubleStashSelection] = useState<string[]>([]);
-
-  function toggleDoubleStashCard(cardId: string) {
-    setDoubleStashSelection((current) => {
-      if (current.includes(cardId)) return current.filter((id) => id !== cardId);
-      if (current.length >= 2) return current;
-      return [...current, cardId];
-    });
-  }
-
   return (
     <GlassPanel className="fixed bottom-[520px] left-1/2 z-20 flex w-[520px] -translate-x-1/2 flex-col gap-3 rounded-2xl p-5">
       {allowedActions.includes('PlayMmmPieTokenPhase') && (
@@ -121,49 +111,23 @@ function TokenPhasePanel({
       )}
 
       {tokenPhase.step === 'StashTrashPickCard' && (
-        <HandCardPickList
+        <GroupedCardPicker
           cards={tokenPhase.stashableHandCardsForCurrentPrompt}
+          min={1}
+          max={1}
           isPending={isPending}
-          onPick={onCardPick}
+          onConfirm={(ids) => onCardPick(ids[0])}
         />
       )}
 
       {tokenPhase.step === 'DoubleStashChoosingCards' && (
-        <>
-          <p className="text-xs" style={{ color: 'var(--gb-text-label)' }}>
-            Pick 0–2 cards to stash.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {tokenPhase.stashableHandCardsForCurrentPrompt.map((card) => {
-              const selected = doubleStashSelection.includes(card.cardId);
-              return (
-                <button
-                  key={card.cardId}
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => toggleDoubleStashCard(card.cardId)}
-                  className="relative rounded-lg border-2 disabled:opacity-50"
-                  style={{ borderColor: selected ? 'var(--gb-green)' : 'transparent' }}
-                >
-                  <img
-                    src={CARD_IMAGE_BY_NAME[card.name]}
-                    alt={card.name}
-                    className="h-[84px] w-[60px] rounded-md object-cover"
-                  />
-                </button>
-              );
-            })}
-          </div>
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={() => onDoubleStashSubmit(doubleStashSelection)}
-            className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
-            style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
-          >
-            Stash {doubleStashSelection.length} card{doubleStashSelection.length === 1 ? '' : 's'}
-          </button>
-        </>
+        <GroupedCardPicker
+          cards={tokenPhase.stashableHandCardsForCurrentPrompt}
+          min={0}
+          max={2}
+          isPending={isPending}
+          onConfirm={onDoubleStashSubmit}
+        />
       )}
 
       {tokenPhase.step === 'StealChoosingVictim' && (
@@ -212,36 +176,6 @@ function TokenPhasePanel({
         </>
       )}
     </GlassPanel>
-  );
-}
-
-function HandCardPickList({
-  cards,
-  isPending,
-  onPick,
-}: {
-  cards: TokenPhaseView['stashableHandCardsForCurrentPrompt'];
-  isPending: boolean;
-  onPick: (cardId: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {cards.map((card) => (
-        <button
-          key={card.cardId}
-          type="button"
-          disabled={isPending}
-          onClick={() => onPick(card.cardId)}
-          className="transition-transform duration-150 hover:scale-[1.08] disabled:opacity-50"
-        >
-          <img
-            src={CARD_IMAGE_BY_NAME[card.name]}
-            alt={card.name}
-            className="h-[84px] w-[60px] rounded-md object-cover"
-          />
-        </button>
-      ))}
-    </div>
   );
 }
 

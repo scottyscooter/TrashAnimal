@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGameClientIdentity } from '../hooks/useGameClientIdentity'
 import { useGameView } from '../hooks/useGameView'
@@ -7,6 +7,7 @@ import { useGameLogAnnouncements } from '../hooks/useGameLogAnnouncements'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
 import { useToast } from '../components/Toast/useToast'
 import type { GameAction, HandCardView, TokenAction } from '../api/types'
+import { TOKEN_IMAGE_BY_ACTION } from './GameBoard/assetMaps'
 import DayNightBackground from '../components/gameboard/DayNightBackground'
 import GameBoardThemeToggle from '../components/gameboard/GameBoardThemeToggle'
 import TurnIndicator from '../components/gameboard/TurnIndicator'
@@ -41,6 +42,16 @@ function GameBoardPage() {
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
   useGameLogAnnouncements(gameViewQuery.data?.view.log ?? [], identity?.seatIndex ?? -1)
   const submitCommand = useSubmitCommand(gameId ?? '', identity?.seatIndex ?? -1)
+
+  // Tokens only appear in the tray when earned, so the browser won't have fetched them yet
+  // on the roll that first produces each token type. Prefetch all six on mount so they're
+  // already cached whenever the tray renders them.
+  useEffect(() => {
+    Object.values(TOKEN_IMAGE_BY_ACTION).forEach((src) => {
+      const img = new Image()
+      img.src = src
+    })
+  }, [])
 
   if (!gameId) {
     return null

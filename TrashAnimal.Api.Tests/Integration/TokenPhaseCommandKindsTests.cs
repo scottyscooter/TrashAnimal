@@ -47,7 +47,7 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         Assert.True(body!.Succeeded, body.ErrorMessage);
 
         var (_, view) = await _client.GetViewAsync(gameId, playerSeat: 0);
-        Assert.Equal(1, view!.View.OwnStash.FaceDownCount);
+        Assert.Single(view!.View.OwnStash.FaceDownCards);
         Assert.DoesNotContain(view.View.HandCards, c => c.CardId == stashCard.Id);
     }
 
@@ -75,7 +75,7 @@ public sealed class TokenPhaseCommandKindsTests : IClassFixture<TrashApiTestFact
         Assert.True(body!.Succeeded, body.ErrorMessage);
 
         var (_, view) = await _client.GetViewAsync(gameId, playerSeat: 0);
-        Assert.Equal(1, view!.View.OwnStash.FaceDownCount);
+        Assert.Single(view!.View.OwnStash.FaceDownCards);
         Assert.Contains(view.View.HandCards, c => c.CardId == keepCard.Id);
         Assert.DoesNotContain(view.View.HandCards, c => c.CardId == stashCard.Id);
     }

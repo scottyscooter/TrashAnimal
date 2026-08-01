@@ -128,7 +128,7 @@ export interface OpponentSummaryView {
 }
 
 export interface OwnStashView {
-  faceDownCount: number;
+  faceDownCards: StashableHandCard[];
   faceUpCards: StashableHandCard[];
 }
 
