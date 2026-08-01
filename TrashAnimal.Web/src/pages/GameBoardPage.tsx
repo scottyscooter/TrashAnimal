@@ -13,6 +13,7 @@ import GameBoardThemeToggle from '../components/gameboard/GameBoardThemeToggle'
 import TurnIndicator from '../components/gameboard/TurnIndicator'
 import PhaseToggle from '../components/gameboard/PhaseToggle'
 import OpponentRail from '../components/gameboard/OpponentRail'
+import OpponentIndexTabs from '../components/gameboard/OpponentIndexTabs'
 import DeckDiscardPiles from '../components/gameboard/DeckDiscardPiles'
 import PlayerStash from '../components/gameboard/PlayerStash'
 import PlayerHand from '../components/gameboard/PlayerHand'
@@ -180,6 +181,7 @@ function GameBoardPage() {
       {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
       <OpponentRail gameView={gameView} />
+      <OpponentIndexTabs gameView={gameView} />
       <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px]">
         <GameLogPanel entries={gameLog} />
       </div>
