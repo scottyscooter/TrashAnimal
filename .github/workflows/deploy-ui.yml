@@ -45,6 +45,10 @@ jobs:
           # or `az containerapp show --name trashanimal-api --resource-group trashanimal-rg --query properties.configuration.ingress.fqdn`).
           VITE_API_BASE_URL: https://${{ vars.API_FQDN }}
 
+      - name: Add SPA fallback for client-side routes
+        run: cp dist/index.html dist/404.html
+        working-directory: TrashAnimal.Web
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
