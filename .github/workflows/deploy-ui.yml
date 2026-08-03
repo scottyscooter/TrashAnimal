@@ -1,0 +1,45 @@
+name: Deploy UI to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'TrashAnimal.Web/**'
+      - '.github/workflows/deploy-ui.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'TrashAnimal.Web/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: TrashAnimal.Web
+
+      - name: Build
+        run: npm run build
+        working-directory: TrashAnimal.Web
+        env:
+          # Set repo variable VITE_API_BASE_URL (Settings > Secrets and variables > Actions > Variables)
+          # to the Container App's actual FQDN once known (see `fqdn` output of the Bicep deployment,
+          # or `az containerapp show --name trashanimal-api --resource-group trashanimal-rg --query properties.configuration.ingress.fqdn`).
+          VITE_API_BASE_URL: https://${{ vars.API_FQDN }}
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./TrashAnimal.Web/dist

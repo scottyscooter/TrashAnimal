@@ -1,0 +1,5 @@
+**/bin
+**/obj
+TrashAnimal.Web/node_modules
+TrashAnimal.Web/dist
+.git
