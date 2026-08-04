@@ -6,11 +6,27 @@ import { useCallback, useSyncExternalStore } from 'react';
  * event — there's nothing to coordinate across hook instances the way `useLocalStorage` has to for
  * same-tab localStorage writes (which the browser doesn't notify same-tab listeners about at all).
  * Each hook instance owns exactly one `MediaQueryList` + one listener, added and removed with it.
+ *
+ * Also re-checks on `resize`/`orientationchange`, not just the `MediaQueryList`'s own `change`
+ * event. The `phone-landscape`/`tablet-landscape` Tailwind variants these hooks mirror are plain
+ * CSS `@media` rules, applied by the browser's style engine synchronously with layout; this hook's
+ * `change` event, by contrast, is dispatched by the browser and then handled by React on its own
+ * schedule, which can commit a render after the CSS has already switched breakpoints. That gap lets
+ * a component that mixes CSS-variant classes (container position/size) with this hook's value (e.g.
+ * per-card size/spacing computed in JS) paint one frame where the two disagree. `resize`/
+ * `orientationchange` fire independently of the `change` event and give React another chance to
+ * re-run `getSnapshot` and catch up, without changing what value is ultimately returned.
  */
 function subscribeToMediaQuery(query: string, listener: () => void): () => void {
   const mql = window.matchMedia(query);
   mql.addEventListener('change', listener);
-  return () => mql.removeEventListener('change', listener);
+  window.addEventListener('resize', listener);
+  window.addEventListener('orientationchange', listener);
+  return () => {
+    mql.removeEventListener('change', listener);
+    window.removeEventListener('resize', listener);
+    window.removeEventListener('orientationchange', listener);
+  };
 }
 
 /**

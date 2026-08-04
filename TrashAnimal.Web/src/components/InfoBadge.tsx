@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 interface InfoBadgeProps {
   info: string | null | undefined;
@@ -26,6 +27,43 @@ function InfoBadge({ info, children }: InfoBadgeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isVisible = Boolean(info) && pinState !== 'dismissed' && (isHovering || isFocused || pinState === 'pinned');
+
+  // Rendered via a portal (below) instead of as a normal absolutely-positioned child: PlayerHand's
+  // phone-landscape fan sits inside an overflow-x-auto scroll layer, and setting any overflow axis
+  // to non-visible clips ALL descendants to that layer's own box, including this tooltip's
+  // `bottom: 100%` upward pop — no amount of sizing the scroll layer avoids that, since its exact
+  // height varies with `info`'s text length. Portaling to document.body escapes that ancestor
+  // entirely, so position has to be computed in viewport coordinates instead of via CSS relative
+  // to the wrapping `<div>`, and re-measured on scroll/resize since a `position: fixed` copy in the
+  // portal no longer tracks the trigger's layout automatically.
+  const [portalPosition, setPortalPosition] = useState<{ right: number; bottom: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!isVisible) {
+      setPortalPosition(null);
+      return;
+    }
+
+    function updatePosition() {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPortalPosition({
+        right: window.innerWidth - rect.right,
+        bottom: window.innerHeight - rect.top,
+      });
+    }
+
+    updatePosition();
+    // `true` (capture phase): the hand's own horizontal scroll fires its `scroll` event on that
+    // scroll container, not `window` — capture-phase listening on window still receives it since
+    // scroll events bubble through the capture phase of every ancestor up to window.
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isVisible]);
 
   useEffect(() => {
     if (pinState === 'unset') {
@@ -84,15 +122,18 @@ function InfoBadge({ info, children }: InfoBadgeProps) {
       >
         i
       </button>
-      {isVisible && (
-        <div
-          role="tooltip"
-          className="gb-glass absolute right-0 z-20 w-max max-w-[220px] rounded-lg px-3 py-2 text-xs"
-          style={{ bottom: '100%', color: 'var(--gb-text-label)' }}
-        >
-          {info}
-        </div>
-      )}
+      {isVisible &&
+        portalPosition &&
+        createPortal(
+          <div
+            role="tooltip"
+            className="gb-glass fixed z-20 w-max max-w-[220px] rounded-lg px-3 py-2 text-xs"
+            style={{ right: portalPosition.right, bottom: portalPosition.bottom, color: 'var(--gb-text-label)' }}
+          >
+            {info}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
