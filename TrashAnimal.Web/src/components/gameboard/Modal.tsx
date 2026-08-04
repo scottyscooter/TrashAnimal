@@ -47,7 +47,7 @@ function Modal({ children, onClose, labelledBy, wide = false, maxWidthClassName,
         aria-modal="true"
         aria-labelledby={labelledBy}
         onClick={handleContentClick}
-        className={`relative rounded-[20px] border p-6 ${fitContent ? 'w-fit' : 'w-full'} ${widthClassName}`}
+        className={`relative max-h-[85vh] overflow-y-auto rounded-[20px] border p-6 ${fitContent ? 'w-fit' : 'w-full'} ${widthClassName}`}
         style={{
           background: 'rgba(18,26,46,.95)',
           borderColor: 'rgba(255,255,255,.18)',
