@@ -11,6 +11,19 @@ afterEach(() => {
   cleanup();
 });
 
+// jsdom has no PointerEvent constructor, so fireEvent.pointerDown/Move/Up (used to simulate
+// the hold-to-enlarge gesture) would otherwise drop clientX/clientY entirely — polyfill it as
+// a MouseEvent subclass, which jsdom already implements those properties on.
+if (typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+    }
+  }
+  // @ts-expect-error - simplified polyfill, not a full PointerEvent implementation
+  window.PointerEvent = PointerEventPolyfill;
+}
+
 // Mock window.matchMedia if needed for responsive tests
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

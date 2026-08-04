@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '../../test/test-utils';
+import { act } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '../../test/test-utils';
 import type { HandCardView } from '../../api/types';
 import PlayerHand from './PlayerHand';
 
@@ -90,6 +91,124 @@ describe('PlayerHand', () => {
     fireEvent.mouseEnter(unplayableCard);
 
     expect(otherCard.style.left).not.toBe(leftBeforeHover);
+  });
+
+  describe('hold-to-enlarge', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('opens the enlarged card preview after holding a card past the hold duration', () => {
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      expect(screen.getByRole('dialog', { name: /shiny card, enlarged/i })).toBeInTheDocument();
+    });
+
+    it('does not open the preview or play the card on a quick tap shorter than the hold duration', () => {
+      const onCardActivate = vi.fn();
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={onCardActivate} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(200));
+      fireEvent.pointerUp(card);
+      fireEvent.click(card);
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(onCardActivate).toHaveBeenCalledTimes(1);
+    });
+
+    it('cancels the pending hold if the pointer moves past the cancel threshold before it fires (a swipe attempt)', () => {
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      fireEvent.pointerMove(card, { clientX: 130, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('does not play the card when the hold fires, even though the pointer is still down over the card', () => {
+      const onCardActivate = vi.fn();
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={onCardActivate} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+      // Simulates touch's implicit pointer capture: the click that follows pointerup still
+      // targets the original card element even though the overlay is now on top.
+      fireEvent.click(card);
+
+      expect(onCardActivate).not.toHaveBeenCalled();
+    });
+
+    it('closes the preview when clicking the scrim, and does not trigger the card underneath', () => {
+      const onCardActivate = vi.fn();
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={onCardActivate} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      fireEvent.click(screen.getByRole('dialog', { name: /shiny card, enlarged/i }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(onCardActivate).not.toHaveBeenCalled();
+    });
+
+    it('closes the preview via the close button', () => {
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      fireEvent.click(screen.getByRole('button', { name: /close/i }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('closes the preview on Escape', () => {
+      const handCards = buildHand({ playableAs: 'PlayShiny', unplayableReason: null });
+      render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    it('can hold-to-enlarge an unplayable card, and renders it at full color/opacity in the preview', () => {
+      const handCards = buildHand({ playableAs: null, unplayableReason: 'Cards drawn during your current turn cannot be played.' });
+      render(<PlayerHand handCards={handCards} onCardActivate={() => {}} />);
+
+      const card = screen.getByRole('button', { name: /shiny/i });
+      fireEvent.pointerDown(card, { clientX: 100, clientY: 100 });
+      act(() => vi.advanceTimersByTime(500));
+
+      const dialog = screen.getByRole('dialog', { name: /shiny card, enlarged/i });
+      const previewImage = within(dialog).getByAltText('Shiny');
+      expect(previewImage).not.toHaveStyle({ filter: 'grayscale(0.6)' });
+      expect(previewImage.parentElement).not.toHaveStyle({ opacity: '0.55' });
+    });
   });
 
   describe('on phone landscape', () => {
