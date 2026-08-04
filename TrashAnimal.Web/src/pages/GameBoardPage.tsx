@@ -5,6 +5,7 @@ import { useGameView } from '../hooks/useGameView'
 import { useGameSignalR } from '../hooks/useGameSignalR'
 import { useGameLogAnnouncements } from '../hooks/useGameLogAnnouncements'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
+import { useIsPhoneLandscape } from '../hooks/useLandscapeBreakpoint'
 import { useToast } from '../components/Toast/useToast'
 import type { GameAction, HandCardView, TokenAction } from '../api/types'
 import { TOKEN_IMAGE_BY_ACTION } from './GameBoard/assetMaps'
@@ -59,6 +60,12 @@ function GameBoardPage() {
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
   useGameLogAnnouncements(gameViewQuery.data?.view.log ?? [], identity?.seatIndex ?? -1)
   const submitCommand = useSubmitCommand(gameId ?? '', identity?.seatIndex ?? -1)
+  // TokenTray's `size` is a numeric prop, not a CSS class — Tailwind's phone-landscape variant
+  // can't conditionally change a React prop value, so this is one of the few spots that genuinely
+  // needs the JS-level breakpoint hook rather than a phone-landscape: utility class. Without this,
+  // the tray rendered at its 64px desktop default on phone landscape too, and its footprint
+  // overlapped the bottom of the hand's fanned/lifted cards. See Round 2 follow-up.
+  const isPhoneLandscape = useIsPhoneLandscape()
 
   // Tokens only appear in the tray when earned, so the browser won't have fetched them yet
   // on the roll that first produces each token type. Prefetch all six on mount so they're
@@ -240,9 +247,9 @@ function GameBoardPage() {
         <PlayerStash ownStash={gameView.ownStash} />
         <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
 
-        <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[6%]">
-          <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-1 phone-landscape:px-3 phone-landscape:py-1.5">
-            <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[9px]" style={{ color: 'var(--gb-text-label)' }}>
+        <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[3%]">
+          <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-0.5 phone-landscape:px-2 phone-landscape:py-1">
+            <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[8px]" style={{ color: 'var(--gb-text-label)' }}>
               YOUR TOKENS
             </span>
             {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
@@ -254,6 +261,7 @@ function GameBoardPage() {
               phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
               tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
               isBusted={isLocalPlayerTurn && gameView.isBusted}
+              size={isPhoneLandscape ? 26 : undefined}
             />
           </GlassPanel>
         </div>
