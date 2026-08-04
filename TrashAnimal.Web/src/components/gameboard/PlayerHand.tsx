@@ -172,6 +172,12 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
   const cardWidth = isPhoneLandscape ? 100 : 198;
   const cardHeight = isPhoneLandscape ? 140 : 277;
 
+  // index.css's `--gb-hand-visible-top` hand-derives where the cards actually start rendering on
+  // phone landscape for other elements (e.g. TokenPhasePanel's branch step) to position
+  // themselves above — NOT this box's own top edge, since the box is taller than cardHeight and
+  // cards anchor to its bottom (see the CSS variable's comment for the full derivation). Changing
+  // this box's phone-landscape height/center offset, or cardHeight above, changes that computed
+  // value — update the CSS variable's comment/value in index.css to match.
   return (
     <div className="fixed bottom-[190px] left-1/2 z-10 h-[320px] w-[1050px] -translate-x-1/2 phone-landscape:bottom-auto phone-landscape:top-1/2 phone-landscape:-translate-y-1/2 phone-landscape:h-[220px] phone-landscape:w-[90%] phone-landscape:max-w-[900px]">
       {/* On phone landscape this is a touch/keyboard-driven carousel: swiping or pressing the

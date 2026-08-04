@@ -27,6 +27,11 @@ function TurnIndicator({ currentPlayerName, isLocalPlayerTurn, state }: TurnIndi
   const rollingResolvingSuffix =
     isLocalPlayerTurn && state ? (RESOLVING_STATES.includes(state) ? ' · RESOLVING' : ' · ROLLING') : '';
 
+  // index.css's `--gb-turn-indicator-bottom` hand-derives this pill's rendered bottom edge
+  // (phone-landscape:top-[4%] + its own height) for other phone-landscape elements (e.g.
+  // TokenPhasePanel's branch step) to position themselves relative to. Changing this wrapper's
+  // top offset, the pill's padding/border, its text size, or TrashBagIcon's scale prop all change
+  // that computed height — update the CSS variable's comment/value in index.css to match.
   return (
     <div className="fixed left-1/2 top-6 z-20 flex -translate-x-1/2 flex-col items-center phone-landscape:top-[4%]">
       <GlassPanel className="flex items-center gap-2 rounded-full px-[26px] py-3 phone-landscape:px-4 phone-landscape:py-1.5">

@@ -193,6 +193,46 @@ code {
   --gb-modal-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
+/* ---- Phone-landscape vertical-anchor tokens ----
+   The two fixed points that bound the empty vertical gap in the middle of the phone-landscape
+   game board: the bottom edge of the turn-indicator pill (top) and the top of the player's
+   actually-visible hand cards (bottom). Anything that needs to sit "in that gap" — e.g.
+   TokenPhasePanel's StashTrashChooseBranch step, centered via
+   `top: calc((var(--gb-turn-indicator-bottom) + var(--gb-hand-visible-top)) / 2)` — should
+   compose these two variables rather than re-deriving the geometry. Only meaningful under the
+   phone-landscape media condition (mirrors the `phone-landscape` custom-variant above); outside
+   it, TurnIndicator/PlayerHand use entirely different (non-percentage) fixed positioning, so
+   these values would not correspond to anything real.
+
+   *** THESE ARE NOT LIVE MEASUREMENTS — THEY'RE HAND-DERIVED FROM THE TSX SOURCE BELOW. ***
+   If you change any of the referenced classes/constants, you must update the matching value here,
+   or every consumer of these two variables will silently drift out of position (no build error,
+   no test failure — just a visually wrong offset that only shows up on a real touch device, since
+   this tool's browser can't emulate `pointer: coarse` to preview it). Search the codebase for
+   `--gb-turn-indicator-bottom` / `--gb-hand-visible-top` before changing the source values below
+   to find every consumer to re-verify.
+
+   --gb-turn-indicator-bottom: TurnIndicator.tsx's phone-landscape:top-[4%] wrapper, plus its
+     rendered height (~54px): the GlassPanel pill (34px = 6px+6px `py-1.5` padding + 2px `gb-glass`
+     border + 20px content row — the row's max child height, which is the text-[16px] Fredoka
+     semibold line, NOT the h-[19px] scaled TrashBagIcon; text is taller at this breakpoint) plus
+     the `phone-landscape:block` phase-name line below it (20px = 4px `mt-1` + 16px `text-xs` line
+     height). If TurnIndicator's padding, font sizes, TrashBagIcon scale, or the top-[4%] offset
+     change, recompute this sum.
+   --gb-hand-visible-top: PlayerHand.tsx's phone-landscape box is `top-1/2 -translate-y-1/2
+     h-[220px]` (box top = `50% - 110px`), but its cards are `cardHeight = 140` (phone-landscape)
+     and anchored `absolute bottom-0` inside that box, dome-lifting only DOWNWARD from the
+     unlifted center card — so the box's own top edge is NOT where cards start; there's
+     `220 - 140 = 80px` of empty headroom above them. True visible top = `(50% - 110px) + 80px`
+     = `50% - 30px`. If PlayerHand's box height or phone-landscape `cardHeight` change, recompute
+     `boxHeight - cardHeight` and re-derive this. */
+@media (orientation: landscape) and (max-height: 599px) and (pointer: coarse) {
+  :root {
+    --gb-turn-indicator-bottom: calc(4% + 54px);
+    --gb-hand-visible-top: calc(50% - 30px);
+  }
+}
+
 .gb-glass {
   background: var(--gb-glass-bg);
   border: 1px solid var(--gb-glass-border);
