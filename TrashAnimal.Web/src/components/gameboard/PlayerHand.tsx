@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, TouchEvent } from 'react';
+import type { KeyboardEvent, PointerEvent, TouchEvent } from 'react';
 import type { HandCardView } from '../../api/types';
 import { useIsPhoneLandscape } from '../../hooks/useLandscapeBreakpoint';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import CardZoomOverlay from './CardZoomOverlay';
 import InfoBadge from '../InfoBadge';
+
+/** How long a pointer must stay down on a card, roughly stationary, before it counts as a
+ * "hold" that opens the enlarged card preview rather than a tap that plays the card. */
+const HOLD_DURATION_MS = 450;
+
+/** A pointer that drifts past this distance (px) before HOLD_DURATION_MS elapses cancels the
+ * pending hold — this is what lets a real swipe attempt (phone-landscape carousel) start
+ * without being misread as a hold. */
+const HOLD_MOVE_CANCEL_THRESHOLD_PX = 10;
 
 /** How many cards on either side of the carousel's centered card stay fully visible/interactive on
  * phone landscape (1 = 3 cards total, center + 1 neighbor each side). A single tunable knob so the
@@ -62,6 +72,44 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartTimeRef = useRef(0);
+
+  // Card currently shown large in CardZoomOverlay, or null when no overlay is open. Only one
+  // card can be zoomed at a time, so this is hoisted above the per-card map rather than kept
+  // as per-card state.
+  const [zoomedCard, setZoomedCard] = useState<HandCardView | null>(null);
+  const holdTimeoutRef = useRef<number | null>(null);
+  const holdStartPositionRef = useRef<{ x: number; y: number } | null>(null);
+  // Set true the instant a hold fires (see startHold below) and checked by activate() so the
+  // click that follows pointerup after a hold doesn't also play the card — touch's implicit
+  // pointer capture means that click can still target the original card element even though
+  // the zoom overlay is now the topmost thing on screen.
+  const holdFiredRef = useRef(false);
+
+  function clearPendingHold() {
+    if (holdTimeoutRef.current !== null) {
+      window.clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+    }
+    holdStartPositionRef.current = null;
+  }
+
+  function startHold(event: PointerEvent<HTMLDivElement>, card: HandCardView) {
+    holdStartPositionRef.current = { x: event.clientX, y: event.clientY };
+    holdTimeoutRef.current = window.setTimeout(() => {
+      holdTimeoutRef.current = null;
+      holdFiredRef.current = true;
+      setZoomedCard(card);
+    }, HOLD_DURATION_MS);
+  }
+
+  function handleHoldPointerMove(event: PointerEvent<HTMLDivElement>) {
+    const start = holdStartPositionRef.current;
+    if (!start) return;
+    const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+    if (distance > HOLD_MOVE_CANCEL_THRESHOLD_PX) {
+      clearPendingHold();
+    }
+  }
 
   const count = handCards.length;
   const centerOffset = (count - 1) / 2;
@@ -181,6 +229,10 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
           );
 
           function activate() {
+            if (holdFiredRef.current) {
+              holdFiredRef.current = false;
+              return;
+            }
             if (isPlayable) {
               onCardActivate(card);
             }
@@ -205,10 +257,19 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
                   activate();
                 }
               }}
+              onPointerDown={(event) => startHold(event, card)}
+              onPointerMove={handleHoldPointerMove}
+              onPointerUp={clearPendingHold}
+              onPointerLeave={clearPendingHold}
+              onPointerCancel={clearPendingHold}
+              onContextMenu={(event) => event.preventDefault()}
               className="absolute bottom-0 left-1/2 shadow-lg transition-[left,transform,opacity] duration-200 ease-out"
               style={{
                 height: `${cardHeight}px`,
                 width: `${cardWidth}px`,
+                touchAction: 'none',
+                WebkitTouchCallout: 'none',
+                userSelect: 'none',
                 left: `calc(50% + ${offset * spacing}px)`,
                 // Peek cards additionally shrink (PEEK_CARD_SCALE) on top of whatever scale they'd
                 // already have — deliberately a *different* visual channel than the grayscale+dim
@@ -232,6 +293,9 @@ function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
           );
         })}
       </div>
+      {zoomedCard && (
+        <CardZoomOverlay cardName={zoomedCard.name} onClose={() => setZoomedCard(null)} />
+      )}
     </div>
   );
 }
