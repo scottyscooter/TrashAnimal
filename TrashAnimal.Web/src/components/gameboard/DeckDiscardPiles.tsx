@@ -15,12 +15,17 @@ function DeckDiscardPiles({ deckCount, discardPile }: DeckDiscardPilesProps) {
 
   return (
     <>
-      {/* phone-landscape: px-[14%] (not the original 2%) keeps the discard pile clear of the
-          top-right icon corner (GameBoardThemeToggle + GameLogButton, both fixed-px positioned
-          right-6/right-[92px]) — at a 960-1024px viewport that leaves a several-px horizontal gap
-          between the discard pile's right edge and the log button's left edge regardless of the
-          row's vertical offset, rather than trying to fine-tune vertical clearance instead. */}
-      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16 phone-landscape:top-[3%] phone-landscape:left-0 phone-landscape:right-0 phone-landscape:w-full phone-landscape:justify-between phone-landscape:translate-x-0 phone-landscape:px-[14%] phone-landscape:gap-0">
+      {/* phone-landscape: pr-[150px] (not a percentage) keeps the discard pile clear of the
+          top-right icon corner (GameBoardThemeToggle `right-6` 60px wide + GameLogButton
+          `right-[92px]` 44px wide — that cluster's left edge sits 136px in from the screen edge,
+          fixed regardless of viewport width). A percentage inset (the original attempt, px-[14%])
+          shrinks at narrower real-device widths exactly where these fixed-px icons don't, so it
+          held at ~960-1024px but reopened an 18px overlap at 844px (iPhone 14/15 landscape) — see
+          the mobile landscape plan, Round 2 Finding 3. 150px leaves a consistent ~14px gap from the
+          icon cluster's left edge at every width in the phone-landscape range, so no vertical
+          offset is needed either — deck/discard can stay at their existing top-[3%]. pl-[3%] on
+          the deck side is unchanged in spirit from before, just no longer needs to match pr. */}
+      <div className="fixed left-1/2 top-[200px] z-10 flex -translate-x-1/2 items-end gap-16 phone-landscape:top-[3%] phone-landscape:left-0 phone-landscape:right-0 phone-landscape:w-full phone-landscape:justify-between phone-landscape:translate-x-0 phone-landscape:pl-[3%] phone-landscape:pr-[150px] phone-landscape:gap-0">
         <div className="flex flex-col items-center gap-2 phone-landscape:gap-1">
           <div className="relative h-[277px] w-[198px] phone-landscape:h-[100px] phone-landscape:w-[72px]">
             {[9, 4, 0].map((offset) => (

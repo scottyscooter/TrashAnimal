@@ -18,25 +18,43 @@ interface PlayerHandProps {
  * additionally scales up and lifts to the front.
  *
  * Playability is per-card (`card.playableAs`/`card.unplayableReason`, driven by the backend's
- * ranked-reason contract on `HandCardView`) rather than one flag for the whole fan. */
+ * ranked-reason contract on `HandCardView`) rather than one flag for the whole fan.
+ *
+ * On phone landscape, `isFanned` is forced permanently true instead of hover-driven: touch devices
+ * never fire `mouseenter`/`mouseleave`, so the hover-gated "tight" resting state (meant only to
+ * save space before a hover reveal) would otherwise be the *only* state a phone ever renders,
+ * leaving cards packed 95px+ into each other with no way to reach an individual one. See the
+ * mobile landscape plan, Round 2 Finding 2. */
 function PlayerHand({ handCards, onCardActivate }: PlayerHandProps) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const count = handCards.length;
   const centerOffset = (count - 1) / 2;
-  const isFanned = hoveredIndex !== null;
-
-  // Reduce spacing on phone landscape for compact display
   const isPhoneLandscape = useIsPhoneLandscape();
-  const spacing = isPhoneLandscape ? (isFanned ? 70 : 45) : (isFanned ? 177 : 90);
+  const isFanned = isPhoneLandscape || hoveredIndex !== null;
+
+  // Phone-landscape spacing/card size are smaller than desktop's "fanned" values, not just its
+  // "resting" ones — desktop's 177px fanned spacing assumes a 198px-wide card with room to spare;
+  // phone landscape needs every card visible within a ~900px budget without a hover gesture, so it
+  // gets its own compact-but-always-spread scale instead of borrowing the desktop hover values.
+  const spacing = isPhoneLandscape ? 62 : isFanned ? 177 : 90;
   const rotationStep = isFanned ? 4 : 2;
   const liftStep = isFanned ? 20 : 5;
 
-  const cardWidth = isPhoneLandscape ? 140 : 198;
-  const cardHeight = isPhoneLandscape ? 195 : 277;
+  const cardWidth = isPhoneLandscape ? 100 : 198;
+  const cardHeight = isPhoneLandscape ? 140 : 277;
 
   return (
-    <div className="fixed bottom-[190px] left-1/2 z-10 h-[320px] w-[1050px] -translate-x-1/2 phone-landscape:bottom-auto phone-landscape:top-1/2 phone-landscape:-translate-y-1/2 phone-landscape:h-auto phone-landscape:w-[90%] phone-landscape:max-w-[900px]">
+    // phone-landscape:h-[220px] (not h-auto): the container's own box needs an explicit height to
+    // (a) center predictably via top-1/2/-translate-y-1/2 (an absolutely-positioned-only child set
+    // contributes nothing to an auto height) and (b) safely contain the fanned cards' rotation/lift
+    // range (140px card height + up to ~50px of lift/drop) once overflow-x-auto is added below —
+    // setting overflow-x to anything but visible forces the browser to treat overflow-y as auto too,
+    // so an under-sized box would silently clip cards vertically rather than just scroll horizontally.
+    <div
+      className="fixed bottom-[190px] left-1/2 z-10 h-[320px] w-[1050px] -translate-x-1/2 phone-landscape:bottom-auto phone-landscape:top-1/2 phone-landscape:-translate-y-1/2 phone-landscape:h-[220px] phone-landscape:w-[90%] phone-landscape:max-w-[900px] phone-landscape:overflow-x-auto"
+      style={{ touchAction: isPhoneLandscape ? 'pan-x' : undefined }}
+    >
       {handCards.map((card, index) => {
         const offset = index - centerOffset;
         const isHovered = hoveredIndex === index;

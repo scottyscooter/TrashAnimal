@@ -6,7 +6,7 @@ interface ShareLinkProps {
 
 function ShareLink({ lobbyId }: ShareLinkProps) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = `${window.location.origin}/games/${lobbyId}/lobby`;
+  const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}games/${lobbyId}/lobby`;
 
   async function handleCopy() {
     await navigator.clipboard.writeText(shareUrl);
