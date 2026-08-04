@@ -31,7 +31,7 @@ function YumYumPrompt({ allowedActions, onAction, isPending }: YumYumPromptProps
           disabled={isPending}
           onClick={() => onAction('YumYumPass')}
           className="gb-glass rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
-          style={{ color: 'var(--gb-text-primary)' }}
+          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
         >
           Pass
         </button>
