@@ -191,8 +191,6 @@ function GameBoardPage() {
 
   return (
     <div className="gb-root">
-      <DayNightBackground />
-
       {/* Background wrapper for the phone-landscape game log focus modal (§B of the mobile
           landscape plan): everything that isn't itself a modal/overlay lives inside here so it can
           be blurred and locked as a single unit while the log panel is open. `absolute inset-0`
@@ -204,6 +202,11 @@ function GameBoardPage() {
           is itself `position: fixed; inset: 0`, i.e. viewport-sized) means that becoming their
           containing block doesn't change where those descendants render, whether or not the filter
           is currently applied.
+          DayNightBackground lives inside this wrapper (not as a separate sibling) so the scenery
+          blurs along with everything else — per Round 2 Finding 4, the user's requirement is that
+          everything but the log panel itself blurs, and a permanently-crisp background layer read
+          as "inconsistent partial blur" rather than the intended uniform effect. It's purely
+          decorative (`-z-10`, no interactive content), so `inert` has no functional effect on it.
           Modals/overlays that must stay sharp and interactive regardless of this wrapper's state —
           VictimPicker, FeeshCardPicker, BanditResponseModal, BanditWaitingModal, YumYumPrompt,
           StealPrompt, and (via a portal in Modal.tsx/OpponentDetailModal.tsx) OpponentDetailModal,
@@ -222,6 +225,7 @@ function GameBoardPage() {
             : undefined
         }
       >
+        <DayNightBackground />
         <GameBoardThemeToggle />
         <GameLogButton ref={gameLogButtonRef} onClick={() => setIsGameLogOpen(true)} />
         <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />

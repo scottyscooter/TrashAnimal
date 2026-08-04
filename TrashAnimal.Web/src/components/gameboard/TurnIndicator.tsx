@@ -1,5 +1,6 @@
 import type { GameState } from '../../api/types';
 import GlassPanel from './GlassPanel';
+import { RESOLVING_STATES } from './gamePhaseStatus';
 import TrashBagIcon from './TrashBagIcon';
 
 interface TurnIndicatorProps {
@@ -17,6 +18,12 @@ function TurnIndicator({ currentPlayerName, isLocalPlayerTurn, state }: TurnIndi
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ')
     : '';
+
+  // PhaseToggle's own Rolling/Resolving pill is hidden on phone landscape (no vertical room for a
+  // second floating widget there) — fold the same distinction into this subtitle instead, only
+  // when it's the local player's turn, matching PhaseToggle's own render condition in GameBoardPage.
+  const rollingResolvingSuffix =
+    isLocalPlayerTurn && state ? (RESOLVING_STATES.includes(state) ? ' · RESOLVING' : ' · ROLLING') : '';
 
   return (
     <div className="fixed left-1/2 top-6 z-20 flex -translate-x-1/2 flex-col items-center phone-landscape:top-[4%]">
@@ -40,6 +47,7 @@ function TurnIndicator({ currentPlayerName, isLocalPlayerTurn, state }: TurnIndi
           style={{ color: 'var(--gb-text-label)' }}
         >
           {phaseName}
+          {rollingResolvingSuffix}
         </span>
       )}
     </div>
