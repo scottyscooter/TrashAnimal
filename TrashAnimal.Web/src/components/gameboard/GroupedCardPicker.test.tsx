@@ -125,4 +125,31 @@ describe('GroupedCardPicker', () => {
       expect(btn).toBeDisabled();
     }
   });
+
+  it('splits card groups into scroll-snapped rows of 3', () => {
+    render(
+      <GroupedCardPicker
+        cards={[
+          card('a', 'Nanners'),
+          card('b', 'Blammo'),
+          card('c', 'MmmPie'),
+          card('d', 'Feesh'),
+        ]}
+        min={0}
+        max={4}
+        isPending={false}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    // 4 distinct groups → 2 rows (3 + 1), each row snap-aligned so scrolling always lands on a
+    // full row instead of stopping mid-row.
+    const images = screen.getAllByRole('img');
+    expect(images).toHaveLength(4);
+    const rows = images.map((img) => img.closest('[style*="scroll-snap-align"]'));
+    expect(new Set(rows).size).toBe(2);
+    for (const row of rows) {
+      expect(row).toHaveStyle({ scrollSnapAlign: 'start' });
+    }
+  });
 });
