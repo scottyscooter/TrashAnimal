@@ -5,7 +5,8 @@ import { useGameView } from '../hooks/useGameView'
 import { useGameSignalR } from '../hooks/useGameSignalR'
 import { useGameLogAnnouncements } from '../hooks/useGameLogAnnouncements'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
-import { useIsPhoneLandscape } from '../hooks/useLandscapeBreakpoint'
+import { useIsPhoneLandscape, useIsMobilePortrait } from '../hooks/useLandscapeBreakpoint'
+import { useFullscreenLandscape } from '../hooks/useFullscreenLandscape'
 import { useToast } from '../components/Toast/useToast'
 import type { GameAction, HandCardView, TokenAction } from '../api/types'
 import { TOKEN_IMAGE_BY_ACTION } from './GameBoard/assetMaps'
@@ -31,6 +32,7 @@ import GlassPanel from '../components/gameboard/GlassPanel'
 import GameLogPanel from '../components/gameboard/GameLogPanel'
 import GameLogButton from '../components/gameboard/GameLogButton'
 import GameLogFocusPanel from '../components/gameboard/GameLogFocusPanel'
+import PortraitOverlay from '../components/gameboard/PortraitOverlay'
 
 type VictimPickerMode = 'shiny' | 'steal' | null
 
@@ -38,6 +40,9 @@ function GameBoardPage() {
   const { gameId } = useParams()
   const { identity } = useGameClientIdentity(gameId)
   const { showToast } = useToast()
+  const isPhoneLandscape = useIsPhoneLandscape()
+  const isMobilePortrait = useIsMobilePortrait()
+  useFullscreenLandscape()
 
   const [victimPickerMode, setVictimPickerMode] = useState<VictimPickerMode>(null)
   const [feeshPickerOpen, setFeeshPickerOpen] = useState(false)
@@ -65,7 +70,7 @@ function GameBoardPage() {
   // needs the JS-level breakpoint hook rather than a phone-landscape: utility class. Without this,
   // the tray rendered at its 64px desktop default on phone landscape too, and its footprint
   // overlapped the bottom of the hand's fanned/lifted cards. See Round 2 follow-up.
-  const isPhoneLandscape = useIsPhoneLandscape()
+  // (isPhoneLandscape already hoisted above for portrait overlay check)
 
   // Tokens only appear in the tray when earned, so the browser won't have fetched them yet
   // on the roll that first produces each token type. Prefetch all six on mount so they're
@@ -106,6 +111,10 @@ function GameBoardPage() {
         <p role="alert">This game could not be found.</p>
       </section>
     )
+  }
+
+  if (isMobilePortrait) {
+    return <PortraitOverlay />
   }
 
   const { view: gameView, allowedActions } = gameViewQuery.data

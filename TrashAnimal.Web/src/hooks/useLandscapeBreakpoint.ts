@@ -58,3 +58,18 @@ export function useIsTabletLandscape(): boolean {
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+
+/**
+ * Returns true when a touch (coarse-pointer) device is in portrait orientation. The pointer check
+ * keeps this from matching a narrow/tall desktop browser window, the same way `useIsPhoneLandscape`
+ * and `useIsTabletLandscape` guard against a resized desktop window being mistaken for a phone.
+ * Used to gate the game board's portrait-mode overlay: unlike the landscape breakpoints above,
+ * there's no height split here since the game is unplayable in portrait at any mobile/tablet size.
+ */
+export function useIsMobilePortrait(): boolean {
+  const query = '(orientation: portrait) and (pointer: coarse)';
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  const subscribe = useCallback((listener: () => void) => subscribeToMediaQuery(query, listener), [query]);
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
