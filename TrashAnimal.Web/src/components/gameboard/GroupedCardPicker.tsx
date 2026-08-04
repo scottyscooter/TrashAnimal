@@ -91,7 +91,7 @@ function GroupedCardPicker({
                       style={{ opacity: 1 }}
                     />
                     <span
-                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold"
+                      className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold"
                       style={{
                         background: 'var(--gb-gold)',
                         color: 'var(--gb-gold-text-dark)',
@@ -104,30 +104,32 @@ function GroupedCardPicker({
                   <p className="text-[11px] font-medium" style={{ color: 'var(--gb-text-primary)' }}>
                     {name}
                   </p>
-                  <p className="text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
-                    {count} / {ids.length}
-                  </p>
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => decrement(name)}
-                      disabled={isPending || count <= 0}
-                      aria-label={`Remove ${name}`}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
-                      style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
-                    >
-                      −
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => increment(name)}
-                      disabled={isPending || !canIncrement}
-                      aria-label={`Add ${name}`}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
-                      style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
-                    >
-                      +
-                    </button>
+                  <div className="-mt-1 flex flex-col items-center gap-1">
+                    <p className="text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
+                      {count} / {ids.length}
+                    </p>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => decrement(name)}
+                        disabled={isPending || count <= 0}
+                        aria-label={`Remove ${name}`}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
+                        style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
+                      >
+                        −
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => increment(name)}
+                        disabled={isPending || !canIncrement}
+                        aria-label={`Add ${name}`}
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
+                        style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

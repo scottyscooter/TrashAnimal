@@ -26,12 +26,20 @@ function BanditResponseModal({
     <Modal onClose={() => {}} labelledBy="bandit-response-heading">
       <h2 id="bandit-response-heading" className="mb-4 text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
         Would you like to stash a {revealedCardName} face-up or pass?
-      </h2>
-      <img
-        src={CARD_IMAGE_BY_NAME[revealedCardName]}
-        alt={revealedCardName}
-        className="mx-auto mb-4 h-[168px] w-[120px] rounded-lg object-cover phone-landscape:mb-2 phone-landscape:h-[110px] phone-landscape:w-[78px]"
-      />
+      </h2>      
+      <div className="relative mx-auto mb-4 w-fit phone-landscape:mb-2">
+        <img
+          src={CARD_IMAGE_BY_NAME[revealedCardName]}
+          alt={revealedCardName}
+          className="h-[168px] w-[120px] rounded-lg object-cover phone-landscape:h-[110px] phone-landscape:w-[78px]"
+        />
+        <span
+          className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold"
+          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)', borderColor: 'var(--gb-gold-text-dark)' }}
+        >
+          {stashableCards.length}
+        </span>
+      </div>
       <div className="flex gap-3">
         <button
           type="button"
@@ -47,7 +55,7 @@ function BanditResponseModal({
           disabled={isPending}
           onClick={onPass}
           className="gb-glass flex-1 rounded-lg py-2 text-sm font-bold disabled:opacity-50"
-          style={{ color: 'var(--gb-text-primary)' }}
+          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
         >
           Pass
         </button>

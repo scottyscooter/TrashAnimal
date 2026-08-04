@@ -37,20 +37,24 @@ function TokenPhasePanel({
   onRecyclePick,
   onStartSteal,
 }: TokenPhasePanelProps) {
-  return (
-    <GlassPanel className="fixed bottom-[520px] left-1/2 z-20 flex w-[520px] -translate-x-1/2 flex-col gap-3 rounded-2xl p-5 phone-landscape:bottom-[18%] phone-landscape:w-[85%] phone-landscape:max-w-[450px] phone-landscape:p-3 phone-landscape:gap-2">
-      {allowedActions.includes('PlayMmmPieTokenPhase') && (
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => onAction('PlayMmmPieTokenPhase')}
-          className="self-start rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
-          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
-        >
-          Play MmmPie (repeat this token)
-        </button>
-      )}
+  const isChoosingBranchStep = tokenPhase.step === 'StashTrashChooseBranch';
+  // On phone landscape, vertically center this step in the empty gap between the turn indicator
+  // and the visible hand cards, rather than screen-center (which would drift toward whichever of
+  // those two is closer as viewport height changes). `--gb-turn-indicator-bottom` /
+  // `--gb-hand-visible-top` are the two anchor tokens for that gap, defined once in index.css —
+  // see the comment there (and TurnIndicator.tsx/PlayerHand.tsx's pointers back to it) before
+  // changing either side's layout, since these values are hand-derived from those components'
+  // classes and don't update themselves. `-translate-y-1/2` centers the panel's own box (not just
+  // its top edge) on the computed midpoint. Desktop has ample vertical room, so it keeps the
+  // original bottom-[520px] placement shared with every other TokenPhasePanel step.
+  const positionClassName = isChoosingBranchStep
+    ? 'bottom-[520px] phone-landscape:top-[calc((var(--gb-turn-indicator-bottom)_+_var(--gb-hand-visible-top))_/_2)] phone-landscape:bottom-auto phone-landscape:-translate-y-1/2'
+    : 'bottom-[520px] phone-landscape:top-[70px] phone-landscape:bottom-auto';
 
+  return (
+    <GlassPanel
+      className={`fixed left-1/2 z-20 flex w-[520px] -translate-x-1/2 flex-col gap-3 rounded-2xl p-5 phone-landscape:w-[85%] phone-landscape:max-w-[450px] phone-landscape:p-3 phone-landscape:gap-2 ${positionClassName}`}
+    >
       {tokenPhase.step === 'ChoosingNextToken' && (
         <>
           <p className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-label)' }}>
