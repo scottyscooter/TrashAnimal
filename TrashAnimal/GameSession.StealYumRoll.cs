@@ -116,6 +116,16 @@ public sealed partial class GameSession
         {
             RecordLogEvent(new StealBlockedEvent(0, TurnNumber, victimIndex, thiefIndex!.Value, CardName.Doggo));
 
+            if (drawnFromPile.Count > 0)
+            {
+                RecordLogEvent(new CardDrawnPrivatelyEvent(
+                    0,
+                    TurnNumber,
+                    victimIndex,
+                    drawnFromPile.Select(c => c.Id).ToList(),
+                    drawnFromPile.Select(c => c.Name).ToList()));
+            }
+
             State = StealResumeState;
             ResetStealResumeStateToRollPhase();
             if (State == GameState.TokenPhase && _tokenPhaseCoordinator.IsActive

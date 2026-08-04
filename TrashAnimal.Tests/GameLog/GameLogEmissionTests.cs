@@ -242,6 +242,36 @@ public sealed class GameLogEmissionTests
     }
 
     [Fact]
+    public void Doggo_BlockingSteal_LogsTheDraw()
+    {
+        var pile = DrawPileMockFactory.CreateWithCards(2, CardName.MmmPie).Object;
+        var alice = new Player(0, "Alice");
+        var bob = new Player(1, "Bob");
+        var session = new GameSession(new[] { alice, bob }, pile);
+        session.ChooseShinyStealVictim = (_, candidates) => candidates[0];
+
+        bob.AddToStash(new Card(CardName.Blammo), faceUp: true);
+        alice.Hand.Clear();
+        alice.Hand.Add(new Card(CardName.Shiny));
+        var die = new Die();
+
+        var handCountBefore = bob.Hand.Count;
+        bob.Hand.Add(new Card(CardName.Doggo));
+
+        Assert.True(session.ApplyAction(0, GameAction.PlayShiny, die, out _, out _));
+        Assert.True(session.ApplyAction(1, GameAction.StealPlayDoggo, die, out var err, out _), err);
+
+        // Mutation already works — hand should have grown by 2
+        Assert.Equal(handCountBefore + 2, bob.Hand.Count);
+
+        // The draw must appear in the log as a CardDrawnPrivatelyEvent for the victim (seat 1)
+        var drawEvent = Assert.Single(session.LogEvents.OfType<CardDrawnPrivatelyEvent>());
+        Assert.Equal(1, drawEvent.ActingPlayerSeat);
+        Assert.Equal(2, drawEvent.CardIds.Count);
+        Assert.All(drawEvent.CardNames, name => Assert.Equal(CardName.MmmPie, name));
+    }
+
+    [Fact]
     public void Steal_Kitteh_EmitsStealRoleSwappedEvent_NotBlockedOrCompleted()
     {
         var (p0, p1, session) = CreateShinyStealSession();
