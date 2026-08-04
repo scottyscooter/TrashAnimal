@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { OpponentSummaryView } from '../../api/types';
 import { CARD_IMAGE_BY_NAME, opponentColorForSeat } from '../../pages/GameBoard/assetMaps';
 import Modal from './Modal';
@@ -20,7 +21,13 @@ function OpponentDetailModal({ opponents, selectedIndex, onSelectIndex, onClose 
 
   const hasMultipleOpponents = opponents.length > 1;
 
-  return (
+  // Portaled to document.body, same reasoning as Modal.tsx's own portal: this component is
+  // rendered nested inside OpponentRail/OpponentIndexTabs, both of which live inside
+  // GameBoardPage's phone-landscape game-log blur/lock wrapper. Modal.tsx already escapes that
+  // wrapper via its own portal, but the prev/next carousel buttons below are siblings of <Modal>,
+  // not children of it, so without this portal they'd stay nested in the filtered subtree and
+  // could get blurred/made inert independently of the modal content itself.
+  return createPortal(
     <>
       {/* Modal itself is position:fixed, so it isn't part of any sibling flex layout's normal
           flow — nesting these buttons in a flex row alongside it just centers the two buttons
@@ -112,7 +119,8 @@ function OpponentDetailModal({ opponents, selectedIndex, onSelectIndex, onClose 
           ›
         </button>
       )}
-    </>
+    </>,
+    document.body,
   );
 }
 

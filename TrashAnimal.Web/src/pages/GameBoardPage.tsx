@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useGameClientIdentity } from '../hooks/useGameClientIdentity'
 import { useGameView } from '../hooks/useGameView'
 import { useGameSignalR } from '../hooks/useGameSignalR'
 import { useGameLogAnnouncements } from '../hooks/useGameLogAnnouncements'
 import { useSubmitCommand } from '../hooks/useSubmitCommand'
+import { useIsPhoneLandscape } from '../hooks/useLandscapeBreakpoint'
 import { useToast } from '../components/Toast/useToast'
 import type { GameAction, HandCardView, TokenAction } from '../api/types'
 import { TOKEN_IMAGE_BY_ACTION } from './GameBoard/assetMaps'
@@ -13,6 +14,7 @@ import GameBoardThemeToggle from '../components/gameboard/GameBoardThemeToggle'
 import TurnIndicator from '../components/gameboard/TurnIndicator'
 import PhaseToggle from '../components/gameboard/PhaseToggle'
 import OpponentRail from '../components/gameboard/OpponentRail'
+import OpponentIndexTabs from '../components/gameboard/OpponentIndexTabs'
 import DeckDiscardPiles from '../components/gameboard/DeckDiscardPiles'
 import PlayerStash from '../components/gameboard/PlayerStash'
 import PlayerHand from '../components/gameboard/PlayerHand'
@@ -27,6 +29,8 @@ import BanditResponseModal from '../components/gameboard/BanditResponseModal'
 import BanditWaitingModal from '../components/gameboard/BanditWaitingModal'
 import GlassPanel from '../components/gameboard/GlassPanel'
 import GameLogPanel from '../components/gameboard/GameLogPanel'
+import GameLogButton from '../components/gameboard/GameLogButton'
+import GameLogFocusPanel from '../components/gameboard/GameLogFocusPanel'
 
 type VictimPickerMode = 'shiny' | 'steal' | null
 
@@ -37,11 +41,31 @@ function GameBoardPage() {
 
   const [victimPickerMode, setVictimPickerMode] = useState<VictimPickerMode>(null)
   const [feeshPickerOpen, setFeeshPickerOpen] = useState(false)
+  const [isGameLogOpen, setIsGameLogOpen] = useState(false)
+  const gameLogButtonRef = useRef<HTMLButtonElement>(null)
+  const wasGameLogOpenRef = useRef(false)
+
+  // Close half of the game log's focus-trap contract (open half lives in GameLogFocusPanel,
+  // which focuses its own close button on mount): once the panel unmounts, return keyboard focus
+  // to the button that opened it. Guarded on the open->closed transition specifically (not just
+  // "isGameLogOpen is false") so this doesn't try to focus the trigger on initial page load.
+  useEffect(() => {
+    if (wasGameLogOpenRef.current && !isGameLogOpen) {
+      gameLogButtonRef.current?.focus()
+    }
+    wasGameLogOpenRef.current = isGameLogOpen
+  }, [isGameLogOpen])
 
   const gameViewQuery = useGameView(gameId ?? '', identity?.seatIndex ?? -1)
   useGameSignalR(gameId ?? '', identity?.seatIndex ?? -1)
   useGameLogAnnouncements(gameViewQuery.data?.view.log ?? [], identity?.seatIndex ?? -1)
   const submitCommand = useSubmitCommand(gameId ?? '', identity?.seatIndex ?? -1)
+  // TokenTray's `size` is a numeric prop, not a CSS class — Tailwind's phone-landscape variant
+  // can't conditionally change a React prop value, so this is one of the few spots that genuinely
+  // needs the JS-level breakpoint hook rather than a phone-landscape: utility class. Without this,
+  // the tray rendered at its 64px desktop default on phone landscape too, and its footprint
+  // overlapped the bottom of the hand's fanned/lifted cards. See Round 2 follow-up.
+  const isPhoneLandscape = useIsPhoneLandscape()
 
   // Tokens only appear in the tray when earned, so the browser won't have fetched them yet
   // on the roll that first produces each token type. Prefetch all six on mount so they're
@@ -174,51 +198,119 @@ function GameBoardPage() {
 
   return (
     <div className="gb-root">
-      <DayNightBackground />
-      <GameBoardThemeToggle />
-      <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} />
-      {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
+      {/* Background wrapper for the phone-landscape game log focus modal (§B of the mobile
+          landscape plan): everything that isn't itself a modal/overlay lives inside here so it can
+          be blurred and locked as a single unit while the log panel is open. `absolute inset-0`
+          (rather than a plain unstyled div) matters specifically because of the risk called out in
+          the plan — once `filter` is applied below, this wrapper becomes the new containing block
+          for every `position: fixed` descendant inside it (TurnIndicator, RollStopControls,
+          PlayerHand, TokenPhasePanel, etc. all currently expect `fixed` to mean "relative to the
+          viewport"). Giving the wrapper the exact same box as the viewport (its parent, `.gb-root`,
+          is itself `position: fixed; inset: 0`, i.e. viewport-sized) means that becoming their
+          containing block doesn't change where those descendants render, whether or not the filter
+          is currently applied.
+          DayNightBackground lives inside this wrapper (not as a separate sibling) so the scenery
+          blurs along with everything else — per Round 2 Finding 4, the user's requirement is that
+          everything but the log panel itself blurs, and a permanently-crisp background layer read
+          as "inconsistent partial blur" rather than the intended uniform effect. It's purely
+          decorative (`-z-10`, no interactive content), so `inert` has no functional effect on it.
+          Modals/overlays that must stay sharp and interactive regardless of this wrapper's state —
+          VictimPicker, FeeshCardPicker, BanditResponseModal, BanditWaitingModal, YumYumPrompt,
+          StealPrompt, and (via a portal in Modal.tsx/OpponentDetailModal.tsx) OpponentDetailModal,
+          StashModal, DiscardCarouselModal — are deliberately kept outside it. */}
+      <div
+        className="absolute inset-0"
+        // `inert` (not just `pointer-events: none`) is what actually makes this the "only the log
+        // accepts input" lock: pointer-events only blocks mouse/touch, but a keyboard user could
+        // still Tab into this subtree and Enter-activate Roll/Stop/cards behind the blur without
+        // it. `inert` removes the whole subtree from the tab order and blocks all interaction
+        // (pointer and keyboard alike), which is exactly the native mechanism for this.
+        inert={isGameLogOpen}
+        style={
+          isGameLogOpen
+            ? { filter: 'blur(10px) saturate(0.6) brightness(0.55)', pointerEvents: 'none' }
+            : undefined
+        }
+      >
+        <DayNightBackground />
+        <GameBoardThemeToggle />
+        <GameLogButton ref={gameLogButtonRef} onClick={() => setIsGameLogOpen(true)} />
+        <TurnIndicator currentPlayerName={gameView.currentPlayerName} isLocalPlayerTurn={isLocalPlayerTurn} state={gameView.state} />
+        {isLocalPlayerTurn && <PhaseToggle state={gameView.state} />}
 
-      <OpponentRail gameView={gameView} />
-      <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px]">
-        <GameLogPanel entries={gameLog} />
-      </div>
-      <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
-      <PlayerStash ownStash={gameView.ownStash} />
-      <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
+        <OpponentRail gameView={gameView} />
+        <OpponentIndexTabs gameView={gameView} />
+        <div className="fixed right-7 top-[110px] bottom-[523px] z-10 w-[320px] phone-landscape:hidden tablet-landscape:w-[260px]">
+          <GameLogPanel entries={gameLog} />
+        </div>
+        <DeckDiscardPiles deckCount={gameView.deckCount} discardPile={gameView.discardPile} />
+        <PlayerStash ownStash={gameView.ownStash} />
+        <PlayerHand handCards={gameView.handCards} onCardActivate={handleHandCardActivate} />
 
-      <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2">
-        <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3">
-          <span className="text-xs font-semibold tracking-[0.12em]" style={{ color: 'var(--gb-text-label)' }}>
-            YOUR TOKENS
-          </span>
-          {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
-              player is CURRENTLY active, not "my own tokens" — every viewer's own tray must stay
-              empty unless it's actually their turn, or everyone sees the active player's rolls
-              duplicated into their own panel. The active player's tray is what OpponentTile shows
-              to everyone else. */}
-          <TokenTray
-            phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
-            tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
-            isBusted={isLocalPlayerTurn && gameView.isBusted}
+        <div className="fixed bottom-6 left-1/2 z-10 -translate-x-1/2 phone-landscape:bottom-[3%]">
+          <GlassPanel className="flex flex-col items-center gap-2 rounded-2xl px-6 py-3 phone-landscape:gap-0.5 phone-landscape:px-2 phone-landscape:py-1">
+            <span className="text-xs font-semibold tracking-[0.12em] phone-landscape:text-[8px]" style={{ color: 'var(--gb-text-label)' }}>
+              YOUR TOKENS
+            </span>
+            {/* gameView.phaseOneTokens/tokenPhase are single shared fields reflecting whichever
+                player is CURRENTLY active, not "my own tokens" — every viewer's own tray must stay
+                empty unless it's actually their turn, or everyone sees the active player's rolls
+                duplicated into their own panel. The active player's tray is what OpponentTile shows
+                to everyone else. */}
+            <TokenTray
+              phaseOneTokens={isLocalPlayerTurn ? gameView.phaseOneTokens : []}
+              tokenPhase={isLocalPlayerTurn ? gameView.tokenPhase : null}
+              isBusted={isLocalPlayerTurn && gameView.isBusted}
+              size={isPhoneLandscape ? 26 : undefined}
+            />
+          </GlassPanel>
+        </div>
+
+        {isLocalPlayerTurn && !gameView.tokenPhase && !gameView.stealPhase && !isLocalYumYumResponder && (
+          <RollStopControls allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
+        )}
+
+        {isLocalPlayerTurn && allowedActions.includes('PlayShiny') && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => setVictimPickerMode('shiny')}
+            className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50 phone-landscape:bottom-[26%] phone-landscape:right-[2%] phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
+            style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
+          >
+            Play Shiny
+          </button>
+        )}
+
+        {isLocalPlayerTurn && gameView.tokenPhase && !isAwaitingBanditResponse && (
+          <TokenPhasePanel
+            tokenPhase={gameView.tokenPhase}
+            allowedActions={allowedActions}
+            isPending={isPending}
+            onAction={handleAction}
+            onCardPick={handleCardPick}
+            onDoubleStashSubmit={handleDoubleStashSubmit}
+            onRecyclePick={handleRecyclePick}
+            onStartSteal={handleStartSteal}
           />
-        </GlassPanel>
+        )}
       </div>
 
-      {isLocalPlayerTurn && !gameView.tokenPhase && !gameView.stealPhase && !isLocalYumYumResponder && (
-        <RollStopControls allowedActions={allowedActions} onAction={handleAction} isPending={isPending} />
-      )}
-
-      {isLocalPlayerTurn && allowedActions.includes('PlayShiny') && (
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => setVictimPickerMode('shiny')}
-          className="fixed bottom-[170px] right-[80px] z-20 rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
-          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)' }}
-        >
-          Play Shiny
-        </button>
+      {isGameLogOpen && (
+        <>
+          {/* pointer-events: none on the wrapper above means it can't receive the "tap background
+              to close" click itself — this full-screen invisible click-catcher sits in front of
+              the (blurred, inert) wrapper but behind GameLogFocusPanel, so a tap anywhere outside
+              the panel closes the log, and a tap on the panel itself doesn't (the panel is a later,
+              higher z-indexed sibling, so it receives the click first and never bubbles down to
+              this catcher for the area it covers). */}
+          <div
+            className="fixed inset-0 z-30 hidden phone-landscape:block"
+            onClick={() => setIsGameLogOpen(false)}
+            aria-hidden="true"
+          />
+          <GameLogFocusPanel entries={gameLog} onClose={() => setIsGameLogOpen(false)} />
+        </>
       )}
 
       {isLocalYumYumResponder && (
@@ -234,19 +326,6 @@ function GameBoardPage() {
           onAction={handleAction}
           onCardPick={handleCardPick}
           isPending={isPending}
-        />
-      )}
-
-      {isLocalPlayerTurn && gameView.tokenPhase && !isAwaitingBanditResponse && (
-        <TokenPhasePanel
-          tokenPhase={gameView.tokenPhase}
-          allowedActions={allowedActions}
-          isPending={isPending}
-          onAction={handleAction}
-          onCardPick={handleCardPick}
-          onDoubleStashSubmit={handleDoubleStashSubmit}
-          onRecyclePick={handleRecyclePick}
-          onStartSteal={handleStartSteal}
         />
       )}
 

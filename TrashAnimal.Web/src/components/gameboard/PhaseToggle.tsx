@@ -1,19 +1,21 @@
 import type { GameState } from '../../api/types';
+import { RESOLVING_STATES } from './gamePhaseStatus';
 import GlassPanel from './GlassPanel';
 
 interface PhaseToggleProps {
   state: GameState;
 }
 
-const RESOLVING_STATES: GameState[] = ['TokenPhase', 'TurnEnd'];
-
 /** Rolling/Resolving segmented pill — active segment is derived from GameState (server-driven),
- * not from local tray fullness like the design mock reactively infers. */
+ * not from local tray fullness like the design mock reactively infers.
+ *
+ * Hidden on phone landscape (`phone-landscape:hidden`) — TurnIndicator's subtitle shows the same
+ * information there instead, since this component's fixed `top-[112px]` collides with the hand. */
 function PhaseToggle({ state }: PhaseToggleProps) {
   const isResolving = RESOLVING_STATES.includes(state);
 
   return (
-    <GlassPanel className="fixed left-1/2 top-[112px] z-20 flex w-[220px] -translate-x-1/2 overflow-hidden rounded-full p-0">
+    <GlassPanel className="fixed left-1/2 top-[112px] z-20 flex w-[220px] -translate-x-1/2 overflow-hidden rounded-full p-0 phone-landscape:hidden">
       {(['Rolling', 'Resolving'] as const).map((label, index) => {
         const active = index === 0 ? !isResolving : isResolving;
         return (

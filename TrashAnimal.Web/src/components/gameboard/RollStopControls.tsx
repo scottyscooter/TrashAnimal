@@ -22,14 +22,14 @@ function RollStopControls({ allowedActions, onAction, isPending }: RollStopContr
   const canStop = allowedActions.includes('StopRolling');
 
   return (
-    <div className="fixed bottom-[60px] right-[80px] z-20 flex flex-col items-center gap-5">
+    <div className="fixed bottom-[60px] right-[80px] z-20 flex flex-col items-center gap-5 phone-landscape:bottom-[6%] phone-landscape:right-[2%] phone-landscape:flex-row phone-landscape:gap-2">
       {allowedActions.includes('AbandonBust') && (
-        <div className="flex gap-2">
+        <div className="flex gap-2 phone-landscape:gap-1">
           <button
             type="button"
             disabled={isPending}
             onClick={() => onAction('AbandonBust')}
-            className="rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] text-white disabled:opacity-50"
+            className="rounded-lg px-3 py-2 text-xs font-bold tracking-[0.06em] text-white disabled:opacity-50 phone-landscape:px-2 phone-landscape:py-1 phone-landscape:text-[10px]"
             style={{ background: 'var(--gb-red)' }}
           >
             DRAW 1 & END TURN
@@ -43,7 +43,7 @@ function RollStopControls({ allowedActions, onAction, isPending }: RollStopContr
           disabled={!canStop || isPending}
           onClick={() => onAction('StopRolling')}
           aria-label="Stop rolling"
-          className="flex h-[104px] w-[104px] items-center justify-center text-sm font-bold tracking-[0.06em] text-white transition-opacity"
+          className="flex h-[104px] w-[104px] items-center justify-center text-sm font-bold tracking-[0.06em] text-white transition-opacity phone-landscape:h-[60px] phone-landscape:w-[60px] phone-landscape:text-xs"
           style={{
             clipPath: 'polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)',
             background: 'var(--gb-red)',
@@ -58,7 +58,7 @@ function RollStopControls({ allowedActions, onAction, isPending }: RollStopContr
           type="button"
           disabled={!primary || isPending}
           onClick={() => primary && onAction(primary.action)}
-          className="flex h-[88px] w-[120px] flex-col items-center justify-center gap-1 rounded-xl border-[3px] text-sm font-bold tracking-[0.06em] disabled:opacity-50"
+          className="flex h-[88px] w-[120px] flex-col items-center justify-center gap-1 rounded-xl border-[3px] text-sm font-bold tracking-[0.06em] disabled:opacity-50 phone-landscape:h-[60px] phone-landscape:w-[70px] phone-landscape:border-[2px] phone-landscape:text-xs phone-landscape:gap-0"
           style={{
             background: 'linear-gradient(160deg,#ffd873,#f2b134)',
             borderColor: '#a86e12',
@@ -67,7 +67,7 @@ function RollStopControls({ allowedActions, onAction, isPending }: RollStopContr
           }}
         >
           <span
-            className="grid h-[18px] w-[18px] grid-cols-3 grid-rows-3 gap-[2px]"
+            className="grid h-[18px] w-[18px] grid-cols-3 grid-rows-3 gap-[2px] phone-landscape:h-[12px] phone-landscape:w-[12px] phone-landscape:gap-[1px]"
             aria-hidden="true"
           >
             {[1, 1, 1, 0, 1, 0, 1, 1, 1].map((filled, index) => (

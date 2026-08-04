@@ -1,5 +1,16 @@
 @import 'tailwindcss';
 
+/* (pointer: coarse) restricts these to touch devices (real phones/tablets, and Playwright's
+   touch-emulated devices) — without it, "landscape orientation + a height range" alone also
+   matches ordinary mouse-driven desktop/laptop windows, since virtually all desktop displays are
+   landscape and taller than 600px. Discovered via Commit 6's e2e tests: an untouched 1280x720
+   desktop viewport was picking up tablet-landscape's narrower OpponentRail/GameLogPanel widths.
+   599px/600px (not 600px/600px) keeps the two ranges mutually exclusive — a device exactly 600px
+   tall in landscape would otherwise match both variants at once. Must stay in sync with the
+   matching query strings in useLandscapeBreakpoint.ts. */
+@custom-variant phone-landscape (@media (orientation: landscape) and (max-height: 599px) and (pointer: coarse));
+@custom-variant tablet-landscape (@media (orientation: landscape) and (min-height: 600px) and (pointer: coarse));
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
