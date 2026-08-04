@@ -1,4 +1,5 @@
 import type { CardName, StashableHandCard } from '../../api/types';
+import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
 import Modal from './Modal';
 
 interface BanditResponseModalProps {
@@ -26,6 +27,11 @@ function BanditResponseModal({
       <h2 id="bandit-response-heading" className="mb-4 text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
         Would you like to stash a {revealedCardName} face-up or pass?
       </h2>
+      <img
+        src={CARD_IMAGE_BY_NAME[revealedCardName]}
+        alt={revealedCardName}
+        className="mx-auto mb-4 h-[168px] w-[120px] rounded-lg object-cover phone-landscape:mb-2 phone-landscape:h-[110px] phone-landscape:w-[78px]"
+      />
       <div className="flex gap-3">
         <button
           type="button"
