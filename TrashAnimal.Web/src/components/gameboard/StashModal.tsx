@@ -26,19 +26,27 @@ function StashModal({ title, cards, onClose }: StashModalProps) {
   }
 
   return (
-    <Modal onClose={onClose} labelledBy="stash-modal-heading" wide fitContent>
-      <h2 id="stash-modal-heading" className="mb-1 min-w-[200px] text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
+    <Modal
+      onClose={onClose}
+      labelledBy="stash-modal-heading"
+      maxWidthClassName="max-w-[392px] phone-landscape:max-w-[228px]"
+    >
+      <h2
+        id="stash-modal-heading"
+        className="mb-1 pr-5 text-lg font-semibold phone-landscape:mb-0 phone-landscape:pr-4"
+        style={{ color: 'var(--gb-text-primary)' }}
+      >
         {title}
       </h2>
-      <p className="mb-6 text-xs tracking-[0.06em] phone-landscape:mb-2" style={{ color: 'var(--gb-text-label)' }}>
+      <p className="mb-6 text-xs tracking-[0.06em] phone-landscape:mb-1" style={{ color: 'var(--gb-text-label)' }}>
         {cards.length} TOTAL
       </p>
       <div
-        className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pb-2 phone-landscape:max-h-[calc(100vh-160px)] phone-landscape:gap-2"
+        className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto pb-2 pr-2 phone-landscape:max-h-[calc(100vh-100px)] phone-landscape:gap-2"
         style={{ scrollSnapType: 'y mandatory' }}
       >
         {rows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-3 phone-landscape:gap-2" style={{ scrollSnapAlign: 'start' }}>
+          <div key={rowIndex} className="flex justify-center gap-3 phone-landscape:gap-2" style={{ scrollSnapAlign: 'start' }}>
             {row.map(([name, count]) => (
               <div key={name} className="relative">
                 <img
