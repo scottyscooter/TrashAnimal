@@ -73,11 +73,11 @@ function GroupedCardPicker({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto phone-landscape:max-h-[calc(100vh-220px)]"
+        className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto phone-landscape:max-h-[calc(100vh-220px)] phone-landscape:gap-2"
         style={{ scrollSnapType: 'y mandatory' }}
       >
         {rows.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-4" style={{ scrollSnapAlign: 'start' }}>
+          <div key={rowIndex} className="flex justify-center gap-4 phone-landscape:gap-2" style={{ scrollSnapAlign: 'start' }}>
             {row.map(([name, ids]) => {
               const count = selected[name] ?? 0;
               const canIncrement = count < ids.length && totalSelected < max;
@@ -87,11 +87,11 @@ function GroupedCardPicker({
                     <img
                       src={CARD_IMAGE_BY_NAME[name]}
                       alt={name}
-                      className="h-[120px] w-[86px] rounded-lg object-cover"
+                      className="h-[120px] w-[86px] rounded-lg object-cover phone-landscape:h-[72px] phone-landscape:w-[52px]"
                       style={{ opacity: 1 }}
                     />
                     <span
-                      className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold"
+                      className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold phone-landscape:h-5 phone-landscape:w-5 phone-landscape:text-[9px]"
                       style={{
                         background: 'var(--gb-gold)',
                         color: 'var(--gb-gold-text-dark)',
@@ -101,7 +101,7 @@ function GroupedCardPicker({
                       {ids.length}
                     </span>
                   </div>
-                  <p className="text-[11px] font-medium" style={{ color: 'var(--gb-text-primary)' }}>
+                  <p className="text-[11px] font-medium phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-primary)' }}>
                     {name}
                   </p>
                   <div className="-mt-1 flex flex-col items-center gap-1">
@@ -114,7 +114,7 @@ function GroupedCardPicker({
                         onClick={() => decrement(name)}
                         disabled={isPending || count <= 0}
                         aria-label={`Remove ${name}`}
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40 phone-landscape:h-6 phone-landscape:w-6"
                         style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
                       >
                         −
@@ -124,7 +124,7 @@ function GroupedCardPicker({
                         onClick={() => increment(name)}
                         disabled={isPending || !canIncrement}
                         aria-label={`Add ${name}`}
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40"
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold disabled:opacity-40 phone-landscape:h-6 phone-landscape:w-6"
                         style={{ background: 'rgba(255,255,255,.22)', border: '1.5px solid rgba(255,255,255,.5)', color: 'var(--gb-text-primary)' }}
                       >
                         +
@@ -141,7 +141,7 @@ function GroupedCardPicker({
         type="button"
         disabled={isPending || totalSelected < min}
         onClick={handleConfirm}
-        className="self-start rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
+        className="self-center rounded-lg px-4 py-2 text-sm font-bold disabled:opacity-50"
         style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
       >
         {confirmLabelPrefix} {totalSelected} card{totalSelected === 1 ? '' : 's'}
