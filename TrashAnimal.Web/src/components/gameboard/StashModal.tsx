@@ -33,7 +33,7 @@ function StashModal({ title, cards, onClose }: StashModalProps) {
     >
       <h2
         id="stash-modal-heading"
-        className="mb-1 pr-5 text-lg font-semibold phone-landscape:mb-0 phone-landscape:pr-4"
+        className="mb-1 pr-5 text-lg font-semibold phone-landscape:mb-0 phone-landscape:pr-4 phone-landscape:text-sm"
         style={{ color: 'var(--gb-text-primary)' }}
       >
         {title}
