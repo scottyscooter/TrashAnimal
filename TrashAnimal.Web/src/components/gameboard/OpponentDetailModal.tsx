@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import type { OpponentSummaryView } from '../../api/types';
 import { CARD_IMAGE_BY_NAME, opponentColorForSeat } from '../../pages/GameBoard/assetMaps';
+import CardCountBadge from './CardCountBadge';
 import Modal from './Modal';
 
 const CARDS_PER_ROW = 3;
@@ -95,25 +96,19 @@ function OpponentDetailModal({ opponents, selectedIndex, onSelectIndex, onClose 
           </span>
         </div>
         <div
-          className="mt-3 flex max-h-[60vh] flex-col gap-3 overflow-y-auto phone-landscape:max-h-[calc(100vh-260px)]"
+          className="mt-3 flex max-h-[60vh] flex-col gap-3 overflow-y-auto pb-2 pr-2 phone-landscape:max-h-[calc(100vh-260px)]"
           style={{ scrollSnapType: 'y mandatory' }}
         >
           {rows.map((row, rowIndex) => (
             <div key={rowIndex} className="flex gap-3" style={{ scrollSnapAlign: 'start' }}>
               {row.map(([name, count]) => (
-                <div key={name} className="relative">
+                <CardCountBadge key={name} count={count} size="medium" includeResponsive={false}>
                   <img
                     src={CARD_IMAGE_BY_NAME[name as keyof typeof CARD_IMAGE_BY_NAME]}
                     alt={name}
                     className="h-[120px] w-[86px] rounded-lg object-cover"
                   />
-                  <span
-                    className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold"
-                    style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)', borderColor: 'var(--gb-gold-text-dark)' }}
-                  >
-                    {count}
-                  </span>
-                </div>
+                </CardCountBadge>
               ))}
             </div>
           ))}

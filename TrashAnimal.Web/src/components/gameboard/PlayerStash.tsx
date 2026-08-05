@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { OwnStashView } from '../../api/types';
 import { CARD_BACK_IMAGE, CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import CardCountBadge from './CardCountBadge';
 import EmptyPileSlot from './EmptyPileSlot';
 import StashModal from './StashModal';
 
@@ -28,46 +29,38 @@ function PlayerStash({ ownStash }: PlayerStashProps) {
           </span>
         </div>
         <div className="flex gap-5 phone-landscape:gap-2">
-          <button
-            type="button"
-            onClick={() => setOpenModal('faceDown')}
-            disabled={ownStash.faceDownCards.length === 0}
-            className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
-          >
-            {ownStash.faceDownCards.length > 0 ? (
-              <img src={CARD_BACK_IMAGE} alt="Face-down stash" className="h-full w-full rounded-[10px] object-cover" />
-            ) : (
-              <EmptyPileSlot className="h-full w-full rounded-[10px]" />
-            )}
-            <span
-              className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold phone-landscape:h-7 phone-landscape:w-7 phone-landscape:text-[10px]"
-              style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text-dark)' }}
+          <CardCountBadge count={ownStash.faceDownCards.length} size="large" color="gold">
+            <button
+              type="button"
+              onClick={() => setOpenModal('faceDown')}
+              disabled={ownStash.faceDownCards.length === 0}
+              className="h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
             >
-              {ownStash.faceDownCards.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setOpenModal('faceUp')}
-            disabled={!topFaceUp}
-            className="relative h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
-          >
-            {topFaceUp ? (
-              <img
-                src={CARD_IMAGE_BY_NAME[topFaceUp.name]}
-                alt={topFaceUp.name}
-                className="h-full w-full rounded-[10px] object-cover"
-              />
-            ) : (
-              <EmptyPileSlot className="h-full w-full rounded-[10px]" />
-            )}
-            <span
-              className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 text-xs font-bold phone-landscape:h-7 phone-landscape:w-7 phone-landscape:text-[10px]"
-              style={{ background: 'var(--gb-green)', color: 'var(--gb-green-text)' }}
+              {ownStash.faceDownCards.length > 0 ? (
+                <img src={CARD_BACK_IMAGE} alt="Face-down stash" className="h-full w-full rounded-[10px] object-cover" />
+              ) : (
+                <EmptyPileSlot className="h-full w-full rounded-[10px]" />
+              )}
+            </button>
+          </CardCountBadge>
+          <CardCountBadge count={ownStash.faceUpCards.length} size="large" color="green">
+            <button
+              type="button"
+              onClick={() => setOpenModal('faceUp')}
+              disabled={!topFaceUp}
+              className="h-[180px] w-[128px] transition-transform duration-[180ms] hover:scale-[1.16] disabled:opacity-50 disabled:hover:scale-100 phone-landscape:h-[100px] phone-landscape:w-[72px]"
             >
-              {ownStash.faceUpCards.length}
-            </span>
-          </button>
+              {topFaceUp ? (
+                <img
+                  src={CARD_IMAGE_BY_NAME[topFaceUp.name]}
+                  alt={topFaceUp.name}
+                  className="h-full w-full rounded-[10px] object-cover"
+                />
+              ) : (
+                <EmptyPileSlot className="h-full w-full rounded-[10px]" />
+              )}
+            </button>
+          </CardCountBadge>
         </div>
       </div>
 

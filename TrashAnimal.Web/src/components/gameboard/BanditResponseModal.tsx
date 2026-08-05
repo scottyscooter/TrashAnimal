@@ -1,5 +1,6 @@
 import type { CardName, StashableHandCard } from '../../api/types';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import CardCountBadge from './CardCountBadge';
 import Modal from './Modal';
 
 interface BanditResponseModalProps {
@@ -27,18 +28,14 @@ function BanditResponseModal({
       <h2 id="bandit-response-heading" className="mb-4 text-lg font-semibold" style={{ color: 'var(--gb-text-primary)' }}>
         Would you like to stash a {revealedCardName} face-up or pass?
       </h2>      
-      <div className="relative mx-auto mb-4 w-fit phone-landscape:mb-2">
-        <img
-          src={CARD_IMAGE_BY_NAME[revealedCardName]}
-          alt={revealedCardName}
-          className="h-[168px] w-[120px] rounded-lg object-cover phone-landscape:h-[110px] phone-landscape:w-[78px]"
-        />
-        <span
-          className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold"
-          style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)', borderColor: 'var(--gb-gold-text-dark)' }}
-        >
-          {stashableCards.length}
-        </span>
+      <div className="mx-auto mb-4 w-fit phone-landscape:mb-2">
+        <CardCountBadge count={stashableCards.length} size="medium" includeResponsive={false}>
+          <img
+            src={CARD_IMAGE_BY_NAME[revealedCardName]}
+            alt={revealedCardName}
+            className="h-[168px] w-[120px] rounded-lg object-cover phone-landscape:h-[110px] phone-landscape:w-[78px]"
+          />
+        </CardCountBadge>
       </div>
       <div className="flex gap-3">
         <button

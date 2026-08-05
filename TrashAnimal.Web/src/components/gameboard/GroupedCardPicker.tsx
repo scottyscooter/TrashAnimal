@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CardName } from '../../api/types';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import CardCountBadge from './CardCountBadge';
 
 const CARDS_PER_ROW = 3;
 
@@ -73,7 +74,7 @@ function GroupedCardPicker({
   return (
     <div className="flex flex-col gap-3">
       <div
-        className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto phone-landscape:max-h-[calc(100vh-220px)] phone-landscape:gap-2"
+        className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto pb-2 pr-2 phone-landscape:max-h-[calc(100vh-220px)] phone-landscape:gap-2"
         style={{ scrollSnapType: 'y mandatory' }}
       >
         {rows.map((row, rowIndex) => (
@@ -83,24 +84,14 @@ function GroupedCardPicker({
               const canIncrement = count < ids.length && totalSelected < max;
               return (
                 <div key={name} className="flex flex-col items-center gap-1">
-                  <div className="relative">
+                  <CardCountBadge count={ids.length} size="small">
                     <img
                       src={CARD_IMAGE_BY_NAME[name]}
                       alt={name}
                       className="h-[120px] w-[86px] rounded-lg object-cover phone-landscape:h-[72px] phone-landscape:w-[52px]"
                       style={{ opacity: 1 }}
                     />
-                    <span
-                      className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-bold phone-landscape:h-5 phone-landscape:w-5 phone-landscape:text-[9px]"
-                      style={{
-                        background: 'var(--gb-gold)',
-                        color: 'var(--gb-gold-text-dark)',
-                        borderColor: 'var(--gb-gold-text-dark)',
-                      }}
-                    >
-                      {ids.length}
-                    </span>
-                  </div>
+                  </CardCountBadge>
                   <p className="text-[11px] font-medium phone-landscape:text-[10px]" style={{ color: 'var(--gb-text-primary)' }}>
                     {name}
                   </p>
