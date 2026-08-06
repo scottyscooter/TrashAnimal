@@ -146,6 +146,8 @@ Exact specs for the game log panel, straight from that reference (`README.md` "G
 
 Treat this mockup bundle as ground truth and match it pixel-close, per its own stated fidelity level — no further design exploration is needed beyond faithfully recreating what's already specified there.
 
+**Addendum (post-implementation correction):** the `flex-direction: column-reverse`, no-client-side-scroll-logic approach described in §5/§6 above turned out not to hold up in practice — browsers' default resting scroll position for a reversed, overflowing flex column lands at the *bottom* of the reversed content, not the top, so an untouched log showed the oldest entries instead of the newest. `GameLogEntryList.tsx` now renders newest-first in a normal (non-reversed) column and manages scroll position explicitly in a `useLayoutEffect`, keyed off whether the user is currently near the top of the list. See that file's doc comment for the full behavior and rationale, including why `overflow-anchor: none` is also needed (native scroll anchoring otherwise double-compensates against the explicit JS adjustment).
+
 ### 7. Testing
 
 - `TrashAnimal.Tests/GameLog/GameLogEmissionTests.cs` — both the RollPhase-handler path and the `ApiSupport` explicit-choice path emit equivalent events (catches drift between the duplicated paths); full TokenPhase resolution produces one event per sub-step in increasing `SequenceNumber` order; bust/turn-end/game-end emit the right event; Doggo block vs Kitteh swap vs completed steal emit distinct event types.
