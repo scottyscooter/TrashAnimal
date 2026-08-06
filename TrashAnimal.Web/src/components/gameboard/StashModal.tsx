@@ -1,5 +1,6 @@
 import type { StashableHandCard } from '../../api/types';
 import { CARD_IMAGE_BY_NAME } from '../../pages/GameBoard/assetMaps';
+import CardCountBadge from './CardCountBadge';
 import Modal from './Modal';
 
 const CARDS_PER_ROW = 3;
@@ -48,19 +49,13 @@ function StashModal({ title, cards, onClose }: StashModalProps) {
         {rows.map((row, rowIndex) => (
           <div key={rowIndex} className="flex justify-center gap-3 phone-landscape:gap-2" style={{ scrollSnapAlign: 'start' }}>
             {row.map(([name, count]) => (
-              <div key={name} className="relative">
+              <CardCountBadge key={name} count={count} size="compact">
                 <img
                   src={CARD_IMAGE_BY_NAME[name as keyof typeof CARD_IMAGE_BY_NAME]}
                   alt={name}
                   className="h-[140px] w-[100px] rounded-lg object-cover phone-landscape:h-[78px] phone-landscape:w-[56px]"
                 />
-                <span
-                  className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-bold phone-landscape:h-6 phone-landscape:w-6 phone-landscape:text-[10px]"
-                  style={{ background: 'var(--gb-gold)', color: 'var(--gb-gold-text)', borderColor: 'var(--gb-gold-text-dark)' }}
-                >
-                  {count}
-                </span>
-              </div>
+              </CardCountBadge>
             ))}
           </div>
         ))}
